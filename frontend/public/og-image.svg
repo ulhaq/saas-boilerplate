@@ -1,0 +1,21 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg" font-family="'Inter','Segoe UI',Helvetica,Arial,sans-serif">
+  <!-- Placeholder social card - replace with your product's artwork. -->
+  <rect width="1200" height="630" fill="#020617"/>
+  <defs>
+    <radialGradient id="glow" cx="28%" cy="35%" r="70%">
+      <stop offset="0%" stop-color="#293e70" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#020617" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#glow)"/>
+  <g transform="translate(80,80)">
+    <rect width="72" height="72" rx="16" fill="#293e70"/>
+    <g transform="translate(12,12) scale(2)" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+      <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
+      <path d="m3.3 7 8.7 5 8.7-5"/>
+      <path d="M12 22V12"/>
+    </g>
+  </g>
+  <text x="80" y="330" fill="#f8fafc" font-size="84" font-weight="700">SaaS Boilerplate</text>
+  <text x="80" y="400" fill="#94a3b8" font-size="36">Replace this image with your product's social card.</text>
+</svg>

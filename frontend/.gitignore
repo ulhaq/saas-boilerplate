@@ -1,0 +1,8 @@
+node_modules
+dist
+tests/e2e/.auth
+playwright-report
+test-results
+src/auto-imports.d.ts
+src/components.d.ts
+src/typed-router.d.ts

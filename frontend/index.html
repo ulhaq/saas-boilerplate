@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="da">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#020617" />
+
+    <script defer src="%VITE_UMAMI_SCRIPT_URL%" data-website-id="%VITE_UMAMI_WEBSITE_ID%"></script>
+
+    <!--
+      Only the tags that are identical on every page live here. Title,
+      description, canonical, robots and the per-page OG/Twitter values are
+      emitted by `useHead` (see src/router/seo.ts): baked into the HTML for the
+      prerendered marketing routes, set at runtime for the rest. Re-adding a
+      static <title> or description here would duplicate them in the build.
+      %BRAND_NAME% / %MARKETING_ORIGIN% are filled from src/brand.ts by vite.config.ts.
+    -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="%BRAND_NAME%" />
+    <meta property="og:image" content="%MARKETING_ORIGIN%/og-image.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="%BRAND_NAME%" />
+
+    <!-- Twitter Card (per-page title/description come from useHead) -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="%MARKETING_ORIGIN%/og-image.png" />
+    <!--
+      Loader for the SPA shell (dist/app.html). vite-ssg replaces the contents of
+      #app when it prerenders the marketing pages, so only the shell keeps it,
+      and Vue clears the container when it mounts - nothing has to remove it.
+      It fades in after 200ms so quick loads stay blank instead of flashing.
+    -->
+    <style>
+      .app-loader {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #ffffff;
+      }
+      .dark .app-loader {
+        background: #020617;
+      }
+      .app-loader__spinner {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        border: 3px solid #e2e8f0;
+        border-top-color: #0f172a;
+        opacity: 0;
+        animation:
+          app-loader-spin 0.7s linear infinite,
+          app-loader-fade 0.2s linear 0.2s forwards;
+      }
+      .dark .app-loader__spinner {
+        border-color: #1e293b;
+        border-top-color: #e2e8f0;
+      }
+      @keyframes app-loader-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      @keyframes app-loader-fade {
+        to {
+          opacity: 1;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .app-loader__spinner {
+          animation: app-loader-fade 0.2s linear 0.2s forwards;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div class="app-loader" role="status" aria-label="Indlæser">
+        <div class="app-loader__spinner"></div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+    <script>
+      var m = localStorage.getItem('theme')
+      var dark =
+        m === 'dark' ||
+        (!m && window.matchMedia('(prefers-color-scheme: dark)').matches) ||
+        (m === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      if (dark) document.documentElement.classList.add('dark')
+    </script>
+  </body>
+</html>

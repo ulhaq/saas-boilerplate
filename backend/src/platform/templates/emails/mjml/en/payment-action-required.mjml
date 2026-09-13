@@ -1,0 +1,46 @@
+<mjml>
+  <mj-head>
+    <mj-title>Payment authentication required - {{ app_name }}</mj-title>
+    <mj-preview>Your payment needs authentication to complete.</mj-preview>
+    <mj-include path="../shared/_head.mjml" />
+  </mj-head>
+  <mj-body background-color="#eff1f5" width="600px">
+    <mj-wrapper background-color="#ffffff" border="1px solid #e0e3eb" border-radius="12px" padding="0" css-class="app-card">
+      <mj-include path="../shared/_header.mjml" />
+
+      <mj-section padding="28px 32px 32px 32px" css-class="app-pad">
+        <mj-column>
+          <mj-text font-size="13px" font-weight="600" color="#dc8f09" text-transform="uppercase" letter-spacing="0.04em" padding="0 0 10px 0">
+            Action required
+          </mj-text>
+          <mj-text font-size="22px" font-weight="700" color="#131825" line-height="1.3" padding="0 0 14px 0">
+            Confirm your payment
+          </mj-text>
+
+          <mj-text padding="0 0 8px 0">
+            Hi {{ user_name }},
+          </mj-text>
+          <mj-text padding="0 0 20px 0">
+            Your latest payment for {{ app_name }} needs an extra verification step (such as 3D&nbsp;Secure) from your bank. Complete it to keep your subscription active.
+          </mj-text>
+
+          <mj-text padding="0 0 24px 0">
+            <div style="background:#fff8ec;border:1px solid #fbe2ab;border-left:3px solid #dc8f09;border-radius:8px;padding:14px 16px;font-size:14px;color:#8a5a0a;line-height:1.6;">
+              Until the payment is confirmed, your subscription is at risk of being paused.
+            </div>
+          </mj-text>
+
+          <mj-button href="{{ billing_url }}" align="left">
+            Complete payment
+          </mj-button>
+
+          <mj-text padding="24px 0 0 0" color="#636b7e" font-size="14px">
+            Need a hand? Just reply to this email.
+          </mj-text>
+        </mj-column>
+      </mj-section>
+    </mj-wrapper>
+
+    <mj-include path="./partials/_footer.mjml" />
+  </mj-body>
+</mjml>

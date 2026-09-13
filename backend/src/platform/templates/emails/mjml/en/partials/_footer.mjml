@@ -1,0 +1,8 @@
+<!-- Shared footer. -->
+<mj-section padding="24px 0 8px 0">
+  <mj-column>
+    <mj-text align="center" font-size="13px" color="#636b7e" padding="0 24px" line-height="1.6">
+      Contact us at <a href="mailto:{{ info_email }}" style="color:#293e70;font-weight:500;">{{ info_email }}</a>.
+    </mj-text>
+  </mj-column>
+</mj-section>

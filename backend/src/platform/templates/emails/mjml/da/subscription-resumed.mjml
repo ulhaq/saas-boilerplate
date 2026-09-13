@@ -1,0 +1,40 @@
+<mjml>
+  <mj-head>
+    <mj-title>Dit abonnement er genoptaget - {{ app_name }}</mj-title>
+    <mj-preview>Dit {{ app_name }}-abonnement er aktivt igen. Velkommen tilbage!</mj-preview>
+    <mj-include path="../shared/_head.mjml" />
+  </mj-head>
+  <mj-body background-color="#eff1f5" width="600px">
+    <mj-wrapper background-color="#ffffff" border="1px solid #e0e3eb" border-radius="12px" padding="0" css-class="app-card">
+      <mj-include path="../shared/_header.mjml" />
+
+      <mj-section padding="28px 32px 32px 32px" css-class="app-pad">
+        <mj-column>
+          <mj-text font-size="13px" font-weight="600" color="#25934d" text-transform="uppercase" letter-spacing="0.04em" padding="0 0 10px 0">
+            Abonnement aktivt
+          </mj-text>
+          <mj-text font-size="22px" font-weight="700" color="#131825" line-height="1.3" padding="0 0 14px 0">
+            Alt er på plads - velkommen tilbage
+          </mj-text>
+
+          <mj-text padding="0 0 8px 0">
+            Hej {{ user_name }},
+          </mj-text>
+          <mj-text padding="0 0 24px 0">
+            Dit {{ app_name }}-abonnement er aktivt igen, og alle betalte funktioner er igen tilgængelige for dit team.
+          </mj-text>
+
+          <mj-button href="{{ billing_url }}" align="left">
+            Administrér fakturering
+          </mj-button>
+
+          <mj-text padding="24px 0 0 0" color="#636b7e" font-size="14px">
+            Mangler du noget? Bare svar på denne email.
+          </mj-text>
+        </mj-column>
+      </mj-section>
+    </mj-wrapper>
+
+    <mj-include path="./partials/_footer.mjml" />
+  </mj-body>
+</mjml>

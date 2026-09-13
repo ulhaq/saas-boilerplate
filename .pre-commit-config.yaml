@@ -1,0 +1,44 @@
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-lint
+        name: ruff lint
+        entry: bash -c 'cd backend && uv run ruff check src tests --fix'
+        language: system
+        files: ^backend/.*\.py$
+        pass_filenames: false
+
+      - id: ruff-format
+        name: ruff format
+        entry: bash -c 'cd backend && uv run ruff format src tests'
+        language: system
+        files: ^backend/.*\.py$
+        pass_filenames: false
+
+      - id: ty
+        name: ty
+        entry: bash -c 'cd backend && uv run ty check src'
+        language: system
+        files: ^backend/.*\.py$
+        pass_filenames: false
+
+      - id: generate-openapi
+        name: generate openapi
+        entry: bash -c 'cd backend && uv run python generate_openapi.py && git add ./openapi.json'
+        language: system
+        files: ^backend/.*\.py$
+        pass_filenames: false
+
+      - id: prettier
+        name: prettier (frontend)
+        entry: bash -c 'cd frontend && npx prettier --write "${@#frontend/}"' --
+        language: system
+        files: ^frontend/src/.*\.(ts|vue|js|css)$
+        pass_filenames: true
+
+      - id: eslint
+        name: eslint
+        entry: bash -c 'cd frontend && npx eslint --fix "${@#frontend/}"' --
+        language: system
+        files: ^frontend/src/.*\.(ts|vue|js)$
+        pass_filenames: true

@@ -1,0 +1,122 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    font-size: 18px;
+  }
+
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222 32% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 32% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 32% 11%;
+    --primary: 222 47% 30%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 222 24% 95%;
+    --secondary-foreground: 222 40% 18%;
+    --muted: 222 24% 95%;
+    --muted-foreground: 222 12% 44%;
+    --accent: 222 32% 94%;
+    --accent-foreground: 222 47% 24%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 222 20% 90%;
+    --input: 222 20% 90%;
+    --ring: 222 47% 40%;
+    --sidebar-background: 222 30% 98%;
+    --sidebar-foreground: 222 18% 30%;
+    --sidebar-primary: 222 47% 30%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 222 30% 93%;
+    --sidebar-accent-foreground: 222 47% 24%;
+    --sidebar-border: 222 22% 90%;
+    --sidebar-ring: 222 47% 45%;
+    --chart-1: 222 60% 50%;
+    --chart-2: 199 70% 45%;
+    --chart-3: 173 58% 39%;
+    --chart-4: 262 60% 60%;
+    --chart-5: 43 74% 56%;
+  }
+
+  .dark {
+    --background: 222 38% 7%;
+    --foreground: 210 30% 96%;
+    --card: 222 34% 10%;
+    --card-foreground: 210 30% 96%;
+    --popover: 222 34% 10%;
+    --popover-foreground: 210 30% 96%;
+    --primary: 213 90% 62%;
+    --primary-foreground: 222 47% 11%;
+    --secondary: 222 26% 16%;
+    --secondary-foreground: 210 30% 96%;
+    --muted: 222 24% 16%;
+    --muted-foreground: 222 14% 64%;
+    --accent: 222 28% 20%;
+    --accent-foreground: 210 30% 96%;
+    --destructive: 0 62% 45%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 222 22% 18%;
+    --input: 222 22% 20%;
+    --ring: 213 90% 62%;
+    --sidebar-background: 222 36% 9%;
+    --sidebar-foreground: 210 22% 80%;
+    --sidebar-primary: 213 90% 62%;
+    --sidebar-primary-foreground: 222 47% 11%;
+    --sidebar-accent: 222 28% 16%;
+    --sidebar-accent-foreground: 210 30% 96%;
+    --sidebar-border: 222 24% 16%;
+    --sidebar-ring: 213 90% 62%;
+    --chart-1: 213 90% 62%;
+    --chart-2: 199 80% 55%;
+    --chart-3: 173 60% 50%;
+    --chart-4: 262 70% 68%;
+    --chart-5: 43 80% 62%;
+  }
+
+  /* ─────────────────────────── Polish layer ───────────────────────── */
+  :root {
+    --radius: 0.625rem;
+
+    /* Soft, layered elevation - premium "lift" */
+    --shadow-sm: 0 1px 2px 0 hsl(220 30% 10% / 0.06);
+    --shadow: 0 1px 2px 0 hsl(220 30% 10% / 0.06), 0 2px 6px -1px hsl(220 30% 10% / 0.08);
+    --shadow-md: 0 2px 4px -1px hsl(220 30% 10% / 0.07), 0 6px 14px -2px hsl(220 30% 10% / 0.1);
+    --shadow-lg: 0 8px 24px -4px hsl(220 30% 10% / 0.12), 0 4px 8px -4px hsl(220 30% 10% / 0.08);
+
+    /* Status tokens */
+    --success: 142 60% 36%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 45%;
+    --warning-foreground: 0 0% 100%;
+    --info: 213 80% 50%;
+    --info-foreground: 0 0% 100%;
+  }
+
+  .dark {
+    --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.4);
+    --shadow: 0 1px 2px 0 hsl(0 0% 0% / 0.4), 0 2px 6px -1px hsl(0 0% 0% / 0.5);
+    --shadow-md: 0 2px 4px -1px hsl(0 0% 0% / 0.5), 0 6px 14px -2px hsl(0 0% 0% / 0.55);
+    --shadow-lg: 0 8px 24px -4px hsl(0 0% 0% / 0.6), 0 4px 8px -4px hsl(0 0% 0% / 0.5);
+
+    --success: 142 55% 45%;
+    --success-foreground: 142 40% 10%;
+    --warning: 38 90% 55%;
+    --warning-foreground: 38 50% 12%;
+    --info: 213 85% 60%;
+    --info-foreground: 213 50% 12%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}

@@ -1,0 +1,33 @@
+<mjml>
+  <mj-head>
+    <mj-title>Kontaktformular - {{ app_name }}</mj-title>
+    <mj-preview>{{ sender_name }} har skrevet om {{ message_subject }}</mj-preview>
+    <mj-include path="../shared/_head.mjml" />
+  </mj-head>
+  <mj-body background-color="#eff1f5" width="600px">
+    <mj-wrapper background-color="#ffffff" border="1px solid #e0e3eb" border-radius="12px" padding="0" css-class="app-card">
+      <mj-include path="../shared/_header.mjml" />
+
+      <mj-section padding="28px 32px 32px 32px" css-class="app-pad">
+        <mj-column>
+          <mj-text font-size="13px" font-weight="600" color="#636b7e" text-transform="uppercase" letter-spacing="0.04em" padding="0 0 10px 0">
+            Kontaktformular
+          </mj-text>
+          <mj-text font-size="22px" font-weight="700" color="#131825" line-height="1.3" padding="0 0 14px 0">
+            {{ message_subject }}
+          </mj-text>
+
+          <mj-text padding="0 0 20px 0" color="#636b7e" font-size="14px">
+            Fra {{ sender_name }} &lt;<a href="mailto:{{ sender_email }}" style="color:#293e70;font-weight:500;">{{ sender_email }}</a>&gt;. Svar på denne email for at svare direkte.
+          </mj-text>
+
+          <mj-text padding="0">
+            <div style="padding:16px;background-color:#f6f7fa;border:1px solid #e0e3eb;border-radius:8px;">{{ message_body|nl2br }}</div>
+          </mj-text>
+        </mj-column>
+      </mj-section>
+    </mj-wrapper>
+
+    <mj-include path="./partials/_footer.mjml" />
+  </mj-body>
+</mjml>

@@ -1,0 +1,37 @@
+<mjml>
+  <mj-head>
+    <mj-title>Du er inviteret til {{ organization_name }} - {{ app_name }}</mj-title>
+    <mj-preview>Du er inviteret til at deltage i {{ organization_name }}.</mj-preview>
+    <mj-include path="../shared/_head.mjml" />
+  </mj-head>
+  <mj-body background-color="#eff1f5" width="600px">
+    <mj-wrapper background-color="#ffffff" border="1px solid #e0e3eb" border-radius="12px" padding="0" css-class="app-card">
+      <mj-include path="../shared/_header.mjml" />
+
+      <mj-section padding="28px 32px 32px 32px" css-class="app-pad">
+        <mj-column>
+          <mj-text font-size="13px" font-weight="600" color="#636b7e" text-transform="uppercase" letter-spacing="0.04em" padding="0 0 10px 0">
+            Du er inviteret
+          </mj-text>
+          <mj-text font-size="22px" font-weight="700" color="#131825" line-height="1.3" padding="0 0 14px 0">
+            Deltag i {{ organization_name }} på {{ app_name }}
+          </mj-text>
+
+          <mj-text padding="0 0 24px 0">
+            Du er blevet inviteret til at deltage i <strong>{{ organization_name }}</strong>.<br />Accepter invitationen for at oprette din konto og begynde at arbejde sammen. Invitationen udløber om {{ expiration_days }}&nbsp;dag{% if expiration_days != 1 %}e{% endif %}.
+          </mj-text>
+
+          <mj-button href="{{ invite_url }}" align="left">
+            Accepter invitation
+          </mj-button>
+
+          <mj-text padding="24px 0 0 0" color="#636b7e" font-size="14px">
+            Hvis du ikke forventede denne invitation, kan du roligt ignorere denne email.
+          </mj-text>
+        </mj-column>
+      </mj-section>
+    </mj-wrapper>
+
+    <mj-include path="./partials/_footer.mjml" />
+  </mj-body>
+</mjml>

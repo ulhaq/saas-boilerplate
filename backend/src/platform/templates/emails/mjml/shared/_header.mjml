@@ -1,0 +1,20 @@
+<!-- Brand header: logo + wordmark -->
+<mj-section padding="28px 32px 0 32px">
+  <mj-column>
+    <mj-text padding="0">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+        <tr>
+          <td style="vertical-align:middle;">
+            <img src="{{ app_url }}/logo.png" width="32" height="32" alt="{{ app_name }} logo" style="display:block;border-radius:8px;background:#293e70;" />
+          </td>
+          <td style="vertical-align:middle;padding-left:10px;font-size:17px;font-weight:600;color:#131825;font-family:Inter,-apple-system,'Segoe UI',Arial,sans-serif;letter-spacing:-0.01em;">{{ app_name }}</td>
+        </tr>
+      </table>
+    </mj-text>
+  </mj-column>
+</mj-section>
+<mj-section padding="20px 32px 0 32px">
+  <mj-column>
+    <mj-divider border-width="1px" border-color="#e0e3eb" padding="0" />
+  </mj-column>
+</mj-section>
