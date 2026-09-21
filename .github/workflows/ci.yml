@@ -165,3 +165,7 @@ jobs:
             # the migration fails - old containers keep running, untouched.
             docker compose run --rm backend uv run alembic upgrade head
             docker compose up -d --remove-orphans
+            # Each deploy pulls new SHA-tagged images; drop unused ones older
+            # than 7 days so the disk doesn't fill. Images in use are never
+            # removed, and older SHAs can be re-pulled from GHCR for a rollback.
+            docker image prune -af --filter "until=168h" || true
