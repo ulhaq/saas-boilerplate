@@ -37,7 +37,7 @@ endif
 
 up:
 	$(COMPOSE) up -d
-	@echo "backend http://localhost:$(BACKEND_PORT)  frontend http://localhost:$(FRONTEND_PORT)"
+	@echo "backend http://localhost:$(BACKEND_PORT)  frontend http://localhost:$(FRONTEND_PORT)  pgadmin http://localhost:$(PGADMIN_PORT)"
 
 up-local:
 	COMPOSE_PROFILES=local$(if $(ENV_PROFILES),$(comma)$(ENV_PROFILES)) $(COMPOSE) up -d

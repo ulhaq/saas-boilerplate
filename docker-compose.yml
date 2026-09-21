@@ -20,6 +20,25 @@ services:
       start_period: 30s
       start_interval: 5s
 
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:?set PGADMIN_EMAIL in BACKEND_ENV}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:?set PGADMIN_PASSWORD in BACKEND_ENV}
+    ports:
+      - "127.0.0.1:${PGADMIN_PORT:-5050}:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   backend:
     image: ${BACKEND_IMAGE}
     restart: unless-stopped
@@ -103,4 +122,5 @@ services:
 
 volumes:
   alloy_data:
+  pgadmin_data:
   postgres_data:

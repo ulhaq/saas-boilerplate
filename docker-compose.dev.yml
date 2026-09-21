@@ -26,7 +26,6 @@ services:
   pgadmin:
     image: dpage/pgadmin4:latest
     restart: unless-stopped
-    profiles: [local]
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
