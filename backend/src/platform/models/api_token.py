@@ -17,10 +17,10 @@ class ApiToken(Base, TimestampMixin):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("user.id", ondelete="CASCADE")
+        Integer, ForeignKey("user.id", ondelete="CASCADE"), index=True
     )
     organization_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("organization.id", ondelete="CASCADE")
+        Integer, ForeignKey("organization.id", ondelete="CASCADE"), index=True
     )
     name: Mapped[str] = mapped_column(String, nullable=False)
     token_hash: Mapped[str] = mapped_column(String, unique=True, nullable=False)

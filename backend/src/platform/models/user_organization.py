@@ -19,5 +19,5 @@ class UserOrganization(ResourceModelBase):
         Integer, ForeignKey("organization.id", ondelete="CASCADE"), nullable=False
     )
     last_active_at: Mapped[datetime | None] = mapped_column(
-        DateTime, nullable=True, default=None
+        DateTime(timezone=True), nullable=True, default=None
     )

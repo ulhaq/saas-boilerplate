@@ -34,7 +34,10 @@ class Notification(Base):
         DateTime(timezone=True), nullable=True, default=None
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
+        index=True,
     )
 
     user: Mapped[User] = relationship("User", passive_deletes=True)

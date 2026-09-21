@@ -10,9 +10,12 @@ class WorkerRun(Base):
     __tablename__ = "worker_run"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    worker_type: Mapped[str] = mapped_column(String, nullable=False)
+    worker_type: Mapped[str] = mapped_column(String, nullable=False, index=True)
     started_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(UTC),
+        index=True,
     )
     finished_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True

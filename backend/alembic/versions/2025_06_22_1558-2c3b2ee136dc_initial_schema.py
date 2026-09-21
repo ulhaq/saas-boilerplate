@@ -191,10 +191,9 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(["user_id"], ["user.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("jti"),
         sa.UniqueConstraint("token"),
     )
-    op.create_index("ix_refresh_token_jti", "refresh_token", ["jti"])
+    op.create_index("ix_refresh_token_jti", "refresh_token", ["jti"], unique=True)
 
     op.create_table(
         "api_token",
@@ -217,9 +216,6 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("token_hash"),
     )
-    op.create_index(
-        op.f("ix_api_token_token_hash"), "api_token", ["token_hash"], unique=True
-    )
     op.create_index(op.f("ix_api_token_user_id"), "api_token", ["user_id"])
     op.create_index(
         op.f("ix_api_token_organization_id"), "api_token", ["organization_id"]
@@ -232,7 +228,6 @@ def upgrade() -> None:
         sa.Column("token", sa.String(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("email"),
         sa.UniqueConstraint("token"),
     )
     op.create_index(
@@ -247,7 +242,6 @@ def upgrade() -> None:
         sa.Column("terms_accepted_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("email"),
         sa.UniqueConstraint("token"),
     )
     op.create_index(
@@ -264,7 +258,6 @@ def upgrade() -> None:
         sa.Column("name", sa.String(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("email"),
     )
     op.create_index(
         op.f("ix_waitlist_entry_email"),
@@ -285,13 +278,13 @@ def upgrade() -> None:
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.UniqueConstraint(
-            "external_product_id", name="uq_billing_plan_external_product_id"
-        ),
     )
     op.create_index("ix_billing_plan_name", "billing_plan", ["name"])
     op.create_index(
-        "ix_billing_plan_external_product_id", "billing_plan", ["external_product_id"]
+        "ix_billing_plan_external_product_id",
+        "billing_plan",
+        ["external_product_id"],
+        unique=True,
     )
 
     billing_plan_price_table = op.create_table(
@@ -312,15 +305,13 @@ def upgrade() -> None:
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.UniqueConstraint(
-            "external_price_id", name="uq_billing_plan_price_external_price_id"
-        ),
     )
     op.create_index("ix_billing_plan_price_plan_id", "billing_plan_price", ["plan_id"])
     op.create_index(
         "ix_billing_plan_price_external_price_id",
         "billing_plan_price",
         ["external_price_id"],
+        unique=True,
     )
 
     op.create_table(
@@ -349,10 +340,6 @@ def upgrade() -> None:
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.UniqueConstraint(
-            "external_subscription_id",
-            name="uq_billing_subscription_external_subscription_id",
-        ),
         sa.CheckConstraint(
             f"status IN {_SUBSCRIPTION_STATUSES}",
             name="ck_billing_subscription_status",
@@ -367,6 +354,7 @@ def upgrade() -> None:
         "ix_billing_subscription_external_subscription_id",
         "billing_subscription",
         ["external_subscription_id"],
+        unique=True,
     )
     op.create_index(
         "uq_billing_subscription_active_organization",
@@ -379,7 +367,7 @@ def upgrade() -> None:
     op.create_table(
         "billing_webhook_event",
         sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("external_event_id", sa.String(), nullable=False, unique=True),
+        sa.Column("external_event_id", sa.String(), nullable=False),
         sa.Column("event_type", sa.String(), nullable=False),
         sa.Column("status", sa.String(), nullable=False, default="received"),
         sa.Column("error", sa.String(), nullable=True),
@@ -762,7 +750,6 @@ def downgrade() -> None:
 
     op.drop_index(op.f("ix_api_token_organization_id"), table_name="api_token")
     op.drop_index(op.f("ix_api_token_user_id"), table_name="api_token")
-    op.drop_index(op.f("ix_api_token_token_hash"), table_name="api_token")
     op.drop_table("api_token")
 
     op.drop_table("refresh_token")

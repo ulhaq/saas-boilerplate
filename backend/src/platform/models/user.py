@@ -25,7 +25,7 @@ class User(ResourceModel):
         String(16), nullable=False, server_default="system"
     )
     terms_accepted_at: Mapped[datetime | None] = mapped_column(
-        DateTime, nullable=True, default=None
+        DateTime(timezone=True), nullable=True, default=None
     )
 
     organizations: Mapped[list[Organization]] = relationship(

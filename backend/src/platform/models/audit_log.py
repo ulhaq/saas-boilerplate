@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String
+from sqlalchemy import JSON, DateTime, ForeignKey, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.platform.core.database import Base
@@ -13,13 +13,17 @@ if TYPE_CHECKING:
 
 class AuditLog(Base):
     __tablename__ = "audit_log"
+    __table_args__ = (Index("ix_audit_log_org_action", "organization_id", "action"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     organization_id: Mapped[int | None] = mapped_column(
-        Integer, ForeignKey("organization.id", ondelete="SET NULL"), nullable=True
+        Integer,
+        ForeignKey("organization.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
     )
     user_id: Mapped[int | None] = mapped_column(
-        Integer, ForeignKey("user.id", ondelete="SET NULL"), nullable=True
+        Integer, ForeignKey("user.id", ondelete="SET NULL"), nullable=True, index=True
     )
     action: Mapped[str] = mapped_column(String, nullable=False)
     resource_type: Mapped[str | None] = mapped_column(String, nullable=True)
@@ -27,7 +31,10 @@ class AuditLog(Base):
     ip_address: Mapped[str | None] = mapped_column(String(45), nullable=True)
     details: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
+        index=True,
     )
 
     organization: Mapped[Organization | None] = relationship(
