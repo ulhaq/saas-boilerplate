@@ -84,6 +84,8 @@ The import-linter contract in `pyproject.toml` forbids `src.platform` from impor
 
 **Permissions** - Fine-grained RBAC using the `Permission` enum (`src/platform/enums.py`) plus `ExamplePermission` (`src/example/enums.py`). Users have roles; roles have permissions. Use `require_permission()` on routes to enforce access.
 
+**Observability** - `src/platform/core/telemetry.py`: OpenTelemetry traces/metrics, enabled only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set (tests force it off). Wrap each worker-loop iteration in `with track_worker_run("name", interval):` so it gets run/failure/duration metrics and the overdue/failing alerts; log lines carry `trace_id`. Setup and dashboards: `observability/README.md`.
+
 **Query features** - Repositories support dynamic filtering via `ComparisonOperator` (eq, lt, gte, contains, in, between, etc.), pagination (`page_number`, `page_size`), and sorting.
 
 ### Database migrations

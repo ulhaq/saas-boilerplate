@@ -14,7 +14,7 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 COPY nginx.conf.template /etc/nginx/templates/nginx.conf.template
 
 ENV API_TARGET=http://backend:8000
-ENV ANALYTICS_ORIGIN=https://analytics.example.com
+ENV ANALYTICS_ORIGIN=""
 
 EXPOSE 80
 

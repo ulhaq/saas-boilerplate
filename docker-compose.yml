@@ -65,7 +65,7 @@ services:
     restart: unless-stopped
     environment:
       API_TARGET: http://backend:8000
-      ANALYTICS_ORIGIN: ${ANALYTICS_ORIGIN:-https://analytics.example.com}
+      ANALYTICS_ORIGIN: ${ANALYTICS_ORIGIN:-}
     ports:
       - "3000:80"
     depends_on:
@@ -74,6 +74,7 @@ services:
 
   umami:
     image: ghcr.io/umami-software/umami:postgresql-latest
+    profiles: [analytics]
     restart: unless-stopped
     ports:
       - "3001:3000"
@@ -84,5 +85,22 @@ services:
       postgres:
         condition: service_healthy
 
+  alloy:
+    image: grafana/alloy:v1.19.2
+    profiles: [observability]
+    restart: unless-stopped
+    command: run --server.http.listen-addr=0.0.0.0:12345 --storage.path=/var/lib/alloy/data /etc/alloy/config.alloy
+    environment:
+      OBSERVABILITY_HOST: ${OBSERVABILITY_HOST:-host.docker.internal}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "127.0.0.1:${FARO_PORT:-12347}:12347"
+    volumes:
+      - ./observability/alloy/agent.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - alloy_data:/var/lib/alloy/data
+
 volumes:
+  alloy_data:
   postgres_data:

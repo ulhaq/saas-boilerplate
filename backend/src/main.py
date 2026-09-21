@@ -30,6 +30,7 @@ from src.platform.core.middlewares import (
     AuditContextMiddleware,
     ErrorHandlingMiddleware,
 )
+from src.platform.core.telemetry import instrument_app, setup_telemetry
 from src.platform.enums import ErrorCode
 from src.platform.routers import (
     api_token,
@@ -51,6 +52,7 @@ from src.platform.schemas.common import (
 )
 
 setup_logging("api")
+setup_telemetry("api")
 
 log = logging.getLogger(__name__)
 
@@ -82,6 +84,7 @@ app = FastAPI(
 )
 
 app.state.limiter = limiter
+instrument_app(app)
 
 
 API_CSP = (

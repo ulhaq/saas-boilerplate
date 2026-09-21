@@ -1,0 +1,85 @@
+# Monitoring stack: Grafana + Prometheus (metrics) + Loki (logs) + Tempo (traces).
+#
+# Runs on its own (ideally a separate small server, so monitoring survives the
+# app host going down); the app host's Alloy agent pushes into it:
+#   docker compose -f docker-compose.observability.yml -p observability --env-file observability/.env up -d
+# (locally: `make obs-up`). Setup and production notes: observability/README.md
+#
+# Ingest ports (9090, 3100, 4318) take unauthenticated writes: bind them to a
+# private network address (OBSERVABILITY_INGEST_BIND) and/or firewall them to the
+# app host. Docker-published ports bypass ufw.
+
+services:
+  prometheus:
+    image: prom/prometheus:v3.14.0
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-15d}
+      - --web.enable-otlp-receiver
+    ports:
+      - "${OBSERVABILITY_INGEST_BIND:-0.0.0.0}:9090:9090"
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+
+  loki:
+    image: grafana/loki:3.7.8
+    restart: unless-stopped
+    command: -config.file=/etc/loki/loki.yaml -config.expand-env=true
+    environment:
+      LOKI_RETENTION: ${LOKI_RETENTION:-168h}
+    ports:
+      - "${OBSERVABILITY_INGEST_BIND:-0.0.0.0}:3100:3100"
+    volumes:
+      - ./observability/loki/loki.yaml:/etc/loki/loki.yaml:ro
+      - loki_data:/loki
+
+  tempo:
+    image: grafana/tempo:2.10.8
+    restart: unless-stopped
+    command: -config.file=/etc/tempo/tempo.yaml -config.expand-env=true
+    environment:
+      TEMPO_RETENTION: ${TEMPO_RETENTION:-168h}
+    ports:
+      - "${OBSERVABILITY_INGEST_BIND:-0.0.0.0}:4318:4318"
+    volumes:
+      - ./observability/tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
+      - tempo_data:/var/tempo
+
+  grafana:
+    image: grafana/grafana:13.2.2
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost:3030}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      # Alert emails (provisioning/alerting). Local default: the dev stack's mailpit.
+      GF_SMTP_ENABLED: "true"
+      GF_SMTP_HOST: ${GRAFANA_SMTP_HOST:-host.docker.internal:1025}
+      GF_SMTP_USER: ${GRAFANA_SMTP_USER:-}
+      GF_SMTP_PASSWORD: ${GRAFANA_SMTP_PASSWORD:-}
+      GF_SMTP_FROM_ADDRESS: ${GRAFANA_SMTP_FROM:-alerts@example.com}
+      GF_SMTP_SKIP_VERIFY: ${GRAFANA_SMTP_SKIP_VERIFY:-true}
+      ALERT_EMAIL: ${ALERT_EMAIL:-ops@example.com}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "${GRAFANA_BIND:-127.0.0.1}:${GRAFANA_PORT:-3030}:3000"
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
+
+volumes:
+  prometheus_data:
+  loki_data:
+  tempo_data:
+  grafana_data:

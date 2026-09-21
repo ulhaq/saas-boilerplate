@@ -11,6 +11,7 @@ from typing import Any
 
 from src.example.config import settings
 from src.example.repositories.project import ProjectRepository
+from src.platform.core.telemetry import track_worker_run
 from src.platform.repositories.worker_run import WorkerRunRepository
 
 log = logging.getLogger(__name__)
@@ -39,9 +40,11 @@ async def _run_once(session_factory: Any) -> None:
 
 
 async def run_example_loop(session_factory: Any) -> None:
+    interval = settings.heartbeat_interval_seconds
     while True:
         try:
-            await _run_once(session_factory)
+            with track_worker_run(WORKER_TYPE, interval):
+                await _run_once(session_factory)
         except Exception as exc:
             log.error("Example loop error: %s", exc, exc_info=True)
-        await asyncio.sleep(settings.heartbeat_interval_seconds)
+        await asyncio.sleep(interval)

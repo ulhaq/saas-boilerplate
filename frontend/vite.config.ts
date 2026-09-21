@@ -100,6 +100,32 @@ function brandAssets(): Plugin {
   }
 }
 
+/**
+ * Umami analytics (opt-in, compose profile `analytics`): adds the tracking
+ * script to index.html only when VITE_UMAMI_SCRIPT_URL is set, so a setup
+ * without Umami ships no dead script tag.
+ */
+function umamiScript(): Plugin {
+  let env: Record<string, string> = {}
+  return {
+    name: 'umami-script',
+    configResolved(config) {
+      env = config.env
+    },
+    transformIndexHtml() {
+      const src = env.VITE_UMAMI_SCRIPT_URL
+      if (!src) return
+      return [
+        {
+          tag: 'script',
+          attrs: { defer: true, src, 'data-website-id': env.VITE_UMAMI_WEBSITE_ID ?? '' },
+          injectTo: 'head',
+        },
+      ]
+    },
+  }
+}
+
 export default defineConfig({
   // Prerender the marketing pages to static HTML. `try_files $uri $uri/
   // /index.html` in nginx.conf.template already serves dist/<route>/index.html,
@@ -137,6 +163,7 @@ export default defineConfig({
   },
   plugins: [
     brandAssets(),
+    umamiScript(),
     VueRouter({
       routesFolder: ['src/platform/pages', 'src/example/pages'],
       dts: 'src/typed-router.d.ts',
@@ -166,6 +193,11 @@ export default defineConfig({
     proxy: {
       '/v1': {
         target: process.env.API_TARGET ?? 'http://localhost:8000',
+        changeOrigin: true,
+      },
+      // Browser telemetry (VITE_FARO_URL=/collect) -> the Alloy agent's Faro receiver
+      '/collect': {
+        target: process.env.FARO_TARGET ?? 'http://localhost:12347',
         changeOrigin: true,
       },
     },

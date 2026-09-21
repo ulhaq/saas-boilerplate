@@ -12,6 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 # Must run before any src imports: env vars are read at import time by
 # config/database modules
 os.environ["RATE_LIMIT_ENABLED"] = "false"
+# Never export telemetry from tests, even when .env enables it
+os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"] = ""
 
 import src.platform.core.security as _security_mod
 from src.bootstrap import ALL_PERMISSIONS, PERMISSION_DESCRIPTIONS

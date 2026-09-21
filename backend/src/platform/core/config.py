@@ -97,6 +97,10 @@ class Settings(EnvSettings):
     log_exc_info: bool = True
     sqlalchemy_echo: bool = False
 
+    # OpenTelemetry traces + metrics go to this OTLP/HTTP endpoint (e.g. the
+    # Alloy agent at http://alloy:4318). Empty disables telemetry.
+    otel_exporter_otlp_endpoint: str = ""
+
     permissions_cache_max_age: int = 60 * 60
 
     plans_cache_max_age: int = 60 * 60

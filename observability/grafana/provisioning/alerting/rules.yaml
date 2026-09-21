@@ -1,0 +1,191 @@
+# Grafana-managed alert rules. Metric names follow the OTLP -> Prometheus
+# translation of what src/platform/core/telemetry.py and the FastAPI
+# instrumentation emit; browser errors come from Faro via Loki.
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: api
+    folder: App
+    interval: 1m
+    rules:
+      - uid: api-5xx-rate
+        title: API 5xx error rate above 5%
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              expr: >-
+                sum(rate(http_server_request_duration_seconds_count{service_name="api", http_response_status_code=~"5.."}[5m]))
+                / sum(rate(http_server_request_duration_seconds_count{service_name="api"}[5m]))
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0.05] }
+        # No traffic or no 5xx -> no data -> fine
+        noDataState: OK
+        execErrState: Error
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: "{{ humanizePercentage $values.A.Value }} of API requests are failing with 5xx"
+
+      - uid: api-p95-latency
+        title: API p95 latency above 1s
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              expr: >-
+                histogram_quantile(0.95,
+                  sum by (le) (rate(http_server_request_duration_seconds_bucket{service_name="api"}[5m])))
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [1] }
+        noDataState: OK
+        execErrState: Error
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "API p95 latency is {{ humanizeDuration $values.A.Value }}"
+
+  - orgId: 1
+    name: worker
+    folder: App
+    interval: 1m
+    rules:
+      - uid: worker-heartbeat
+        title: Worker loop overdue
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              # Time since last success, in multiples of the loop's own interval
+              expr: >-
+                (time() - max by (worker) (worker_last_success_seconds))
+                / max by (worker) (worker_interval_seconds)
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [2] }
+        # No worker metrics at all = worker process down (or never started)
+        noDataState: Alerting
+        execErrState: Error
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: "Worker {{ $labels.worker }} has not succeeded for {{ humanize $values.A.Value }}x its interval (no data: the worker is not reporting)"
+
+      - uid: worker-errors
+        title: Worker loop failing
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 3600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              expr: sum by (worker) (increase(worker_runs_total{outcome="error"}[1h]))
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+        noDataState: OK
+        execErrState: Error
+        for: 0s
+        labels: { severity: warning }
+        annotations:
+          summary: 'Worker {{ $labels.worker }} failed {{ printf "%.0f" $values.A.Value }} time(s) in the last hour - check its error logs'
+
+  - orgId: 1
+    name: billing
+    folder: App
+    interval: 1m
+    rules:
+      - uid: billing-webhook-failures
+        title: Stripe webhook failures
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              instant: true
+              # retry = transient (Stripe retries), failed = permanent (acknowledged)
+              expr: sum by (outcome) (increase(billing_webhook_events_total{outcome=~"failed|retry"}[15m]))
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+        noDataState: OK
+        execErrState: Error
+        for: 0s
+        labels: { severity: critical }
+        annotations:
+          summary: '{{ printf "%.0f" $values.A.Value }} Stripe webhook event(s) ended as "{{ $labels.outcome }}" in the last 15 minutes'
+
+  - orgId: 1
+    name: frontend
+    folder: App
+    interval: 1m
+    rules:
+      - uid: frontend-exceptions
+        title: Frontend exception spike
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: loki
+            model:
+              refId: A
+              queryType: instant
+              expr: sum(count_over_time({service_name="browser"} | logfmt | kind="exception" [10m]))
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [20] }
+        noDataState: OK
+        execErrState: Error
+        for: 0s
+        labels: { severity: warning }
+        annotations:
+          summary: '{{ printf "%.0f" $values.A.Value }} browser exceptions in the last 10 minutes'

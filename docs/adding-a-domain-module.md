@@ -55,7 +55,7 @@ def bootstrap() -> None:
 |-------|------|
 | `src/main.py` | `from src.acme.routers import ...` + `app.include_router(...)` |
 | `alembic/env.py` | `from src.acme import models  # noqa: F401` (metadata registration - without this, autogenerate will try to drop your tables) |
-| `worker.py` | `asyncio.create_task(run_acme_loop(ASYNC_SESSION_LOCAL))` if you need a background loop (never start loops in `main.py`) |
+| `worker.py` | `asyncio.create_task(run_acme_loop(ASYNC_SESSION_LOCAL))` if you need a background loop (never start loops in `main.py`); wrap each iteration in `track_worker_run("acme", interval)` (`src/platform/core/telemetry.py`) so it gets metrics and the overdue/failing alerts |
 | `pyproject.toml` | add `src.acme` to the import-linter contract's `forbidden_modules` so the platform can't import it either |
 
 ### 4. Migrate and test

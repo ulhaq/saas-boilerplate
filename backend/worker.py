@@ -14,9 +14,10 @@ import logging
 import signal
 
 from src.bootstrap import bootstrap
+from src.example.worker import run_example_loop
 from src.platform.core.database import ASYNC_SESSION_LOCAL
 from src.platform.core.logging import setup_logging
-from src.example.worker import run_example_loop
+from src.platform.core.telemetry import setup_telemetry
 from src.platform.services.billing import (
     run_stale_checkout_cleanup_loop,
     run_trial_reminder_loop,
@@ -24,6 +25,7 @@ from src.platform.services.billing import (
 from src.platform.services.gdpr import run_gdpr_retention_loop
 
 setup_logging("worker")
+setup_telemetry("worker")
 log = logging.getLogger(__name__)
 
 

@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.platform.core.audit import write_audit_log
 from src.platform.core.config import settings
+from src.platform.core.telemetry import track_worker_run
 from src.platform.enums import AuditAction
 from src.platform.models.email_verification_token import EmailVerificationToken
 from src.platform.models.invite_token import InviteToken
@@ -99,19 +100,21 @@ async def purge_soft_deleted_orgs(db: AsyncSession) -> int:
 
 
 async def run_gdpr_retention_loop(session_factory: Any) -> None:
+    interval = settings.gdpr_retention_interval_seconds
     while True:
         try:
-            async with session_factory() as session:
-                async with session.begin():
-                    token_count = await purge_expired_tokens(session)
-                    user_count = await purge_soft_deleted_users(session)
-                    org_count = await purge_soft_deleted_orgs(session)
-                    log.info(
-                        "GDPR retention: purged %d token(s), %d user(s), %d org(s)",
-                        token_count,
-                        user_count,
-                        org_count,
-                    )
+            with track_worker_run("gdpr_retention", interval):
+                async with session_factory() as session:
+                    async with session.begin():
+                        token_count = await purge_expired_tokens(session)
+                        user_count = await purge_soft_deleted_users(session)
+                        org_count = await purge_soft_deleted_orgs(session)
+                        log.info(
+                            "GDPR retention: purged %d token(s), %d user(s), %d org(s)",
+                            token_count,
+                            user_count,
+                            org_count,
+                        )
         except Exception as exc:
             log.error("GDPR retention loop error: %s", exc, exc_info=True)
-        await asyncio.sleep(settings.gdpr_retention_interval_seconds)
+        await asyncio.sleep(interval)

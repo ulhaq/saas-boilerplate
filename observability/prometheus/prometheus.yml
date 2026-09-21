@@ -1,0 +1,16 @@
+# Metrics arrive over OTLP (/api/v1/otlp, enabled with --web.enable-otlp-receiver)
+# from the Alloy agent on the app host; nothing is scraped.
+global:
+  evaluation_interval: 1m
+
+otlp:
+  # Queryable labels from the OTel resource (service.name "api"/"worker", ...)
+  promote_resource_attributes:
+    - service.name
+    - service.namespace
+    - deployment.environment.name
+
+storage:
+  tsdb:
+    # OTLP batches can arrive slightly out of order
+    out_of_order_time_window: 30m

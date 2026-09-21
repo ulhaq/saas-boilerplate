@@ -63,7 +63,7 @@ The backend runs as **two separate processes**:
 | **API** | `src/main.py` (uvicorn) | Handles HTTP requests |
 | **Worker** | `worker.py` | Runs product loops (the example heartbeat), GDPR retention, billing cleanup, and trial reminder loops as concurrent asyncio tasks |
 
-Adding a new background loop: implement a `run_X_loop(session_factory)` coroutine and register it as a task in `worker.py`. Never start background tasks inside `main.py`'s lifespan - horizontal API scaling would cause duplicate runs.
+Adding a new background loop: implement a `run_X_loop(session_factory)` coroutine and register it as a task in `worker.py`. Wrap each iteration in `track_worker_run("x", interval)` (`backend/src/platform/core/telemetry.py`) so it shows up on the dashboard and in the overdue/failing alerts. Never start background tasks inside `main.py`'s lifespan - horizontal API scaling would cause duplicate runs.
 
 ## Permission Flow (Backend → Frontend)
 

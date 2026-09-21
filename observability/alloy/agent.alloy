@@ -1,0 +1,135 @@
+// Grafana Alloy agent on the APP host (compose profile `observability`).
+//
+// Collects everything locally and forwards it to the monitoring stack
+// (docker-compose.observability.yml) at OBSERVABILITY_HOST:
+//   API/worker traces + metrics  -- OTLP/HTTP :4318 -->  Tempo :4318 / Prometheus :9090
+//   container logs (docker)      -------------------->  Loki :3100
+//   browser telemetry (Faro)     -- :12347 /collect -->  Loki (logs) / Tempo
+// The monitoring host needs no public endpoint: only this agent talks to it.
+
+// --- Traces + metrics from the API and worker ------------------------------
+
+otelcol.receiver.otlp "app" {
+  http {
+    endpoint = "0.0.0.0:4318"
+  }
+
+  output {
+    metrics = [otelcol.processor.batch.default.input]
+    traces  = [otelcol.processor.batch.default.input]
+  }
+}
+
+otelcol.processor.batch "default" {
+  output {
+    metrics = [otelcol.exporter.otlphttp.prometheus.input]
+    traces  = [otelcol.exporter.otlphttp.tempo.input]
+  }
+}
+
+otelcol.exporter.otlphttp "tempo" {
+  client {
+    endpoint = "http://" + sys.env("OBSERVABILITY_HOST") + ":4318"
+  }
+}
+
+otelcol.exporter.otlphttp "prometheus" {
+  // The exporter appends /v1/metrics
+  client {
+    endpoint = "http://" + sys.env("OBSERVABILITY_HOST") + ":9090/api/v1/otlp"
+  }
+}
+
+// --- Container logs ----------------------------------------------------------
+
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+  // Pick up containers recreated by a deploy quickly (default 1m)
+  refresh_interval = "15s"
+}
+
+discovery.relabel "app" {
+  targets = discovery.docker.containers.targets
+
+  // Only the app's own services, not this agent or other stacks on the host
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    regex         = "backend|worker|frontend|postgres"
+    action        = "keep"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service_name"
+  }
+}
+
+loki.source.docker "app" {
+  host       = "unix:///var/run/docker.sock"
+  // Filtered targets: relabel_rules alone would relabel but still tail everything
+  targets    = discovery.relabel.app.output
+  forward_to = [loki.process.app.receiver]
+}
+
+loki.process "app" {
+  // Backend/worker lines are JSON with LOG_FORMAT=json (production); other lines
+  // pass through as-is. trace_id/request_id become structured metadata so a log
+  // line links to its trace without blowing up label cardinality.
+  stage.json {
+    expressions = {
+      level      = "level",
+      trace_id   = "trace_id",
+      request_id = "request_id",
+    }
+  }
+
+  stage.labels {
+    values = {
+      level = "",
+    }
+  }
+
+  stage.structured_metadata {
+    values = {
+      trace_id   = "",
+      request_id = "",
+    }
+  }
+
+  forward_to = [loki.write.monitoring.receiver]
+}
+
+// --- Browser telemetry (Grafana Faro) -----------------------------------------
+
+faro.receiver "browser" {
+  server {
+    listen_address = "0.0.0.0"
+    listen_port    = 12347
+
+    rate_limiting {
+      rate       = 50
+      burst_size = 100
+    }
+  }
+
+  output {
+    logs   = [loki.process.browser.receiver]
+    traces = [otelcol.processor.batch.default.input]
+  }
+}
+
+loki.process "browser" {
+  stage.static_labels {
+    values = {
+      service_name = "browser",
+    }
+  }
+
+  forward_to = [loki.write.monitoring.receiver]
+}
+
+loki.write "monitoring" {
+  endpoint {
+    url = "http://" + sys.env("OBSERVABILITY_HOST") + ":3100/loki/api/v1/push"
+  }
+}

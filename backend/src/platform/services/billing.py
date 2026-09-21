@@ -17,6 +17,7 @@ from src.platform.core.exceptions import (
 )
 from src.platform.core.hooks import HookEvent, emit
 from src.platform.core.security import Auth
+from src.platform.core.telemetry import record_webhook_event, track_worker_run
 from src.platform.enums import AuditAction, ErrorCode, Permission
 from src.platform.models.billing import PlanPrice, Subscription
 from src.platform.models.organization import Organization
@@ -540,6 +541,7 @@ class WebhookService(BaseService):
         )
 
         if not should_process or event_record is None:
+            record_webhook_event(webhook.event_type, "duplicate")
             return True
 
         try:
@@ -547,6 +549,7 @@ class WebhookService(BaseService):
         except BillingProviderException as exc:
             # Transient provider error - let Stripe retry
             await self.repos.webhook_event.mark_failed(event_record, str(exc))
+            record_webhook_event(webhook.event_type, "retry")
             return False
         except Exception as exc:
             # Permanent error (bug, unexpected data)
@@ -561,9 +564,11 @@ class WebhookService(BaseService):
             await self.repos.webhook_event.mark_failed(
                 event_record, f"permanent: {exc}"
             )
+            record_webhook_event(webhook.event_type, "failed")
             return True
 
         await self.repos.webhook_event.mark_processed(event_record)
+        record_webhook_event(webhook.event_type, "processed")
         await self.log_audit(
             AuditAction.BILLING_WEBHOOK,
             resource_type="webhook_event",
@@ -1411,16 +1416,18 @@ async def run_trial_reminder_loop(session_factory: Any) -> None:
     default). Must run in the worker process only - running it in the API would
     email each organization once per API replica.
     """
+    interval = settings.billing_trial_reminder_interval_seconds
     while True:
         try:
-            async with session_factory() as session:
-                async with session.begin():
-                    service = BillingMaintenanceService(RepositoryManager(session))
-                    count = await service.send_trial_reminders()
-                    log.info("Trial reminder: %d organization(s) emailed", count)
+            with track_worker_run("trial_reminder", interval):
+                async with session_factory() as session:
+                    async with session.begin():
+                        service = BillingMaintenanceService(RepositoryManager(session))
+                        count = await service.send_trial_reminders()
+                        log.info("Trial reminder: %d organization(s) emailed", count)
         except Exception as exc:
             log.error("Trial reminder loop error: %s", exc, exc_info=True)
-        await asyncio.sleep(settings.billing_trial_reminder_interval_seconds)
+        await asyncio.sleep(interval)
 
 
 async def run_stale_checkout_cleanup_loop(session_factory: Any) -> None:
@@ -1428,16 +1435,18 @@ async def run_stale_checkout_cleanup_loop(session_factory: Any) -> None:
     Background loop that calls cleanup_stale_checkouts once every 24 hours.
     Intended to be launched as an asyncio task from the application lifespan.
     """
+    interval = settings.billing_cleanup_interval_seconds
     while True:
         try:
-            async with session_factory() as session:
-                async with session.begin():
-                    service = BillingMaintenanceService(RepositoryManager(session))
-                    count = await service.cleanup_stale_checkouts()
-                    log.info(
-                        "Stale checkout cleanup: %d subscription(s) canceled",
-                        count,
-                    )
+            with track_worker_run("stale_checkout_cleanup", interval):
+                async with session_factory() as session:
+                    async with session.begin():
+                        service = BillingMaintenanceService(RepositoryManager(session))
+                        count = await service.cleanup_stale_checkouts()
+                        log.info(
+                            "Stale checkout cleanup: %d subscription(s) canceled",
+                            count,
+                        )
         except Exception as exc:
             log.error("Stale checkout cleanup loop error: %s", exc, exc_info=True)
-        await asyncio.sleep(settings.billing_cleanup_interval_seconds)
+        await asyncio.sleep(interval)

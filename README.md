@@ -11,6 +11,7 @@ The product-specific code lives in one package per side (`backend/src/example/`,
 - **Billing** via Stripe: plans, trials, checkout, customer portal, webhooks, plan features, seat/usage/capacity limits
 - **Audit log, GDPR export/erasure/retention**, cookie consent
 - **Notifications**: localized transactional email (Danish/English, MJML templates) and in-app notifications
+- **Observability** (opt-in, self-hosted): OpenTelemetry traces/metrics, JSON logs, browser errors via Grafana Faro, and a provisioned Grafana dashboard + alerts (Prometheus, Loki, Tempo) - see [`observability/README.md`](observability/README.md)
 - **Marketing site**: localized routes (`/da/...`, `/en/...`), SSG prerendering, SEO tags, generated sitemap/robots, contact form, waitlist mode
 - **Example product**: org-scoped Projects CRUD with permissions, a plan capacity limit, a hook handler, and a worker loop
 
@@ -21,7 +22,7 @@ The product-specific code lives in one package per side (`backend/src/example/`,
 | Backend | Python 3.14, FastAPI, async SQLAlchemy, PostgreSQL, Alembic, `uv` |
 | Worker | Standalone asyncio process (product loops, GDPR retention, billing cleanup, trial reminders) |
 | Frontend | Vue 3, TypeScript, Vite + vite-ssg, Pinia, vue-i18n, Tailwind + Reka UI, file-based routing |
-| Infra | Docker Compose (postgres, pgadmin, mailpit, umami, backend, worker, frontend) |
+| Infra | Docker Compose (postgres, pgadmin, mailpit, backend, worker, frontend); opt-in profiles: `analytics` (Umami), `observability` (Alloy agent + Grafana, Prometheus, Loki, Tempo) |
 
 ## Architecture
 
@@ -65,7 +66,7 @@ Background loops live only in the worker so the API can scale horizontally witho
 2. **Product code**: replace the `example` package on both sides - step-by-step in [`docs/adding-a-domain-module.md`](docs/adding-a-domain-module.md).
 3. **Plans**: adjust the seeded plans/prices/seat limits in the initial migration, product limits in your product migration, and the plan copy (`planComparisonRows`, `planDescriptions`) in the product locales.
 4. **Legal**: adapt `frontend/src/platform/pages/terms.vue` and `privacy-policy.vue` (templates - get them reviewed).
-5. **Deploy config**: `etc.nginx.sites-available.example`, `ANALYTICS_ORIGIN` in `docker-compose.yml`, the deploy path in `.github/workflows/ci.yml`.
+5. **Deploy config**: `etc.nginx.sites-available.example`, `ANALYTICS_ORIGIN` in `docker-compose.yml` (only with the `analytics` profile), the deploy path in `.github/workflows/ci.yml`.
 
 Architecture details live in `backend/CLAUDE.md` and `frontend/CLAUDE.md`.
 

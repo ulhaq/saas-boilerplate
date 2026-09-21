@@ -3,6 +3,7 @@ import logging.config
 import re
 
 import structlog
+from opentelemetry import trace
 from structlog.processors import CallsiteParameter
 from structlog.typing import EventDict, Processor, WrappedLogger
 
@@ -119,6 +120,19 @@ def add_request_context(
     return event_dict
 
 
+def add_trace_context(
+    logger: WrappedLogger, name: str, event_dict: EventDict
+) -> EventDict:
+    """Processor: stamp the active OpenTelemetry trace/span id, so a log line
+    links to its trace in Grafana. Absent when telemetry is off or no span is
+    active."""
+    span_context = trace.get_current_span().get_span_context()
+    if span_context.is_valid:
+        event_dict["trace_id"] = format(span_context.trace_id, "032x")
+        event_dict["span_id"] = format(span_context.span_id, "016x")
+    return event_dict
+
+
 # --- Configuration ---------------------------------------------------------
 
 _LEVEL = settings.log_level.upper()
@@ -136,6 +150,7 @@ def _shared_processors() -> list[Processor]:
         structlog.stdlib.ExtraAdder(),
         structlog.stdlib.PositionalArgumentsFormatter(),
         add_request_context,
+        add_trace_context,
         structlog.processors.TimeStamper(fmt="iso", utc=True),
         structlog.processors.StackInfoRenderer(),
         structlog.processors.CallsiteParameterAdder(
