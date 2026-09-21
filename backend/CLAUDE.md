@@ -12,7 +12,7 @@ This file provides comprehensive guidance for working with this FastAPI multi-te
 - Async/await throughout using SQLAlchemy async drivers
 - Pydantic V2 for schema validation
 - Alembic for database migrations
-- Comprehensive pytest suite with in-memory SQLite testing
+- Comprehensive pytest suite running against PostgreSQL
 - Type hints throughout (enforced via ty)
 - Line length limit: 88 characters
 
@@ -92,8 +92,8 @@ Prefer adding to an existing staged migration file over creating a new one.
 The initial migration holds the platform schema and seeds (permissions, plans, seat limits); product tables and product plan limits go in product migrations.
 
 ### Testing
-- Tests use **SQLite in-memory** database; no external DB needed
-- `tests/conftest.py` provides: async test client, pre-seeded organizations/users/roles/permissions, and per-test DB teardown
+- Tests run against the app's **PostgreSQL** server (`settings.db_connection`: docker compose builds `DB_CONNECTION` from the `DB_*` parts in `.env`; outside compose `Settings` does the same), never the app database itself: each xdist worker creates and drops its own `<db>_test_<worker>` database, so the role needs `CREATEDB`. The dev stack grants that at postgres init (`DB_USER_CREATEDB`); run `uv run poe test` - without a `DB_CONNECTION` (only compose and CI set one) the app settings point at `localhost:$POSTGRES_PORT` (default 5432, `APP_ENV=local` only)
+- `tests/conftest.py` provides: async test client, pre-seeded organizations/users/roles/permissions, and per-test table truncation (`RESTART IDENTITY`, so seeded ids are stable)
 - `asyncio_mode = auto` (set in `pytest.ini`); all test functions can be `async`
 - Platform tests must not import product code - use a test-local enum where a metric/feature is needed
 

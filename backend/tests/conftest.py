@@ -4,24 +4,20 @@ from collections.abc import AsyncGenerator, Generator
 from datetime import UTC, datetime
 
 import pytest
-import sqlalchemy.dialects.postgresql as _pg_dialect
 from fastapi.testclient import TestClient
 from httpx import Headers
-from sqlalchemy import JSON, StaticPool
-from sqlalchemy import text as _text
+from sqlalchemy import NullPool, create_engine, make_url, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-# These must run before any src imports:
-# - env vars are read at import time by config/database modules
-# - JSONB→JSON patch lets SQLite run Base.metadata.create_all() in tests
+# Must run before any src imports: env vars are read at import time by
+# config/database modules
 os.environ["RATE_LIMIT_ENABLED"] = "false"
-_pg_dialect.JSONB = JSON  # ty: ignore[invalid-assignment]
 
-import src.platform.core.security as _security_mod  # noqa: E402
-from src.bootstrap import ALL_PERMISSIONS, PERMISSION_DESCRIPTIONS  # noqa: E402
-from src.init_db import INIT_AUTH_DATA  # noqa: E402
-from src.main import app  # noqa: E402
-from src.platform.billing import (  # noqa: E402
+import src.platform.core.security as _security_mod
+from src.bootstrap import ALL_PERMISSIONS, PERMISSION_DESCRIPTIONS
+from src.init_db import INIT_AUTH_DATA
+from src.main import app
+from src.platform.billing import (
     BillingProviderABC,
     CheckoutResult,
     CustomerPortalResult,
@@ -31,21 +27,31 @@ from src.platform.billing import (  # noqa: E402
     WebhookPayload,
     get_billing_provider,
 )
-from src.platform.core.config import settings  # noqa: E402
-from src.platform.core.database import Base, get_db  # noqa: E402
-from src.platform.core.security import hash_secret  # noqa: E402
-from src.platform.enums import PlanFeature  # noqa: E402
-from src.platform.models.billing import Plan, PlanPrice, Subscription  # noqa: E402
-from src.platform.models.billing import PlanFeature as PlanFeatureModel  # noqa: E402
-from src.platform.models.organization import Organization  # noqa: E402
-from src.platform.models.permission import Permission  # noqa: E402
-from src.platform.models.role import Role  # noqa: E402
-from src.platform.models.user import User  # noqa: E402
-from src.platform.models.user_organization import UserOrganization  # noqa: E402
+from src.platform.core.config import settings
+from src.platform.core.database import Base, get_db
+from src.platform.core.security import hash_secret
+from src.platform.enums import PlanFeature
+from src.platform.models.billing import Plan, PlanPrice, Subscription
+from src.platform.models.billing import PlanFeature as PlanFeatureModel
+from src.platform.models.organization import Organization
+from src.platform.models.permission import Permission
+from src.platform.models.role import Role
+from src.platform.models.user import User
+from src.platform.models.user_organization import UserOrganization
 
-TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+# Tests run against a real PostgreSQL server so Postgres-only behaviour (JSONB,
+# partial indexes, advisory locks, constraint semantics) is exercised. They use
+# the app's server and credentials (settings.db_connection), but never the app
+# database itself: each pytest-xdist worker creates and drops its own
+# `<db>_test_<worker>` database, so the role needs CREATEDB.
+_app_url = make_url(settings.db_connection)
+_worker = os.environ.get("PYTEST_XDIST_WORKER", "main")
+TEST_DATABASE_URL = _app_url.set(database=f"{_app_url.database}_test_{_worker}")
 
-test_engine = create_async_engine(TEST_DATABASE_URL, poolclass=StaticPool)
+# NullPool: TestClient runs the app on its own event loop, so connections must
+# not be shared across loops.
+test_engine = create_async_engine(TEST_DATABASE_URL, poolclass=NullPool)
+_sync_test_engine = create_engine(TEST_DATABASE_URL, poolclass=NullPool)
 TestSessionLocal = async_sessionmaker(
     autocommit=False, autoflush=False, bind=test_engine
 )
@@ -87,11 +93,36 @@ def fast_password_hashing() -> Generator[None]:
     _security_mod.crypt_context = original
 
 
+@pytest.fixture(scope="session", autouse=True)
+def test_database() -> Generator[None]:
+    """Create a fresh database (and schema) for this worker, drop it afterwards."""
+    admin_engine = create_engine(
+        TEST_DATABASE_URL.set(database="postgres"),
+        poolclass=NullPool,
+        isolation_level="AUTOCOMMIT",
+    )
+    name = TEST_DATABASE_URL.database
+    with admin_engine.connect() as conn:
+        conn.execute(text(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)'))
+        conn.execute(text(f'CREATE DATABASE "{name}"'))
+
+    Base.metadata.create_all(_sync_test_engine)
+    yield
+
+    with admin_engine.connect() as conn:
+        conn.execute(text(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)'))
+    admin_engine.dispose()
+
+
+def _truncate_all_tables() -> None:
+    # RESTART IDENTITY keeps seeded ids at 1, 2, ... which tests rely on
+    tables = ", ".join(f'"{t.name}"' for t in Base.metadata.sorted_tables)
+    with _sync_test_engine.begin() as conn:
+        conn.execute(text(f"TRUNCATE {tables} RESTART IDENTITY CASCADE"))
+
+
 @pytest.fixture(scope="function", autouse=True)
 async def prepare_database() -> AsyncGenerator[None]:
-    async with test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
     hashed_password = hash_secret("password")
     async with TestSessionLocal() as session:
         organizations = []
@@ -201,25 +232,7 @@ async def prepare_database() -> AsyncGenerator[None]:
 
         await session.commit()
     yield
-    async with test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-
-
-@pytest.fixture(autouse=True)
-def mock_pg_advisory_lock(mocker):
-    """Make pg_advisory_xact_lock a no-op in SQLite tests.
-
-    This is a PostgreSQL-only function used in start_checkout to prevent
-    concurrent duplicate customer creation. SQLite does not support it, so
-    we replace the one text() call in the billing service with SELECT 1.
-    """
-
-    def _patched_text(clause: str):
-        if "pg_advisory_xact_lock" in clause:
-            return _text("SELECT 1")
-        return _text(clause)
-
-    mocker.patch("src.platform.repositories.billing.text", side_effect=_patched_text)
+    _truncate_all_tables()
 
 
 @pytest.fixture(autouse=True)

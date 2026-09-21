@@ -206,6 +206,12 @@ class UserService(
                     error_code=ErrorCode.OWNER_ROLE_ASSIGNMENT,
                 )
 
+        organization = await self.repos.organization.get(
+            self.current_user.organization_id
+        )
+        if not organization:
+            raise NotFoundException("Organization not found.")
+
         existing = await self.repo.get_by_email(invite_in.email)
         if existing:
             membership = (
@@ -242,12 +248,6 @@ class UserService(
             resource_type="user",
             details={"email": invite_in.email},
         )
-
-        organization = await self.repos.organization.get(
-            self.current_user.organization_id
-        )
-        if not organization:
-            raise NotFoundException("Organization not found.")
 
         # Invitee has no account yet, so no stored locale; defaults to English.
         schedule_task(

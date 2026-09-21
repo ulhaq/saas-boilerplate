@@ -26,7 +26,6 @@ dependencies = [
 [dependency-groups]
 dev = [
     "aiosmtpd>=1.4.6",
-    "aiosqlite>=0.22.1",
     "import-linter>=2.11",
     "locust>=2.44.1",
     "poethepoet>=0.46.0",

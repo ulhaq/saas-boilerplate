@@ -1,10 +1,10 @@
 """Targeted tests for specific coverage gaps not covered by other test files."""
 
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from pydantic import ValidationError
-from sqlalchemy import insert
 
 from src.platform.core.exceptions import (
     AlreadyExistsException,
@@ -14,6 +14,7 @@ from src.platform.core.exceptions import (
 from src.platform.core.security import Auth
 from src.platform.enums import ComparisonOperator
 from src.platform.enums import Permission as PermEnum
+from src.platform.models.user import User
 from src.platform.models.user_organization import UserOrganization
 from src.platform.repositories.repository_manager import RepositoryManager
 from src.platform.schemas.billing import CheckoutIn, StartTrialIn
@@ -145,25 +146,33 @@ async def test_delete_with_validation_callback_is_called():
 
 async def test_delete_organization_skips_orphaned_membership():
     """
-    delete_organization continues when a membership references a missing user (line 180)
+    delete_organization skips a membership whose user is soft-deleted (line 180)
     """
-    # SQLite does not enforce FK constraints by default, so we can insert a
-    # UserOrganization row whose user_id does not exist in the users table.
+    deleted_at = datetime(2026, 1, 1, tzinfo=UTC)
     async with TestSessionLocal() as session:
         async with session.begin():
-            await session.execute(
-                insert(UserOrganization).values(
-                    user_id=99999,
-                    organization_id=1,
-                )
+            user = User(
+                name="Gone",
+                email="gone@example.org",
+                password="x",
+                deleted_at=deleted_at,
             )
+            session.add(user)
+            await session.flush()
+            session.add(UserOrganization(user_id=user.id, organization_id=1))
+            user_id = user.id
 
     async with TestSessionLocal() as session:
         async with session.begin():
             repos = RepositoryManager(session)
             service = OrganizationService(repos, _admin_auth(org_id=1), MagicMock())
-            # Should not raise; the orphaned membership is silently skipped
+            # Should not raise; the soft-deleted user is silently skipped
             await service.delete_organization(1)
+
+    async with TestSessionLocal() as session:
+        user = await session.get(User, user_id)
+        assert user is not None
+        assert user.deleted_at == deleted_at
 
 
 # ---------------------------------------------------------------------------

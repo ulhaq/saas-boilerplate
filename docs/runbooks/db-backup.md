@@ -76,11 +76,11 @@ cd backend && alembic upgrade head
 ## Disaster recovery
 
 1. Provision a fresh PostgreSQL instance.
-2. Create the scoped DB user and database (mirrors what `postgres/init.sh` does on first start):
+2. Create the scoped DB user and database (mirrors what `scripts/db-init.sh` does on first start):
    ```sql
    CREATE USER username WITH PASSWORD 'secret';
    CREATE DATABASE app_db OWNER username;
    ```
 3. Run restore: `DB_NAME=app_db DB_USER=username DB_PASSWORD=secret ./scripts/db-restore.sh <latest-backup>`
 4. Apply any migrations that post-date the backup: `cd backend && alembic upgrade head`
-5. Point the application at the new host via `DB_CONNECTION` env var in `backend/.env`.
+5. Point the application at the new host via `DB_HOST` / `DB_PORT` (and `DB_NAME` / `DB_USER` / `DB_PASSWORD`) in `backend/.env` - docker compose builds `DB_CONNECTION` from them.

@@ -9,6 +9,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       DB_UMAMI_USER: ${DB_UMAMI_USER}
       DB_UMAMI_PASSWORD: ${DB_UMAMI_PASSWORD}
+      DB_USER_CREATEDB: "true"
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
@@ -62,6 +63,8 @@ services:
       dockerfile: ${DOCKERFILE:-Dockerfile.dev}
     restart: unless-stopped
     env_file: ./backend/.env
+    environment:
+      DB_CONNECTION: postgresql+psycopg://${DB_USER}:${DB_PASSWORD}@${DB_HOST:-postgres}:${DB_PORT:-5432}/${DB_NAME}
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     volumes:
@@ -84,6 +87,8 @@ services:
       dockerfile: ${DOCKERFILE:-Dockerfile.dev}
     restart: unless-stopped
     env_file: ./backend/.env
+    environment:
+      DB_CONNECTION: postgresql+psycopg://${DB_USER}:${DB_PASSWORD}@${DB_HOST:-postgres}:${DB_PORT:-5432}/${DB_NAME}
     command: uv run watchfiles --filter python "python worker.py"
     volumes:
       - ./backend:/app

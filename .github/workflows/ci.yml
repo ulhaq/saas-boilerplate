@@ -13,6 +13,19 @@ jobs:
       run:
         working-directory: backend
 
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     steps:
       - uses: actions/checkout@v6
 
@@ -30,7 +43,7 @@ jobs:
       - name: Test
         env:
           APP_SECRET: ci-test-secret-not-for-production
-          DB_CONNECTION: postgresql+psycopg://localhost/test
+          DB_CONNECTION: postgresql+psycopg://postgres:postgres@localhost:5432/app
         run: uv run poe test
 
   frontend:

@@ -238,7 +238,6 @@ def setup_logging(service: str) -> None:
                 },
                 "httpx": {"level": "WARNING"},
                 "httpcore": {"level": "WARNING"},
-                "aiosqlite": {"level": "WARNING"},
             },
             "root": {
                 "handlers": ["stdout"],

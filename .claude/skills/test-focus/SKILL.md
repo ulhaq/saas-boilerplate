@@ -80,6 +80,6 @@ Summarize:
 
 ## Notes
 
-- Backend tests use SQLite in-memory; no running database needed
+- Backend tests need the app's PostgreSQL server (`DB_*` in `backend/.env`) with a `CREATEDB` role - the dev stack must be up (it grants `CREATEDB` at init; see README)
 - `asyncio_mode = auto` - all test functions can be `async`
 - `tests/conftest.py` provides pre-seeded fixtures; do not seed manually before running tests

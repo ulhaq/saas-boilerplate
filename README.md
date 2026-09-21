@@ -116,10 +116,22 @@ cd backend && python -m src.init_db
 uv run poe dev      # dev server on :8000
 uv run poe format   # ruff format + autofix
 uv run poe lint     # ty (type check) + ruff + import-linter boundary contract
-uv run poe test     # pytest (in-memory SQLite, no external services)
+uv run poe test     # pytest against PostgreSQL (see below)
 alembic revision --autogenerate -m "..."   # new migration
 alembic upgrade head
 ```
+
+Tests run against the app's PostgreSQL server (the `DB_*` settings in `.env`, or
+`DB_CONNECTION` if set, as in CI), but never touch the app database: each
+pytest-xdist worker creates and drops its own `<db>_test_<worker>` database, so
+`DB_USER` needs `CREATEDB`. The dev stack
+grants it when the postgres volume is first initialized (`DB_USER_CREATEDB` in
+`docker-compose.dev.yml`); production doesn't. With the dev stack up, run
+`uv run poe test` from `backend/`. Without a `DB_CONNECTION` (only compose and CI
+set one), the app settings build it from the `DB_*` parts and connect to
+`localhost` on `POSTGRES_PORT` (default 5432; set it when using a
+`make up-local <offset>` stack) - this also covers `alembic`, `init_db` and the
+dev server run on the host. Only with `APP_ENV=local`.
 
 ### Frontend (`cd frontend`)
 

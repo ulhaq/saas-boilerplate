@@ -2,6 +2,7 @@ from typing import Literal, Self
 
 from pydantic import Field, SecretStr, computed_field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy import URL
 
 
 def _parse_comma_list(value: str) -> list[str]:
@@ -31,6 +32,11 @@ class Settings(EnvSettings):
     display_timezone: str = "Europe/Copenhagen"
 
     db_connection: str = ""
+    # Parts docker compose builds DB_CONNECTION from (see docker-compose*.yml)
+    db_name: str = ""
+    db_user: str = ""
+    db_password: SecretStr = SecretStr("")
+    postgres_port: int = 5432
 
     allow_multiple_organizations: bool = True
 
@@ -94,6 +100,25 @@ class Settings(EnvSettings):
     permissions_cache_max_age: int = 60 * 60
 
     plans_cache_max_age: int = 60 * 60
+
+    @model_validator(mode="after")
+    def default_db_connection(self) -> Self:
+        # Compose and CI always set DB_CONNECTION. Without it we're running on
+        # the host machine (tests, alembic, init_db, dev server), so reach the
+        # dev stack's postgres through the port it publishes on localhost.
+        if self.db_connection:
+            return self
+        if self.app_env != "local":
+            raise ValueError("DB_CONNECTION must be set in non-local environments")
+        self.db_connection = URL.create(
+            "postgresql+psycopg",
+            username=self.db_user,
+            password=self.db_password.get_secret_value(),
+            host="localhost",
+            port=self.postgres_port,
+            database=self.db_name,
+        ).render_as_string(hide_password=False)
+        return self
 
     @model_validator(mode="after")
     def validate_allow_origins_and_credentials(self) -> Self:
