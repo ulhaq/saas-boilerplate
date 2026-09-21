@@ -70,6 +70,15 @@ Processes run on the host (`uv run poe dev`) can't resolve `alloy`; leave
    Grafana binds to `127.0.0.1:3030` by default; put it behind nginx with TLS,
    or reach it over an SSH tunnel.
 
+   **Same server as the app:** let the deploy run it instead - put the contents
+   of `observability/.env` in an `OBSERVABILITY_ENV` repository secret. Each
+   deploy copies this directory, writes the `.env` and recreates the stack, so
+   dashboard/alert edits ship with the app. Set
+   `OBSERVABILITY_INGEST_BIND=172.17.0.1` (the `docker0` bridge address) so the
+   ingest ports are reachable from the agent but not from the internet, and
+   leave `OBSERVABILITY_HOST` unset on the app side (it defaults to
+   `host.docker.internal`, which resolves to that address).
+
 2. **App host** - add to the `BACKEND_ENV` secret (it is also the compose `.env`):
    ```bash
    COMPOSE_PROFILES=observability
@@ -77,8 +86,8 @@ Processes run on the host (`uv run poe dev`) can't resolve `alloy`; leave
    OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy:4318
    LOG_FORMAT=json
    ```
-   The deploy copies `observability/alloy/` to the server and starts the agent
-   with the stack.
+   The deploy copies `observability/` to the server and starts the agent with
+   the stack.
 
 3. **Browser telemetry** - add `VITE_FARO_URL=/collect` to the `FRONTEND_ENV`
    secret and the `/collect` location from `etc.nginx.sites-available.example` to

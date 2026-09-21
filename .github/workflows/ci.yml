@@ -129,13 +129,13 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Copy scripts and compose file to server
+      - name: Copy scripts and compose files to server
         uses: appleboy/scp-action@v1
         with:
           host: ${{ secrets.HETZNER_HOST }}
           username: ${{ secrets.HETZNER_USER }}
           key: ${{ secrets.HETZNER_SSH_KEY }}
-          source: scripts/,docker-compose.yml,observability/alloy/
+          source: scripts/,docker-compose.yml,docker-compose.observability.yml,observability/
           target: /opt/app/
 
       - name: Deploy via SSH
@@ -145,11 +145,12 @@ jobs:
           FRONTEND_IMAGE: ghcr.io/${{ github.repository }}/frontend:${{ github.sha }}
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
+          OBSERVABILITY_ENV: ${{ secrets.OBSERVABILITY_ENV }}
         with:
           host: ${{ secrets.HETZNER_HOST }}
           username: ${{ secrets.HETZNER_USER }}
           key: ${{ secrets.HETZNER_SSH_KEY }}
-          envs: BACKEND_IMAGE,FRONTEND_IMAGE,GHCR_TOKEN,GITHUB_ACTOR
+          envs: BACKEND_IMAGE,FRONTEND_IMAGE,GHCR_TOKEN,GITHUB_ACTOR,OBSERVABILITY_ENV
           script: |
             set -e
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
@@ -165,6 +166,17 @@ jobs:
             # the migration fails - old containers keep running, untouched.
             docker compose run --rm backend uv run alembic upgrade head
             docker compose up -d --remove-orphans
+            # Same stale-mount issue for the agent config; restart only if the
+            # observability profile is on (naming the service would start it).
+            if [ -n "$(docker compose ps -q alloy)" ]; then docker compose restart alloy; fi
+            # Monitoring stack on the same server, only when the OBSERVABILITY_ENV
+            # secret is set. Recreated every deploy: the copy replaces the config
+            # files, and single-file bind mounts keep pointing at the old ones.
+            if [ -n "$OBSERVABILITY_ENV" ]; then
+              printf '%s\n' "$OBSERVABILITY_ENV" > observability/.env
+              docker compose -f docker-compose.observability.yml -p observability \
+                --env-file observability/.env up -d --force-recreate --remove-orphans
+            fi
             # Each deploy pulls new SHA-tagged images; drop unused ones older
             # than 7 days so the disk doesn't fill. Images in use are never
             # removed, and older SHAs can be re-pulled from GHCR for a rollback.
