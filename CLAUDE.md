@@ -27,17 +27,17 @@ code - enforced by import-linter (backend) and ESLint (frontend).
 
 ## Running Locally
 
-**Recommended: Docker Compose** (runs postgres, mailhog, backend, worker, and frontend together):
+**Recommended: Docker Compose** (runs postgres, mailpit, backend, worker, and frontend together):
 
 ```bash
 cp backend/.env.example backend/.env   # fill in secrets
-make up-local                          # starts all services + pgadmin + mailhog
+make up-local                          # starts all services + pgadmin + mailpit
 make up-local 1                        # port offset: adds 1 to every host port (for parallel git worktree stacks)
 make down                              # stop everything
 make logs                              # tail all logs
 ```
 
-Services: backend API on `:8000`, frontend on `:5173`, pgadmin on `:5050`, mailhog UI on `:8025`.
+Services: backend API on `:8000`, frontend on `:5173`, pgadmin on `:5050`, mailpit UI on `:8025`.
 
 **Without Docker** (run each in a separate terminal, `cd` first):
 
@@ -78,5 +78,5 @@ When adding a new permission-gated feature:
 
 ## Email / Notifications
 
-Outbound email uses SMTP (mailhog in local dev).
+Outbound email uses SMTP (mailpit in local dev).
 Templates live in `backend/src/platform/templates/` (platform emails) and an optional product `templates/` directory (product emails, registered in `bootstrap()`). The worker sends emails via `asyncio.to_thread(send_email, ...)` so SMTP calls don't block the event loop. In-app notifications are written to the `notification` table alongside each email dispatch.

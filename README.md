@@ -21,7 +21,7 @@ The product-specific code lives in one package per side (`backend/src/example/`,
 | Backend | Python 3.14, FastAPI, async SQLAlchemy, PostgreSQL, Alembic, `uv` |
 | Worker | Standalone asyncio process (product loops, GDPR retention, billing cleanup, trial reminders) |
 | Frontend | Vue 3, TypeScript, Vite + vite-ssg, Pinia, vue-i18n, Tailwind + Reka UI, file-based routing |
-| Infra | Docker Compose (postgres, pgadmin, mailhog, umami, backend, worker, frontend) |
+| Infra | Docker Compose (postgres, pgadmin, mailpit, umami, backend, worker, frontend) |
 
 ## Architecture
 
@@ -75,7 +75,7 @@ Architecture details live in `backend/CLAUDE.md` and `frontend/CLAUDE.md`.
 
 ```bash
 cp backend/.env.example backend/.env   # fill in secrets (APP_SECRET, DB_*, ...)
-make up-local                          # postgres, mailhog, pgadmin, backend, worker, frontend
+make up-local                          # postgres, mailpit, pgadmin, backend, worker, frontend
 make logs                              # tail everything
 make down                              # stop
 ```
@@ -84,7 +84,7 @@ make down                              # stop
 |---------|-----|
 | Frontend | http://localhost:5173 |
 | API (+ OpenAPI docs) | http://localhost:8000 |
-| Mailhog (caught email) | http://localhost:8025 |
+| Mailpit (caught email) | http://localhost:8025 |
 | pgAdmin | http://localhost:5050 |
 
 ### Without Docker

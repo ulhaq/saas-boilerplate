@@ -16,8 +16,8 @@ export BACKEND_PORT      := $(call port,8000)
 export FRONTEND_PORT     := $(call port,5173)
 export POSTGRES_PORT     := $(call port,5432)
 export PGADMIN_PORT      := $(call port,5050)
-export MAILHOG_SMTP_PORT := $(call port,1025)
-export MAILHOG_UI_PORT   := $(call port,8025)
+export MAILPIT_SMTP_PORT := $(call port,1025)
+export MAILPIT_UI_PORT   := $(call port,8025)
 export UMAMI_PORT        := $(call port,3001)
 
 .PHONY: up up-local down build logs ps restart shell-backend shell-worker
@@ -35,7 +35,7 @@ up:
 
 up-local:
 	$(COMPOSE) --profile local up -d
-	@echo "backend http://localhost:$(BACKEND_PORT)  frontend http://localhost:$(FRONTEND_PORT)  pgadmin http://localhost:$(PGADMIN_PORT)  mailhog http://localhost:$(MAILHOG_UI_PORT)  umami http://localhost:$(UMAMI_PORT)"
+	@echo "backend http://localhost:$(BACKEND_PORT)  frontend http://localhost:$(FRONTEND_PORT)  pgadmin http://localhost:$(PGADMIN_PORT)  mailpit http://localhost:$(MAILPIT_UI_PORT)  umami http://localhost:$(UMAMI_PORT)"
 
 down:
 	$(COMPOSE) --profile local down --remove-orphans
