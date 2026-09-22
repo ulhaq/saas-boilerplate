@@ -1,0 +1,10 @@
+# The app is behind a login: block everything except the public auth pages
+# (keep in sync with INDEXABLE_PAGES in src/router/seo.ts). The marketing site
+# serves its own robots.txt and sitemap.
+User-agent: *
+Disallow: /
+Allow: /login$
+Allow: /register$
+Allow: /forgot-password$
+Allow: /assets/
+Allow: /favicon.svg

@@ -4,17 +4,6 @@ export default {
   app: {
     name: BRAND.name,
   },
-  waitlist: {
-    badge: 'Launching soon',
-    headline: 'Be the first to know',
-    sub: `${BRAND.name} is launching soon. Join the waitlist for early access.`,
-    nameLabel: 'Name (optional)',
-    namePlaceholder: 'Your name',
-    emailLabel: 'Email',
-    emailPlaceholder: 'you@company.com',
-    submit: 'Join the waitlist',
-    success: "You're on the list. We'll be in touch.",
-  },
   notifications: {
     title: 'Notifications',
     markAllRead: 'Mark all read',
@@ -561,15 +550,6 @@ export default {
     deletePasswordLabel: 'Confirm your password',
     deletePasswordPlaceholder: 'Enter your current password',
   },
-  cookie: {
-    title: 'Cookies',
-    description:
-      'We use a cookie that is strictly necessary for login. With your consent, we also enable optional services that set additional cookies.',
-    learnMore: 'Read more in our Privacy Policy.',
-    acceptAll: 'Accept all',
-    necessaryOnly: 'Necessary only',
-    settings: 'Cookie settings',
-  },
   errors: {
     common: 'Something went wrong. Please try again.',
     api: {
@@ -741,58 +721,10 @@ export default {
       body__organization_id: 'Organization',
     },
   },
-  landing: {
-    nav: {
-      home: 'Home',
-      features: 'Features',
-      pricing: 'Pricing',
-      login: 'Log in',
-      cta: 'Get free account',
-    },
-    footer: {
-      copyright: `© {year} ${BRAND.name}. All rights reserved.`,
-      tagline: '',
-      product: 'Product',
-      company: 'Company',
-      legal: 'Legal',
-      about: 'About',
-      contact: 'Contact',
-      privacy: 'Privacy policy',
-      terms: 'Terms of service',
-      register: 'Create account',
-      apiDocs: 'API docs',
-    },
-    contact: {
-      title: 'Contact',
-      sub: "Have a question? We're happy to help.",
-      contactTitle: 'Get in touch',
-      email: 'Email',
-      responseTime: 'We reply within 2 business days.',
-      formTitle: 'Send us a message',
-      form: {
-        name: 'Your name',
-        namePlaceholder: 'Jane Doe',
-        email: 'Your email',
-        emailPlaceholder: "you{'@'}company.com",
-        subject: 'Subject',
-        subjectPlaceholder: 'What is this about?',
-        message: 'Message',
-        messagePlaceholder: 'Tell us how we can help.',
-        messageTooShort: 'Please write at least 10 characters',
-        submit: 'Send message',
-        sentTitle: 'Thanks for reaching out!',
-        sentBody: "We'll get back to you within 2 business days.",
-      },
-    },
-  },
   seo: {
-    landing: {
+    app: {
       title: BRAND.name,
       description: `${BRAND.name} - sign in or create an account.`,
-    },
-    contact: {
-      title: `Contact ${BRAND.name}`,
-      description: `Get in touch with the ${BRAND.name} team - questions about the product, pricing, or your account.`,
     },
     login: {
       title: `Log in to ${BRAND.name}`,
@@ -805,14 +737,6 @@ export default {
     forgotPassword: {
       title: `Reset your ${BRAND.name} password`,
       description: `Reset the password for your ${BRAND.name} account.`,
-    },
-    privacy: {
-      title: `Privacy Policy - ${BRAND.name}`,
-      description: `How ${BRAND.name} collects, uses and protects personal data under the GDPR.`,
-    },
-    terms: {
-      title: `Terms of Service - ${BRAND.name}`,
-      description: `The terms that apply when you use ${BRAND.name}.`,
     },
   },
 }

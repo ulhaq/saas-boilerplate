@@ -1,6 +1,6 @@
 # Frontend
 
-Vue 3 + TypeScript app for the SaaS boilerplate: a prerendered bilingual marketing site plus the signed-in dashboard (auth, organizations, users, roles, billing, settings) and the example product's Projects feature. Built with Vite, Pinia state management, file-based routing via `unplugin-vue-router`, Tailwind + Reka UI components.
+Vue 3 + TypeScript SPA for the SaaS boilerplate: the signed-in app (auth, organizations, users, roles, billing, settings) and the example product's Projects feature. The marketing site (home, pricing, legal pages) lives outside this repo on its own domain; the app links to its terms/privacy pages via `legalUrl()` in `platform/constants.ts`. Built with Vite, Pinia state management, file-based routing via `unplugin-vue-router`, Tailwind + Reka UI components.
 
 ## Commands (`cd frontend` first)
 
@@ -27,7 +27,7 @@ src/
 │   │   ├── layout/   # AppSidebar, AppTopbar, MobileSidebar
 │   │   └── users/, roles/, organizations/
 │   ├── composables/  # useDataTable, useErrorHandler, usePermission, useNotificationPresenter, ...
-│   ├── layouts/      # DashboardLayout, AuthLayout, LandingLayout
+│   ├── layouts/      # DashboardLayout, AuthLayout
 │   ├── locales/      # platform i18n strings (en, da)
 │   ├── pages/        # login, register, users, roles, settings/**, billing/**, notifications
 │   ├── stores/       # auth, users, roles, organizations, subscription, notifications, ui, ...
@@ -36,13 +36,13 @@ src/
 │   └── navigation.ts # sidebar nav registry - products register their items
 ├── example/          # the product (self-contained vertical slice - replace it)
 │   ├── api/projects.ts · stores/projects.ts · components/projects/
-│   ├── pages/        # dashboard.vue, projects/index.vue, marketing: index/pricing/features/about.vue
-│   ├── components/marketing/PricingPlans.vue, composables/, types/, constants.ts
+│   ├── pages/        # dashboard.vue, projects/index.vue
+│   ├── components/, types/, constants.ts
 │   ├── locales/      # product i18n strings, deep-merged over platform messages
 │   └── index.ts      # module entry: registers nav items (imported by main.ts)
-├── brand.ts          # product identity: name, domains, support email, legal entity
+├── brand.ts          # product identity: name, marketing + app origins
 ├── plugins/          # i18n setup (merges platform + product messages)
-├── router/           # Router config, navigation guards, public-routes.ts (marketing inventory)
+├── router/           # Router config + navigation guards, seo.ts (head tags)
 └── main.ts           # assembly: configureApp({ homeRoute }), imports '@/example'
 ```
 
@@ -55,12 +55,10 @@ knowing about it): `registerNavItems()` in `platform/navigation.ts`,
 **Reusing this frontend for a new product**: edit `src/brand.ts`, then replace
 `src/example/` - update the `'@/example'` import in `src/main.ts`, the entries in
 `vite.config.ts` (`routesFolder`, Components `dirs`), `plugins/i18n.ts`, and the
-ESLint boundary rule. Marketing pages are listed in `src/router/public-routes.ts`;
-`vite.config.ts` derives the prerender list, `robots.txt` and `sitemap.xml` from it.
+ESLint boundary rule.
 
 **Product-provided i18n keys the platform reads**: `planDescriptions.<PlanName>` and
-`planComparisonRows` (billing page), and optionally `landing.footer.tagline` /
-`seo.landing.*` overrides. Everything else the platform renders is defined in
+`planComparisonRows` (billing page), and optionally `seo.*` overrides. Everything else the platform renders is defined in
 the platform locales.
 
 ### Example product: Projects

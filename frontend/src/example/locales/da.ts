@@ -1,5 +1,3 @@
-import { BRAND } from '@/brand'
-
 export default {
   nav: {
     dashboard: 'Dashboard',
@@ -46,85 +44,6 @@ export default {
     deleted: 'Projekt slettet',
     deleteFailed: 'Projektet kunne ikke slettes',
   },
-  landing: {
-    hero: {
-      headline: 'Den hurtigste vej til at {word}',
-      headlineWords: ['lancere', 'vokse', 'drive', 'skalere'],
-      sub: `${BRAND.name} giver dit team ét sted at organisere projekter, samarbejde og få tingene gjort.`,
-      ctaButton: 'Prøv gratis i {days} dage',
-      socialProof: 'Intet kreditkort krævet',
-      trustCancel: 'Opsig når som helst',
-    },
-    howItWorks: {
-      title: 'Sådan virker det',
-      step1Title: 'Opret en konto',
-      step1Desc: 'Tilmeld dig på få sekunder - intet kreditkort krævet.',
-      step2Title: 'Tilføj dine projekter',
-      step2Desc: 'Opret projekter og invitér dem, du arbejder sammen med.',
-      step3Title: 'Kom i gang',
-      step3Desc: 'Arbejd sammen med roller, notifikationer og en fuld revisionslog.',
-    },
-    features: {
-      title: 'Alt hvad dit team har brug for',
-      sub: `${BRAND.name} har det vigtigste indbygget, så du kan fokusere på dit arbejde.`,
-      projects: { title: 'Projekter', desc: 'Organisér arbejdet i projekter, hele teamet kan se.' },
-      teams: { title: 'Samarbejde', desc: 'Invitér kolleger og arbejd sammen ét sted.' },
-      rbac: {
-        title: 'Rollebaseret adgang',
-        desc: 'Detaljerede tilladelser, så alle ser præcis det, de skal.',
-      },
-      billing: {
-        title: 'Fleksible planer',
-        desc: 'Start gratis og opgradér, når du har brug for mere.',
-      },
-      notifications: {
-        title: 'Notifikationer',
-        desc: 'Email og beskeder i appen, når det betyder noget.',
-      },
-      api: { title: 'API-adgang', desc: 'Integrér med jeres egne systemer via REST API.' },
-      audit: {
-        title: 'Revisionslog',
-        desc: 'En komplet historik over handlinger i din organisation.',
-      },
-      i18n: { title: 'Flere sprog', desc: 'Tilgængelig på dansk og engelsk.' },
-    },
-    pricing: {
-      title: 'Enkle og gennemskuelige priser',
-      sub: 'Start gratis. Opgradér når du har brug for mere.',
-      recommended: 'Mest populær',
-      forever: 'For altid',
-      monthly: '/ md.',
-      cta: 'Start {days} dages gratis prøveperiode',
-      ctaFree: 'Opret gratis konto',
-      compareTitle: 'Fuld sammenligning',
-      moreAbout: 'Mere om {feature}',
-      compareFeature: 'Funktion',
-      customText: 'Finder du ikke en plan, der passer?',
-      customLink: 'Kontakt os',
-    },
-    faq: {
-      title: 'Ofte stillede spørgsmål',
-      q1: `Hvad er ${BRAND.name}?`,
-      a1: `${BRAND.name} er et arbejdsområde, hvor teams kan organisere projekter og samarbejde.`,
-      q2: 'Kan jeg tilføje mit team?',
-      a2: 'Ja. Invitér kolleger og tildel roller. Antallet af brugere afhænger af din plan.',
-      q3: 'Hvordan fungerer den gratis prøveperiode?',
-      a3: 'Betalte planer har en gratis prøveperiode - intet kreditkort krævet. Når prøveperioden slutter, flyttes organisationen til den gratis plan, medmindre du tilføjer en betalingsmetode.',
-      q4: 'Kan jeg ændre eller opsige min plan når som helst?',
-      a4: 'Ja. Du kan opgradere, nedgradere eller opsige når som helst under faktureringsindstillinger.',
-      q5: 'Er der et API?',
-      a5: 'Ja. Betalte planer inkluderer API-tokens, som du kan bruge til at integrere med jeres egne systemer.',
-      q6: 'Er mine data sikre og GDPR-kompatible?',
-      a6: 'Ja. Vi behandler kun de data, der er nødvendige for at drive tjenesten, sletter data automatisk efter faste regler og sælger aldrig dine data. Se vores privatlivspolitik for detaljer.',
-    },
-    ctaBanner: {
-      headline: 'Kom i gang i dag',
-      button: 'Få en gratis konto',
-    },
-    footer: {
-      tagline: 'Ét sted, hvor dit team kan organisere projekter og få tingene gjort.',
-    },
-  },
   planDescriptions: {
     Free: 'Til enkeltpersoner, der vil i gang',
     Basic: 'Til små teams',
@@ -163,50 +82,6 @@ export default {
   errors: {
     api: {
       project_name_taken: 'Der findes allerede et projekt med dette navn.',
-    },
-  },
-  seo: {
-    landing: {
-      title: `${BRAND.name} - Organisér dit teams arbejde`,
-      description: `${BRAND.name} giver dit team ét sted at organisere projekter, samarbejde og få tingene gjort.`,
-    },
-    pricing: {
-      title: `Priser - ${BRAND.name}`,
-      description: 'Enkle og gennemskuelige priser. Start gratis og opgradér, når teamet vokser.',
-    },
-    features: {
-      title: `Funktioner - ${BRAND.name}`,
-      description: `Projekter, samarbejde, rollebaseret adgang, API og revisionslog - se hvad ${BRAND.name} indeholder.`,
-    },
-    about: {
-      title: `Om ${BRAND.name}`,
-      description: `Hvem der bygger ${BRAND.name}, og hvorfor.`,
-    },
-  },
-  marketing: {
-    pricing: {
-      heroSub: 'Start gratis og opgradér, når teamet vokser. Ingen binding, ingen skjulte gebyrer.',
-      faqTitle: 'Spørgsmål om priser',
-    },
-    features: {
-      heroTitle: 'Alt hvad du har brug for, intet du ikke har',
-      heroSub: `${BRAND.name} samler de værktøjer, dit team har brug for, i ét enkelt arbejdsområde.`,
-    },
-    about: {
-      heroTitle: `Om ${BRAND.name}`,
-      heroSub: 'Vi bygger enkle værktøjer, der hjælper teams med at få tingene gjort.',
-      missionTitle: 'Vores mission',
-      missionP1: 'Teams spilder tid på værktøjer, der ikke taler sammen.',
-      missionP2: `${BRAND.name} samler det vigtigste, så I kan fokusere på det arbejde, der betyder noget.`,
-      valuesTitle: 'Det står vi for',
-      value1Title: 'Bygget til mennesker',
-      value1Desc: 'Enkelt, overskueligt og rart at bruge hver dag.',
-      value2Title: 'Sikkerhed og GDPR',
-      value2Desc: 'Vi behandler kun de data, vi har brug for, og sælger dem aldrig.',
-      value3Title: 'Hurtigt i gang',
-      value3Desc: 'Ingen kompliceret opsætning - tilmeld dig, og du er klar.',
-      contactTitle: 'Har du spørgsmål?',
-      contactSub: 'Vi hjælper gerne. Kontakt os, så vender vi tilbage.',
     },
   },
 }

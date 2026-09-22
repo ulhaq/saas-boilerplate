@@ -4,17 +4,6 @@ export default {
   app: {
     name: BRAND.name,
   },
-  waitlist: {
-    badge: 'Lanceres snart',
-    headline: 'Vær den første der ved det',
-    sub: `${BRAND.name} lanceres snart. Skriv dig på ventelisten for tidlig adgang.`,
-    nameLabel: 'Navn (valgfrit)',
-    namePlaceholder: 'Dit navn',
-    emailLabel: 'Email',
-    emailPlaceholder: 'dig@virksomhed.dk',
-    submit: 'Skriv dig på ventelisten',
-    success: 'Du er på listen. Vi vender tilbage.',
-  },
   notifications: {
     title: 'Notifikationer',
     markAllRead: 'Markér alle som læst',
@@ -566,15 +555,6 @@ export default {
     deletePasswordLabel: 'Bekræft din adgangskode',
     deletePasswordPlaceholder: 'Indtast din nuværende adgangskode',
   },
-  cookie: {
-    title: 'Cookies',
-    description:
-      'Vi bruger en cookie, der er strengt nødvendig for login. Med dit samtykke anvender vi også valgfrie tjenester, der sætter yderligere cookies.',
-    learnMore: 'Læs mere i vores privatlivspolitik.',
-    acceptAll: 'Acceptér alle',
-    necessaryOnly: 'Kun nødvendige',
-    settings: 'Cookieindstillinger',
-  },
   errors: {
     common: 'Noget gik galt. Prøv igen.',
     api: {
@@ -747,58 +727,10 @@ export default {
       body__organization_id: 'Organisation',
     },
   },
-  landing: {
-    nav: {
-      home: 'Forside',
-      features: 'Funktioner',
-      pricing: 'Priser',
-      login: 'Log ind',
-      cta: 'Få en gratis konto',
-    },
-    footer: {
-      copyright: `© {year} ${BRAND.name}. Alle rettigheder forbeholdes.`,
-      tagline: '',
-      product: 'Produkt',
-      company: 'Virksomhed',
-      legal: 'Juridisk',
-      about: 'Om os',
-      contact: 'Kontakt',
-      privacy: 'Privatlivspolitik',
-      terms: 'Handelsbetingelser',
-      register: 'Opret konto',
-      apiDocs: 'API-dokumentation',
-    },
-    contact: {
-      title: 'Kontakt',
-      sub: 'Har du et spørgsmål? Vi hjælper gerne.',
-      contactTitle: 'Kom i kontakt',
-      email: 'Email',
-      responseTime: 'Vi svarer inden for 2 hverdage.',
-      formTitle: 'Send os en besked',
-      form: {
-        name: 'Dit navn',
-        namePlaceholder: 'Jens Jensen',
-        email: 'Din email',
-        emailPlaceholder: "dig{'@'}virksomhed.dk",
-        subject: 'Emne',
-        subjectPlaceholder: 'Hvad drejer det sig om?',
-        message: 'Besked',
-        messagePlaceholder: 'Fortæl os, hvordan vi kan hjælpe.',
-        messageTooShort: 'Skriv venligst mindst 10 tegn',
-        submit: 'Send besked',
-        sentTitle: 'Tak for din besked!',
-        sentBody: 'Vi vender tilbage inden for 2 hverdage.',
-      },
-    },
-  },
   seo: {
-    landing: {
+    app: {
       title: BRAND.name,
       description: `${BRAND.name} - log ind eller opret en konto.`,
-    },
-    contact: {
-      title: `Kontakt ${BRAND.name}`,
-      description: `Kom i kontakt med ${BRAND.name}-teamet - spørgsmål om produktet, priser eller din konto.`,
     },
     login: {
       title: `Log ind på ${BRAND.name}`,
@@ -811,14 +743,6 @@ export default {
     forgotPassword: {
       title: `Nulstil din ${BRAND.name}-adgangskode`,
       description: `Nulstil adgangskoden til din ${BRAND.name}-konto.`,
-    },
-    privacy: {
-      title: `Privatlivspolitik - ${BRAND.name}`,
-      description: `Hvordan ${BRAND.name} indsamler, bruger og beskytter personoplysninger efter GDPR.`,
-    },
-    terms: {
-      title: `Handelsbetingelser - ${BRAND.name}`,
-      description: `De betingelser der gælder, når du bruger ${BRAND.name}.`,
     },
   },
 }

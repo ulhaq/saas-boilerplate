@@ -102,24 +102,26 @@ meta:
             <Label for="invite-terms" class="text-sm font-normal leading-snug">
               <i18n-t keypath="gdpr.consentLabel" tag="span" scope="global">
                 <template #terms>
-                  <RouterLink
-                    :to="localePath('terms')"
+                  <a
+                    :href="legalUrl('terms', locale)"
                     target="_blank"
+                    rel="noopener"
                     class="underline hover:text-primary"
                     @click.stop
                   >
                     {{ $t('gdpr.consentTermsLink') }}
-                  </RouterLink>
+                  </a>
                 </template>
                 <template #privacy>
-                  <RouterLink
-                    :to="localePath('privacy')"
+                  <a
+                    :href="legalUrl('privacy', locale)"
                     target="_blank"
+                    rel="noopener"
                     class="underline hover:text-primary"
                     @click.stop
                   >
                     {{ $t('gdpr.consentPrivacyLink') }}
-                  </RouterLink>
+                  </a>
                 </template>
               </i18n-t>
             </Label>
@@ -161,9 +163,7 @@ import { useValidation } from '@/platform/composables/useValidation'
 import { useRules } from '@/platform/composables/useRules'
 import { useErrorHandler } from '@/platform/composables/useErrorHandler'
 import { useI18n } from 'vue-i18n'
-import { useLocalePath } from '@/platform/composables/useLocalePath'
-
-const { localePath } = useLocalePath()
+import { legalUrl } from '@/platform/constants'
 
 type InviteState =
   | 'loading'
@@ -181,7 +181,7 @@ const { resolveError } = useErrorHandler()
 
 const inviteToken = (route.query.token as string) || ''
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const state = ref<InviteState>(inviteToken ? 'loading' : 'invalid')
 const invalidMessage = ref(inviteToken ? '' : t('auth.invite.invalidLink'))
 const inviteEmail = ref('')

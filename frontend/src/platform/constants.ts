@@ -29,7 +29,19 @@ export const ALLOW_MULTIPLE_ORGANIZATIONS =
 // the API regardless of this flag. Defaults to disabled.
 export const MFA_ENABLED = import.meta.env.VITE_MFA_ENABLED === 'true'
 
-// Swagger UI served by the API process itself, so it lives on the API host
-// rather than behind the app's `/v1` proxy. Overridable per environment.
-export const API_DOCS_URL =
-  (import.meta.env.VITE_API_DOCS_URL as string | undefined) ?? BRAND.apiDocsUrl
+// The marketing site (outside this repo), which hosts the legal pages.
+// Overridable per environment.
+export const MARKETING_ORIGIN: string =
+  (import.meta.env.VITE_MARKETING_ORIGIN as string | undefined) || BRAND.marketingOrigin
+
+// Legal page paths on the marketing site - keep in sync with that site.
+const LEGAL_PATHS = {
+  terms: { da: '/da/handelsbetingelser', en: '/en/terms' },
+  privacy: { da: '/da/privatlivspolitik', en: '/en/privacy-policy' },
+} as const
+
+/** `legalUrl('terms', 'en')` -> `https://example.com/en/terms`; falls back to Danish. */
+export function legalUrl(page: keyof typeof LEGAL_PATHS, locale: string): string {
+  const paths = LEGAL_PATHS[page]
+  return `${MARKETING_ORIGIN}${locale in paths ? paths[locale as keyof typeof paths] : paths.da}`
+}

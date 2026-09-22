@@ -36,9 +36,8 @@ export const LOCALE_LABELS: Record<SupportedLocale, string> = {
   en: 'English',
 }
 
-// `localStorage` doesn't exist during the SSG build, so the prerendered HTML is
-// always emitted in the default locale. A visitor who has picked the other
-// language sees it swap in once the app hydrates.
+// The visitor's last choice; a signed-in user's profile language replaces it
+// once the session loads.
 const savedLocale = (globalThis.localStorage?.getItem('locale') ??
   DEFAULT_LOCALE) as SupportedLocale
 

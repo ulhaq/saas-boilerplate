@@ -8,11 +8,10 @@
 
     <!--
       Only the tags that are identical on every page live here. Title,
-      description, canonical, robots and the per-page OG/Twitter values are
-      emitted by `useHead` (see src/router/seo.ts): baked into the HTML for the
-      prerendered marketing routes, set at runtime for the rest. Re-adding a
-      static <title> or description here would duplicate them in the build.
-      %BRAND_NAME% / %MARKETING_ORIGIN% are filled from src/brand.ts by vite.config.ts.
+      description, canonical, robots and the per-page OG/Twitter values are set
+      at runtime by `useHead` (see src/router/seo.ts). The OG image is served by
+      the marketing site. %BRAND_NAME% / %MARKETING_ORIGIN% are filled from
+      src/brand.ts by vite.config.ts.
     -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="%BRAND_NAME%" />
@@ -26,10 +25,9 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:image" content="%MARKETING_ORIGIN%/og-image.png" />
     <!--
-      Loader for the SPA shell (dist/app.html). vite-ssg replaces the contents of
-      #app when it prerenders the marketing pages, so only the shell keeps it,
-      and Vue clears the container when it mounts - nothing has to remove it.
-      It fades in after 200ms so quick loads stay blank instead of flashing.
+      Loader shown until the app mounts; Vue clears the container when it does,
+      so nothing has to remove it. It fades in after 200ms so quick loads stay
+      blank instead of flashing.
     -->
     <style>
       .app-loader {

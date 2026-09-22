@@ -1,6 +1,6 @@
 # SaaS Boilerplate
 
-A production-ready starting point for multi-tenant B2B SaaS products: FastAPI + PostgreSQL backend, background worker, and a Vue 3 frontend with a prerendered bilingual marketing site.
+A production-ready starting point for multi-tenant B2B SaaS products: FastAPI + PostgreSQL backend, background worker, and a Vue 3 app.
 
 The product-specific code lives in one package per side (`backend/src/example/`, `frontend/src/example/`). It ships as a small **Projects** feature that exercises every extension point - replace it with your product.
 
@@ -9,10 +9,9 @@ The product-specific code lives in one package per side (`backend/src/example/`,
 - **Multi-tenant** organisations with enforced tenant isolation and fine-grained RBAC (roles, permissions, API tokens)
 - **Auth**: JWT access tokens + httponly refresh cookies, email verification, password reset, invites, multiple organisations per user, optional TOTP two-factor auth with recovery codes (`MFA_ENABLED` / `VITE_MFA_ENABLED`)
 - **Billing** via Stripe: plans, trials, checkout, customer portal, webhooks, plan features, seat/usage/capacity limits
-- **Audit log, GDPR export/erasure/retention**, cookie consent
+- **Audit log, GDPR export/erasure/retention**
 - **Notifications**: localized transactional email (Danish/English, MJML templates) and in-app notifications
 - **Observability** (opt-in, self-hosted): OpenTelemetry traces/metrics, JSON logs, browser errors via Grafana Faro, and a provisioned Grafana dashboard + alerts (Prometheus, Loki, Tempo) - see [`observability/README.md`](observability/README.md)
-- **Marketing site**: localized routes (`/da/...`, `/en/...`), SSG prerendering, SEO tags, generated sitemap/robots, contact form, waitlist mode
 - **Example product**: org-scoped Projects CRUD with permissions, a plan capacity limit, a hook handler, and a worker loop
 
 ## Tech Stack
@@ -21,7 +20,7 @@ The product-specific code lives in one package per side (`backend/src/example/`,
 |-------|-------|
 | Backend | Python 3.14, FastAPI, async SQLAlchemy, PostgreSQL, Alembic, `uv` |
 | Worker | Standalone asyncio process (product loops, GDPR retention, billing cleanup, trial reminders) |
-| Frontend | Vue 3, TypeScript, Vite + vite-ssg, Pinia, vue-i18n, Tailwind + Reka UI, file-based routing |
+| Frontend | Vue 3, TypeScript, Vite, Pinia, vue-i18n, Tailwind + Reka UI, file-based routing |
 | Infra | Docker Compose (postgres, pgadmin, mailpit, backend, worker, frontend); opt-in profiles: `analytics` (Umami), `observability` (Alloy agent + Grafana, Prometheus, Loki, Tempo) |
 
 ## Architecture
@@ -62,11 +61,11 @@ Background loops live only in the worker so the API can scale horizontally witho
 
 ## Starting a new product
 
-1. **Brand**: edit `frontend/src/brand.ts` (name, domains, support email, legal entity) and set `APP_NAME` / `EMAIL_FROM_NAME` in `backend/.env`. Replace `frontend/public/{favicon.svg,logo.png,og-image.png}`.
+1. **Brand**: edit `frontend/src/brand.ts` (name, app and marketing domains) and set `APP_NAME` / `EMAIL_FROM_NAME` in `backend/.env`. Replace `frontend/public/{favicon.svg,logo.png}`.
 2. **Product code**: replace the `example` package on both sides - step-by-step in [`docs/adding-a-domain-module.md`](docs/adding-a-domain-module.md).
 3. **Plans**: adjust the seeded plans/prices/seat limits in the initial migration, product limits in your product migration, and the plan copy (`planComparisonRows`, `planDescriptions`) in the product locales.
-4. **Legal**: adapt `frontend/src/platform/pages/terms.vue` and `privacy-policy.vue` (templates - get them reviewed).
-5. **Deploy config**: `etc.nginx.sites-available.example`, `ANALYTICS_ORIGIN` in `docker-compose.yml` (only with the `analytics` profile), the deploy path in `.github/workflows/ci.yml`.
+4. **Marketing site**: not part of this repo. The app links to its terms and privacy pages (`LEGAL_PATHS` in `frontend/src/platform/constants.ts`) and expects `/og-image.png` there.
+5. **Deploy config**: `etc.nginx.sites-available.example` (marketing domain -> site, `app.` subdomain -> app), `ANALYTICS_ORIGIN` in `docker-compose.yml` (only with the `analytics` profile), the deploy path in `.github/workflows/ci.yml`.
 
 Architecture details live in `backend/CLAUDE.md` and `frontend/CLAUDE.md`.
 
@@ -140,7 +139,7 @@ dev server run on the host. Only with `APP_ENV=local`.
 npm run dev         # vite dev server on :5173
 npm run typecheck   # vue-tsc
 npm run lint        # eslint (includes the platform/product boundary rule)
-npm run build       # production build (prerenders marketing pages, emits sitemap/robots)
+npm run build       # production build (SPA)
 npm run test:e2e    # playwright (needs the dev stack running)
 ```
 
@@ -161,7 +160,7 @@ Routes are file-based: adding a page under `src/platform/pages/` or `src/example
 
 ```
 ├── backend/         FastAPI API + worker (see backend/CLAUDE.md)
-├── frontend/        Vue 3 SPA + marketing site (see frontend/CLAUDE.md)
+├── frontend/        Vue 3 SPA - the signed-in app (see frontend/CLAUDE.md)
 ├── docs/            adding-a-domain-module.md + operational runbooks
 ├── scripts/         db-init / db-backup / db-restore
 ├── docker-compose.yml (prod) / docker-compose.dev.yml (local dev, used by Makefile)

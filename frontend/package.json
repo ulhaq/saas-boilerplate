@@ -5,15 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite-ssg build",
+    "build": "vite build",
     "preview": "vite preview",
     "typecheck": "vue-tsc --noEmit",
     "lint": "eslint . --fix",
     "format": "prettier --write .",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:e2e:headed": "playwright test --headed",
-    "build:spa": "vite build"
+    "test:e2e:headed": "playwright test --headed"
   },
   "dependencies": {
     "@grafana/faro-web-sdk": "^2.12.0",
@@ -61,7 +60,6 @@
     "unplugin-vue-components": "^0.27.5",
     "unplugin-vue-router": "^0.10.9",
     "vite": "^6.1.0",
-    "vite-ssg": "^28.3.0",
     "vue-eslint-parser": "^10.4.0",
     "vue-tsc": "^2.2.0"
   }

@@ -4,21 +4,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Product
 
-**SaaS Boilerplate** - a multi-tenant B2B SaaS starter: auth, organizations, RBAC, Stripe billing with plan limits, audit log, GDPR tooling, email + in-app notifications, and a bilingual (da/en) prerendered marketing site.
+**SaaS Boilerplate** - a multi-tenant B2B SaaS starter: auth, organizations, RBAC, Stripe billing with plan limits, audit log, GDPR tooling, email + in-app notifications. The marketing site is not part of this repo.
 
-Product-specific code lives in one package per side - `backend/src/example/` and `frontend/src/example/` - currently a minimal **Projects** feature (org-scoped CRUD, permissions, a `projects` plan limit, a hook handler, a worker loop, marketing pages). It exists to exercise every extension point; replace it with the real product.
+Product-specific code lives in one package per side - `backend/src/example/` and `frontend/src/example/` - currently a minimal **Projects** feature (org-scoped CRUD, permissions, a `projects` plan limit, a hook handler, a worker loop). It exists to exercise every extension point; replace it with the real product.
 
 Starting a new product from this template:
 - Replace/rename the `example` package on both sides - see `docs/adding-a-domain-module.md`.
-- Set the product identity in `frontend/src/brand.ts` (name, domains, support email, legal entity) and `APP_NAME` / `EMAIL_FROM_*` in `backend/.env`.
-- Adapt plan seeds (initial migration + product migration), plan copy (`planComparisonRows` / `planDescriptions` in the product locales), and the legal page templates (`frontend/src/platform/pages/{terms,privacy-policy}.vue`).
-- Replace `frontend/public/{favicon.svg,logo.png,og-image.png}`.
+- Set the product identity in `frontend/src/brand.ts` (name, app and marketing domains) and `APP_NAME` / `EMAIL_FROM_*` in `backend/.env`.
+- Adapt plan seeds (initial migration + product migration), and plan copy (`planComparisonRows` / `planDescriptions` in the product locales). The app links to the marketing site's terms/privacy pages (`LEGAL_PATHS` in `frontend/src/platform/constants.ts`).
+- Replace `frontend/public/{favicon.svg,logo.png}`.
 
 ## Repository Structure
 
 Full-stack multi-tenant SaaS:
 - `backend/` - FastAPI + Python, PostgreSQL, async SQLAlchemy, Alembic migrations. See `backend/CLAUDE.md`.
-- `frontend/` - Vue 3 + TypeScript, Vite, Pinia, file-based routing. See `frontend/CLAUDE.md`.
+- `frontend/` - the signed-in app: Vue 3 + TypeScript SPA, Vite, Pinia, file-based routing. See `frontend/CLAUDE.md`.
 
 Both sides are split into a generic SaaS **platform** package and the
 **product** package (`src/platform/` + `src/example/`), wired together by a thin
@@ -37,7 +37,7 @@ make down                              # stop everything
 make logs                              # tail all logs
 ```
 
-Services: backend API on `:8000`, frontend on `:5173`, pgadmin on `:5050`, mailpit UI on `:8025`.
+Services: backend API on `:8000`, app on `:5173`, pgadmin on `:5050`, mailpit UI on `:8025`.
 
 **Without Docker** (run each in a separate terminal, `cd` first):
 
@@ -48,7 +48,7 @@ cd backend && uv run poe dev
 # Terminal 2 - background worker (product loops, GDPR retention, billing cleanup)
 cd backend && uv run python worker.py
 
-# Terminal 3 - frontend
+# Terminal 3 - app
 cd frontend && npm run dev
 ```
 
