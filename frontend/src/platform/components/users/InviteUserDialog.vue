@@ -88,6 +88,7 @@
   </Dialog>
 
   <RoleForm v-model:open="showRoleForm" @saved="onRoleCreated" />
+  <RolePermissionDialog v-model:open="showRolePerms" :role="createdRole" @saved="loadRoles" />
 </template>
 
 <script setup lang="ts">
@@ -111,6 +112,8 @@ import { Checkbox } from '@/platform/components/ui/checkbox'
 import { Skeleton } from '@/platform/components/ui/skeleton'
 import PermissionGuard from '@/platform/components/common/PermissionGuard.vue'
 import RoleForm from '@/platform/components/roles/RoleForm.vue'
+import RolePermissionDialog from '@/platform/components/roles/RolePermissionDialog.vue'
+import { usePermission } from '@/platform/composables/usePermission'
 import { useUsersStore } from '@/platform/stores/users'
 import { useRolesStore } from '@/platform/stores/roles'
 import { PAGE_SIZE } from '@/platform/constants'
@@ -128,6 +131,7 @@ const { resolveError, resolveFieldErrors } = useErrorHandler()
 const subscriptionStore = useSubscriptionStore()
 const usersStore = useUsersStore()
 const rolesStore = useRolesStore()
+const { hasPermission } = usePermission()
 
 const rules = useRules()
 const { form, errors, validate, clearErrors } = useValidation({ email: rules.email })
@@ -139,6 +143,8 @@ const availableRoles = ref<RoleOut[]>([])
 const selectedRoleIds = ref<number[]>([])
 const loadingRoles = ref(false)
 const showRoleForm = ref(false)
+const showRolePerms = ref(false)
+const createdRole = ref<RoleOut | null>(null)
 
 async function loadRoles() {
   loadingRoles.value = true
@@ -167,7 +173,12 @@ watch(
 
 async function onRoleCreated(role: RoleOut | null) {
   await loadRoles()
-  if (role) selectedRoleIds.value = [role.id]
+  if (!role) return
+  selectedRoleIds.value = [role.id]
+  if (hasPermission('manage:role_permission')) {
+    createdRole.value = role
+    showRolePerms.value = true
+  }
 }
 
 function toggleRole(id: number) {
