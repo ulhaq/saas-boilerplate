@@ -135,6 +135,10 @@ class UserDataExportOut(BaseModel):
     audit_logs: list[dict[str, Any]]
 
 
+class AcceptInviteIn(BaseModel):
+    invite_token: str
+
+
 class InviteStatusIn(BaseModel):
     token: str
 

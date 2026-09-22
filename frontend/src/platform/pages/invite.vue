@@ -11,9 +11,6 @@ meta:
       <CardDescription v-if="state === 'new-user'">
         {{ $t('auth.invite.description') }}
       </CardDescription>
-      <CardDescription v-else-if="state === 'mfa'">
-        {{ $t('auth.mfaDescription') }}
-      </CardDescription>
     </CardHeader>
     <CardContent>
       <!-- Invalid / expired token -->
@@ -41,7 +38,18 @@ meta:
         </Button>
       </div>
 
-      <!-- Existing user - accept with one click -->
+      <!-- Existing account, signed out - the invite link alone can't act on
+           an account, so sign in (password + 2FA) and come back here. -->
+      <div v-else-if="state === 'sign-in-required'" class="text-center py-4 space-y-3">
+        <p class="text-sm text-muted-foreground">
+          {{ $t('auth.invite.signInRequired', { email: inviteEmail }) }}
+        </p>
+        <Button class="w-full" @click="onSignIn">
+          {{ $t('auth.invite.signInToAccept') }}
+        </Button>
+      </div>
+
+      <!-- Existing account, signed in as the invitee - accept with one click -->
       <div v-else-if="state === 'existing-user'" class="space-y-4">
         <p v-if="errorMessage" class="text-sm text-destructive">{{ errorMessage }}</p>
         <Button class="w-full" :disabled="isLoading" @click="onAcceptExisting">
@@ -49,15 +57,6 @@ meta:
           {{ $t('auth.invite.acceptAs', { email: inviteEmail }) }}
         </Button>
       </div>
-
-      <!-- Existing user with 2FA - invite accepted, code needed to sign in.
-           The invite is consumed by now, so "back" goes to the login page. -->
-      <MfaChallengeForm
-        v-else-if="state === 'mfa'"
-        :mfa-token="mfaToken"
-        @verified="router.push(appConfig.homeRoute)"
-        @cancel="router.push('/login')"
-      />
 
       <!-- New user - name + password form -->
       <form v-else-if="state === 'new-user'" class="space-y-4" @submit.prevent="onSubmitNew">
@@ -163,11 +162,16 @@ import { useRules } from '@/platform/composables/useRules'
 import { useErrorHandler } from '@/platform/composables/useErrorHandler'
 import { useI18n } from 'vue-i18n'
 import { useLocalePath } from '@/platform/composables/useLocalePath'
-import MfaChallengeForm from '@/platform/components/auth/MfaChallengeForm.vue'
 
 const { localePath } = useLocalePath()
 
-type InviteState = 'loading' | 'invalid' | 'wrong-account' | 'existing-user' | 'new-user' | 'mfa'
+type InviteState =
+  | 'loading'
+  | 'invalid'
+  | 'wrong-account'
+  | 'sign-in-required'
+  | 'existing-user'
+  | 'new-user'
 
 const route = useRoute()
 const router = useRouter()
@@ -190,7 +194,6 @@ const termsAccepted = ref(false)
 const termsError = ref('')
 const isLoading = ref(false)
 const errorMessage = ref('')
-const mfaToken = ref('')
 
 const currentUserEmail = computed(() => profileStore.user?.email ?? '')
 
@@ -214,33 +217,23 @@ onMounted(async () => {
       return
     }
 
-    state.value = 'existing-user'
+    state.value = authStore.isAuthenticated ? 'existing-user' : 'sign-in-required'
   } catch (err: unknown) {
     invalidMessage.value = resolveError(err)
     state.value = 'invalid'
   }
 })
 
-async function _finishAccept(
-  inviteTokenValue: string,
-  name?: string,
-  password?: string,
-  termsAcceptedVal?: boolean,
-) {
+async function _createAccount(name: string, password: string, termsAcceptedVal: boolean) {
   isLoading.value = true
   errorMessage.value = ''
   try {
-    const challenge = await authStore.completeInvite({
-      invite_token: inviteTokenValue,
-      ...(name !== undefined && { name }),
-      ...(password !== undefined && { password }),
-      ...(termsAcceptedVal !== undefined && { terms_accepted: termsAcceptedVal }),
+    await authStore.completeInvite({
+      invite_token: inviteToken,
+      name,
+      password,
+      terms_accepted: termsAcceptedVal,
     })
-    if (challenge) {
-      mfaToken.value = challenge.mfa_token
-      state.value = 'mfa'
-      return
-    }
     router.push(appConfig.homeRoute)
   } catch (err: unknown) {
     errorMessage.value = resolveError(err)
@@ -250,7 +243,24 @@ async function _finishAccept(
 }
 
 async function onAcceptExisting() {
-  await _finishAccept(inviteToken)
+  isLoading.value = true
+  errorMessage.value = ''
+  try {
+    await authStore.acceptInvite(inviteToken)
+    router.push(appConfig.homeRoute)
+  } catch (err: unknown) {
+    errorMessage.value = resolveError(err)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+// Login (incl. 2FA) sends the user back here with the token to accept.
+function onSignIn() {
+  router.push({
+    path: '/login',
+    query: { redirect: `${route.path}?token=${encodeURIComponent(inviteToken)}` },
+  })
 }
 
 function onTermsChange(v: boolean | 'indeterminate') {
@@ -264,7 +274,7 @@ async function onSubmitNew() {
     termsError.value = t('gdpr.consentRequired')
     return
   }
-  await _finishAccept(inviteToken, form.name, form.password, termsAccepted.value)
+  await _createAccount(form.name, form.password, termsAccepted.value)
 }
 
 async function onLogout() {

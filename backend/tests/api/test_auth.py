@@ -1,9 +1,12 @@
+from collections.abc import Generator
 from unittest.mock import patch
 
+import pytest
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
 from src.bootstrap import ALL_PERMISSIONS
+from src.main import app
 from src.platform.core.limiter import limiter
 from tests.utils import advance_clock
 
@@ -852,54 +855,136 @@ def test_invite_status_expired_token(
 # --- existing user invite flow ---
 
 
-def test_complete_invite_existing_user(
-    mocker: MockerFixture, admin_authenticated: TestClient, client: TestClient
+@pytest.fixture
+def admin2_client() -> Generator[TestClient]:
+    """Signed-in session for admin2@example.org (member of Org 2 only)."""
+    with TestClient(app) as c:
+        rs = c.post(
+            "/v1/auth/token",
+            data={"username": "admin2@example.org", "password": "password"},
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        ).json()
+        c.headers["Authorization"] = f"Bearer {rs['access_token']}"
+        yield c
+
+
+def test_complete_invite_rejects_existing_user(
+    mocker: MockerFixture, admin_authenticated: TestClient
+) -> None:
+    # The invite link alone must not act on an existing account.
+    token = _do_invite(mocker, admin_authenticated, email="admin2@example.org")
+    with TestClient(app) as anonymous:
+        response = anonymous.post(
+            "/v1/auth/complete-invite", json={"invite_token": token}
+        )
+    assert response.status_code == 403
+    assert response.json()["error_code"] == "invite_login_required"
+
+
+def test_rejected_complete_invite_leaves_invite_usable(
+    mocker: MockerFixture, admin_authenticated: TestClient, admin2_client: TestClient
 ) -> None:
     mocker.patch("src.platform.services.auth.send_email")
-    # admin2@example.org is in Org 2 - invite to Org 1 without name/password
     token = _do_invite(mocker, admin_authenticated, email="admin2@example.org")
-    response = client.post(
-        "/v1/auth/complete-invite",
-        json={"invite_token": token},
+    with TestClient(app) as anonymous:
+        anonymous.post("/v1/auth/complete-invite", json={"invite_token": token})
+
+    response = admin2_client.post(
+        "/v1/auth/accept-invite", json={"invite_token": token}
+    )
+    assert response.status_code == 201
+
+
+def test_accept_invite_switches_session_to_new_org(
+    mocker: MockerFixture, admin_authenticated: TestClient, admin2_client: TestClient
+) -> None:
+    mocker.patch("src.platform.services.auth.send_email")
+    token = _do_invite(mocker, admin_authenticated, email="admin2@example.org")
+
+    response = admin2_client.post(
+        "/v1/auth/accept-invite", json={"invite_token": token}
     )
     assert response.status_code == 201
     rs = response.json()
     assert rs["access_token"]
-    assert rs["refresh_token"]
+    assert "refresh_token" in response.cookies
 
-
-def test_complete_invite_existing_user_is_added_to_org(
-    mocker: MockerFixture, admin_authenticated: TestClient, client: TestClient
-) -> None:
-    mocker.patch("src.platform.services.auth.send_email")
-    token = _do_invite(mocker, admin_authenticated, email="admin2@example.org")
-    rs = client.post(
-        "/v1/auth/complete-invite",
-        json={"invite_token": token},
-    ).json()
-    profile = client.get(
-        "/v1/users/me", headers={"Authorization": f"Bearer {rs['access_token']}"}
-    ).json()
+    admin2_client.headers["Authorization"] = f"Bearer {rs['access_token']}"
+    profile = admin2_client.get("/v1/users/me").json()
     assert profile["email"] == "admin2@example.org"
+    # Roles returned are those of the active org, i.e. the invited Org 1 role.
+    assert [r["id"] for r in profile["roles"]] == [2]
+    orgs = admin2_client.get("/v1/organizations").json()
+    assert {o["id"] for o in orgs} == {1, 2}
 
 
-def test_complete_invite_existing_user_sends_added_to_org_email(
-    mocker: MockerFixture, admin_authenticated: TestClient, client: TestClient
+def test_accept_invite_sends_added_to_org_email(
+    mocker: MockerFixture, admin_authenticated: TestClient, admin2_client: TestClient
 ) -> None:
     mock_send = mocker.patch("src.platform.services.auth.send_email")
     token = _do_invite(mocker, admin_authenticated, email="admin2@example.org")
-    client.post("/v1/auth/complete-invite", json={"invite_token": token})
+    admin2_client.post("/v1/auth/accept-invite", json={"invite_token": token})
     mock_send.assert_called_once()
     assert mock_send.call_args.kwargs["email_template"] == "added-to-org"
 
 
-def test_cannot_invite_user_already_in_org(
+def test_accept_invite_requires_authentication(
     mocker: MockerFixture, admin_authenticated: TestClient
+) -> None:
+    token = _do_invite(mocker, admin_authenticated, email="admin2@example.org")
+    with TestClient(app) as anonymous:
+        response = anonymous.post(
+            "/v1/auth/accept-invite", json={"invite_token": token}
+        )
+    assert response.status_code == 401
+
+
+def test_accept_invite_rejects_other_users_invite(
+    mocker: MockerFixture, admin_authenticated: TestClient, admin2_client: TestClient
+) -> None:
+    mocker.patch("src.platform.services.auth.send_email")
+    token = _do_invite(mocker, admin_authenticated, email="invited@example.org")
+
+    response = admin2_client.post(
+        "/v1/auth/accept-invite", json={"invite_token": token}
+    )
+    assert response.status_code == 403
+    assert response.json()["error_code"] == "invite_email_mismatch"
+
+    # Still usable by the real recipient.
+    with TestClient(app) as anonymous:
+        response = anonymous.post(
+            "/v1/auth/complete-invite",
+            json={"invite_token": token, "name": "Invited", "password": "password1"},
+        )
+    assert response.status_code == 201
+
+
+def test_accept_invite_rejects_api_token(
+    mocker: MockerFixture, admin_authenticated: TestClient, admin2_client: TestClient
+) -> None:
+    rs = admin2_client.post(
+        "/v1/api-tokens", json={"name": "ci", "permissions": ["read:user"]}
+    )
+    assert rs.status_code == 201, rs.text
+    token = _do_invite(mocker, admin_authenticated, email="admin2@example.org")
+
+    with TestClient(app) as api_client:
+        response = api_client.post(
+            "/v1/auth/accept-invite",
+            json={"invite_token": token},
+            headers={"Authorization": f"Bearer {rs.json()['token']}"},
+        )
+    assert response.status_code == 403
+
+
+def test_cannot_invite_user_already_in_org(
+    mocker: MockerFixture, admin_authenticated: TestClient, admin2_client: TestClient
 ) -> None:
     # Accept first invite, then verify re-invite is blocked via invite_user
     mocker.patch("src.platform.services.auth.send_email")
     token = _do_invite(mocker, admin_authenticated, email="admin2@example.org")
-    admin_authenticated.post("/v1/auth/complete-invite", json={"invite_token": token})
+    admin2_client.post("/v1/auth/accept-invite", json={"invite_token": token})
 
     # Now admin2 is in Org 1 - invite_user should block a second invite
     mocker.patch("src.platform.services.user.send_email")

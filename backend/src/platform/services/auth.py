@@ -35,6 +35,7 @@ from src.platform.enums import (
     ErrorCode,
     RefreshTokenRevokeReason,
 )
+from src.platform.models.organization import Organization
 from src.platform.models.role import Role
 from src.platform.models.user import User
 from src.platform.models.user_organization import UserOrganization
@@ -287,134 +288,45 @@ class AuthService(BaseService):
         user_exists = await self.repos.user.get_by_email(email) is not None
         return InviteStatusOut(email=email, user_exists=user_exists)
 
-    async def complete_invite(
-        self, schema_in: CompleteInviteIn, schedule_task: Callable
-    ) -> Token | MfaChallengeOut:
-        data: dict = unsign(
-            schema_in.invite_token,
-            salt="invite",
-            max_age=settings.invite_expiry,
-        )
+    async def _load_invite(self, invite_token: str) -> tuple[str, int, list[int]]:
+        """Validate an invite token (signature, expiry, not yet used) and
+        return (email, organization_id, role_ids). Does not consume it."""
+        data: dict = unsign(invite_token, salt="invite", max_age=settings.invite_expiry)
         email: str = data["email"]
-        organization_id: int = data["organization_id"]
-        role_ids: list[int] = data.get("role_ids", [])
 
         record = await self.repos.invite_token.get_by_email(email)
-        if not record or not verify_secret(schema_in.invite_token, record.token):
+        if not record or not verify_secret(invite_token, record.token):
             raise NotAuthenticatedException(
                 "Token invalid", error_code=ErrorCode.TOKEN_INVALID
             )
+        return email, data["organization_id"], data.get("role_ids", [])
 
-        await self.repos.invite_token.delete_by_email(email)
-
+    async def _get_live_organization(self, organization_id: int) -> Organization:
         organization = await self.repos.organization.get(organization_id)
         if not organization or organization.deleted_at is not None:
             raise NotFoundException(
                 "Organization not found or has been deleted. "
                 f"[organization_id={organization_id}]"
             )
+        return organization
 
-        existing_user = await self.repos.user.get_by_email(email)
-
-        if existing_user:
-            # Existing user from another org - add them to this org.
-            membership = (
-                await self.repos.user_organization.get_by_user_and_organization(
-                    user_id=existing_user.id,
-                    organization_id=organization_id,
-                )
+    async def _add_to_organization(
+        self, user: User, organization_id: int, role_ids: list[int]
+    ) -> User:
+        """Create the membership, grant the invited roles, emit MEMBER_ADDED.
+        Returns the user re-fetched with the new roles loaded."""
+        await self.repos.user_organization.create(
+            user_id=user.id,
+            organization_id=organization_id,
+            last_active_at=datetime.now(UTC),
+        )
+        if role_ids:
+            self.repos.role.set_organization_scope(organization_id)
+            valid_roles = _filter_assignable_roles(
+                await self.repos.role.filter_by_ids(role_ids)
             )
-            if membership:
-                raise AlreadyExistsException(
-                    "User is already a member of this organization.",
-                    error_code=ErrorCode.EMAIL_ALREADY_EXISTS,
-                )
-
-            await self.repos.user_organization.create(
-                user_id=existing_user.id,
-                organization_id=organization_id,
-                last_active_at=datetime.now(UTC),
-            )
-
-            if role_ids:
-                self.repos.role.set_organization_scope(organization_id)
-                valid_roles = _filter_assignable_roles(
-                    await self.repos.role.filter_by_ids(role_ids)
-                )
-                if valid_roles:
-                    await self.repos.user.add_roles(
-                        existing_user, *[r.id for r in valid_roles]
-                    )
-
-            user = await self.repos.user.unscoped.get_one(existing_user.id)
-
-            schedule_task(
-                send_email,
-                address=email,
-                user_name=user.name,
-                email_template="added-to-org",
-                locale=user.locale,
-                data={
-                    "organization_name": organization.name,
-                    "login_url": f"{settings.frontend_url}/login",
-                },
-            )
-        else:
-            # New user - require name and password to create an account.
-            if not schema_in.name or not schema_in.password:
-                raise ValidationException(
-                    "Name and password are required for new accounts."
-                )
-
-            invite_now = datetime.now(UTC)
-            terms_at = invite_now if schema_in.terms_accepted else None
-
-            # Restore soft-deleted user rather than creating a duplicate that
-            # would violate the email unique constraint.
-            deleted_user = await self.repos.user.get_by_email(
-                email, include_deleted=True
-            )
-            hashed_pw = hash_secret(schema_in.password)
-            if deleted_user:
-                user = await self.repos.user.restore(deleted_user)
-                user = await self.repos.user.update(
-                    user,
-                    name=schema_in.name,
-                    password=hashed_pw,
-                    terms_accepted_at=terms_at,
-                    **_MFA_RESET,
-                )
-            else:
-                user = await self.repos.user.create(
-                    name=schema_in.name,
-                    email=email,
-                    password=hashed_pw,
-                    terms_accepted_at=terms_at,
-                )
-
-            if terms_at:
-                await self.log_audit(
-                    AuditAction.USER_CONSENT,
-                    organization_id=organization_id,
-                    user_id=user.id,
-                    details={"terms_accepted_at": terms_at.isoformat()},
-                )
-
-            await self.repos.user_organization.create(
-                user_id=user.id,
-                organization_id=organization_id,
-                last_active_at=datetime.now(UTC),
-            )
-
-            if role_ids:
-                self.repos.role.set_organization_scope(organization_id)
-                valid_roles = _filter_assignable_roles(
-                    await self.repos.role.filter_by_ids(role_ids)
-                )
-                if valid_roles:
-                    await self.repos.user.add_roles(user, *[r.id for r in valid_roles])
-
-            user = await self.repos.user.unscoped.get_one(user.id)
+            if valid_roles:
+                await self.repos.user.add_roles(user, *[r.id for r in valid_roles])
 
         await emit(
             HookEvent.MEMBER_ADDED,
@@ -422,13 +334,129 @@ class AuthService(BaseService):
             organization_id=organization_id,
             user_id=user.id,
         )
+        return await self.repos.user.unscoped.get_one(user.id)
 
-        # The invite link proves email ownership only; an existing account
-        # with 2FA still has to present a code before getting a session.
-        if mfa_required(user):
-            challenge = self._mfa_challenge(user, organization_id)
-            await self.repos.db.commit()
-            return challenge
+    async def complete_invite(
+        self, schema_in: CompleteInviteIn, schedule_task: Callable
+    ) -> Token:
+        """Accept an invite by creating a new account (unauthenticated).
+
+        Existing accounts must sign in (password + 2FA) and use
+        accept_invite() instead - the invite link only proves control of the
+        mailbox, which is not enough to act on an existing account.
+        """
+        email, organization_id, role_ids = await self._load_invite(
+            schema_in.invite_token
+        )
+
+        if await self.repos.user.get_by_email(email):
+            raise PermissionDeniedException(
+                "Sign in to accept this invitation.",
+                error_code=ErrorCode.INVITE_LOGIN_REQUIRED,
+            )
+
+        await self.repos.invite_token.delete_by_email(email)
+        await self._get_live_organization(organization_id)
+
+        if not schema_in.name or not schema_in.password:
+            raise ValidationException(
+                "Name and password are required for new accounts."
+            )
+
+        invite_now = datetime.now(UTC)
+        terms_at = invite_now if schema_in.terms_accepted else None
+
+        # Restore soft-deleted user rather than creating a duplicate that
+        # would violate the email unique constraint.
+        deleted_user = await self.repos.user.get_by_email(email, include_deleted=True)
+        hashed_pw = hash_secret(schema_in.password)
+        if deleted_user:
+            user = await self.repos.user.restore(deleted_user)
+            user = await self.repos.user.update(
+                user,
+                name=schema_in.name,
+                password=hashed_pw,
+                terms_accepted_at=terms_at,
+                **_MFA_RESET,
+            )
+        else:
+            user = await self.repos.user.create(
+                name=schema_in.name,
+                email=email,
+                password=hashed_pw,
+                terms_accepted_at=terms_at,
+            )
+
+        if terms_at:
+            await self.log_audit(
+                AuditAction.USER_CONSENT,
+                organization_id=organization_id,
+                user_id=user.id,
+                details={"terms_accepted_at": terms_at.isoformat()},
+            )
+
+        user = await self._add_to_organization(user, organization_id, role_ids)
+
+        token = await self._issue_tokens(user, organization_id)
+
+        await self.repos.db.commit()
+
+        return token
+
+    async def accept_invite(
+        self,
+        current_user: Auth,
+        invite_token: str,
+        schedule_task: Callable,
+        refresh_token: str | None = None,
+    ) -> Token:
+        """Accept an invite as the signed-in user and switch the session to
+        the new organization."""
+        user = await self.repos.user.unscoped.get(current_user.id)
+        if not user:
+            raise NotAuthenticatedException(headers=BEARER_HEADERS)
+
+        email, organization_id, role_ids = await self._load_invite(invite_token)
+
+        # Checked before consuming, so a wrong-account attempt leaves the
+        # invite usable by its real recipient.
+        if email.lower() != user.email.lower():
+            raise PermissionDeniedException(
+                "This invitation was sent to a different email address.",
+                error_code=ErrorCode.INVITE_EMAIL_MISMATCH,
+            )
+
+        await self.repos.invite_token.delete_by_email(email)
+        organization = await self._get_live_organization(organization_id)
+
+        if await self.repos.user_organization.get_by_user_and_organization(
+            user_id=user.id, organization_id=organization_id
+        ):
+            raise AlreadyExistsException(
+                "User is already a member of this organization.",
+                error_code=ErrorCode.EMAIL_ALREADY_EXISTS,
+            )
+
+        user = await self._add_to_organization(user, organization_id, role_ids)
+
+        schedule_task(
+            send_email,
+            address=user.email,
+            user_name=user.name,
+            email_template="added-to-org",
+            locale=user.locale,
+            data={
+                "organization_name": organization.name,
+                "login_url": f"{settings.frontend_url}/login",
+            },
+        )
+
+        # Like switch_organization: rotate this device's session only.
+        session_jti = self._decode_session_jti(refresh_token, user_id=user.id)
+        if session_jti:
+            await self.repos.refresh_token.revoke_by_jti(
+                session_jti, RefreshTokenRevokeReason.ROTATED
+            )
 
         token = await self._issue_tokens(user, organization_id)
 

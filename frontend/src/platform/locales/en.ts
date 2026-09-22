@@ -171,6 +171,8 @@ export default {
       wrongAccount: 'You are logged in as {email}.',
       logoutFirst: 'Log out first to accept this invitation.',
       logout: 'Log out',
+      signInRequired: 'You already have an account for {email}. Sign in to accept this invitation.',
+      signInToAccept: 'Sign in to accept',
     },
   },
   users: {
@@ -671,6 +673,8 @@ export default {
       limit_exceeded:
         "You have reached your plan's usage limit for this period. Upgrade your plan to continue.",
       capacity_exceeded: "You have reached your plan's limit. Upgrade your plan to add more.",
+      invite_login_required: 'You already have an account. Sign in to accept this invitation.',
+      invite_email_mismatch: 'This invitation was sent to a different email address.',
       mfa_code_invalid: 'Invalid code. Check your authenticator app and try again.',
       mfa_locked: 'Too many invalid codes. Wait a few minutes and try again.',
       mfa_already_enabled: 'Two-factor authentication is already enabled.',

@@ -66,6 +66,12 @@ export const authApi = {
   },
 
   completeInvite(data: CompleteInviteIn) {
-    return apiClient.post<Token | MfaChallenge>('/auth/complete-invite', data)
+    return apiClient.post<Token>('/auth/complete-invite', data)
+  },
+
+  // Existing accounts: accept as the signed-in user (switches the session to
+  // the invited organization).
+  acceptInvite(inviteToken: string) {
+    return apiClient.post<Token>('/auth/accept-invite', { invite_token: inviteToken })
   },
 }

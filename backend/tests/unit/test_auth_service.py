@@ -13,7 +13,8 @@ from src.platform.core.exceptions import (
     NotFoundException,
     PermissionDeniedException,
 )
-from src.platform.core.security import Token, hash_secret, sign
+from src.platform.core.security import Auth, Token, hash_secret, sign
+from src.platform.enums import ErrorCode
 from src.platform.repositories.repository_manager import RepositoryManager
 from src.platform.schemas.user import (
     CompleteInviteIn,
@@ -34,6 +35,12 @@ def _no_op_schedule(fn, **kwargs):
 async def _make_service(session, provider) -> AuthService:
     repos = RepositoryManager(session)
     return AuthService(repos, provider)
+
+
+async def _auth(repos: RepositoryManager, email: str, organization_id: int) -> Auth:
+    user = await repos.user.get_by_email(email)
+    assert user is not None
+    return Auth.from_user_model(user, organization_id)
 
 
 def _token(result: object) -> Token:
@@ -445,8 +452,8 @@ async def test_complete_invite_new_user(mock_billing_provider):
     assert result.access_token
 
 
-async def test_complete_invite_existing_user(mock_billing_provider):
-    """Existing user invited to org 2 is added as a member."""
+async def test_complete_invite_existing_user_requires_sign_in(mock_billing_provider):
+    """The invite link alone can't add an existing account; the invite stays."""
     from src.platform.core.security import hash_secret, sign
 
     email = "admin@example.org"  # already in org 1
@@ -459,14 +466,36 @@ async def test_complete_invite_existing_user(mock_billing_provider):
             repos = RepositoryManager(session)
             await repos.invite_token.create(email=email, token=hash_secret(token))
             service = AuthService(repos, mock_billing_provider)
-            result = _token(
+            with pytest.raises(PermissionDeniedException) as exc:
                 await service.complete_invite(
                     CompleteInviteIn(invite_token=token),
                     schedule_task=_no_op_schedule,
                 )
+            assert exc.value.error_code == ErrorCode.INVITE_LOGIN_REQUIRED
+            assert await repos.invite_token.get_by_email(email) is not None
+
+
+async def test_accept_invite_existing_user(mock_billing_provider):
+    """Signed-in user accepts an invite to org 2 and gets an org-2 session."""
+    from src.platform.core.security import decode_token, hash_secret, sign
+
+    email = "admin@example.org"  # already in org 1
+    token = sign(
+        data={"email": email, "organization_id": 2, "role_ids": []}, salt="invite"
+    )
+
+    async with TestSessionLocal() as session:
+        async with session.begin():
+            repos = RepositoryManager(session)
+            await repos.invite_token.create(email=email, token=hash_secret(token))
+            service = AuthService(repos, mock_billing_provider)
+            result = await service.accept_invite(
+                await _auth(repos, email, organization_id=1),
+                token,
+                schedule_task=_no_op_schedule,
             )
 
-    assert result.access_token
+    assert decode_token(result.access_token)["oid"] == 2
 
 
 # ---------------------------------------------------------------------------
@@ -590,7 +619,7 @@ async def test_complete_invite_org_not_found_raises(mock_billing_provider):
 # ---------------------------------------------------------------------------
 
 
-async def test_complete_invite_already_member_raises(mock_billing_provider):
+async def test_accept_invite_already_member_raises(mock_billing_provider):
     from src.platform.core.security import hash_secret, sign
 
     email = "admin@example.org"  # already in org 1
@@ -604,8 +633,9 @@ async def test_complete_invite_already_member_raises(mock_billing_provider):
             await repos.invite_token.create(email=email, token=hash_secret(token))
             service = AuthService(repos, mock_billing_provider)
             with pytest.raises(AlreadyExistsException):
-                await service.complete_invite(
-                    CompleteInviteIn(invite_token=token),
+                await service.accept_invite(
+                    await _auth(repos, email, organization_id=1),
+                    token,
                     schedule_task=_no_op_schedule,
                 )
 
@@ -615,14 +645,14 @@ async def test_complete_invite_already_member_raises(mock_billing_provider):
 # ---------------------------------------------------------------------------
 
 
-async def test_complete_invite_existing_user_with_roles(mock_billing_provider):
+async def test_accept_invite_with_roles(mock_billing_provider):
     """Existing user invited to new org with role_ids > roles assigned."""
     from src.platform.core.security import hash_secret, sign
 
     email = "admin@example.org"  # in org 1; being invited to org 2
-    # Role id=5 is Org 2's Admin role (non-protected) - must use same-org role
+    # Role id=4 is Org 2's Member role (non-protected) - must use same-org role
     token = sign(
-        data={"email": email, "organization_id": 2, "role_ids": [5]}, salt="invite"
+        data={"email": email, "organization_id": 2, "role_ids": [4]}, salt="invite"
     )
 
     async with TestSessionLocal() as session:
@@ -630,14 +660,16 @@ async def test_complete_invite_existing_user_with_roles(mock_billing_provider):
             repos = RepositoryManager(session)
             await repos.invite_token.create(email=email, token=hash_secret(token))
             service = AuthService(repos, mock_billing_provider)
-            result = _token(
-                await service.complete_invite(
-                    CompleteInviteIn(invite_token=token),
-                    schedule_task=_no_op_schedule,
-                )
+            await service.accept_invite(
+                await _auth(repos, email, organization_id=1),
+                token,
+                schedule_task=_no_op_schedule,
             )
 
-    assert result.access_token
+    async with TestSessionLocal() as session:
+        user = await RepositoryManager(session).user.get_by_email(email)
+        assert user is not None
+        assert 4 in {r.id for r in user.roles}
 
 
 # ---------------------------------------------------------------------------

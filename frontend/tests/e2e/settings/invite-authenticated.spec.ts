@@ -32,7 +32,7 @@ test.describe('Invite page - existing user (email matches logged-in user)', () =
 
   test('clicking accept redirects to /', async ({ page }) => {
     await stubInviteStatus(page, { email: ADMIN_EMAIL, user_exists: true })
-    await page.route('**/v1/auth/complete-invite', (route) =>
+    await page.route('**/v1/auth/accept-invite', (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',

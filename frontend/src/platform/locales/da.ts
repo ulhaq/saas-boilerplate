@@ -172,6 +172,9 @@ export default {
       wrongAccount: 'Du er logget ind som {email}.',
       logoutFirst: 'Log ud for at acceptere denne invitation.',
       logout: 'Log ud',
+      signInRequired:
+        'Du har allerede en konto til {email}. Log ind for at acceptere denne invitation.',
+      signInToAccept: 'Log ind for at acceptere',
     },
   },
   users: {
@@ -677,6 +680,8 @@ export default {
       limit_exceeded:
         'Du har nået din plans brugsgrænse for denne periode. Opgrader din plan for at fortsætte.',
       capacity_exceeded: 'Du har nået din plans grænse. Opgrader din plan for at tilføje flere.',
+      invite_login_required: 'Du har allerede en konto. Log ind for at acceptere denne invitation.',
+      invite_email_mismatch: 'Denne invitation blev sendt til en anden email-adresse.',
       mfa_code_invalid: 'Ugyldig kode. Tjek din godkendelsesapp, og prøv igen.',
       mfa_locked: 'For mange ugyldige koder. Vent et par minutter, og prøv igen.',
       mfa_already_enabled: 'Totrinsgodkendelse er allerede aktiveret.',

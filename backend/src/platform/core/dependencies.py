@@ -134,6 +134,18 @@ async def authenticate(
     return auth
 
 
+async def authenticate_user_session(
+    auth: Annotated[Auth, Depends(authenticate)],
+    token: Annotated[str | None, Depends(oauth2_scheme)],
+) -> Auth:
+    """Like authenticate(), but only for an interactive sign-in (password and,
+    if enabled, 2FA) - rejects API tokens. For account-level actions such as
+    joining an organization."""
+    if token and token.startswith("sk_"):
+        raise PermissionDeniedException("This action requires a signed-in user")
+    return auth
+
+
 def require_permission(permission: StrEnum) -> Callable:
     async def _check(
         current_user: Annotated[Auth, Depends(authenticate)],

@@ -110,13 +110,19 @@ export const useAuthStore = defineStore('auth', () => {
     await startSession(token)
   }
 
-  // Accepts an org invite, establishes the session, and bootstraps app state
-  // (mirrors login: an existing account with 2FA gets an MfaChallenge).
-  async function completeInvite(data: CompleteInviteIn): Promise<MfaChallenge | null> {
-    const { data: res } = await authApi.completeInvite(data)
-    if (isMfaChallenge(res)) return res
-    await startSession(res)
-    return null
+  // New account from an invite: creates the user, establishes the session,
+  // and bootstraps app state (mirrors completeRegistration).
+  async function completeInvite(data: CompleteInviteIn): Promise<void> {
+    const { data: token } = await authApi.completeInvite(data)
+    await startSession(token)
+  }
+
+  // Existing account: joins the invited org as the signed-in user; the
+  // returned session is scoped to the new org.
+  async function acceptInvite(inviteToken: string): Promise<void> {
+    const { data: token } = await authApi.acceptInvite(inviteToken)
+    notificationsStore.clear()
+    await startSession(token)
   }
 
   // --- unauthenticated passthrough flows (no session side effects) ---
@@ -166,6 +172,7 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
     completeRegistration,
     completeInvite,
+    acceptInvite,
     register,
     verifyEmail,
     inviteStatus,

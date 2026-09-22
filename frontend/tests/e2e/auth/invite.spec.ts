@@ -42,6 +42,33 @@ test.describe('Invite page - invalid/expired token', () => {
   })
 })
 
+test.describe('Invite page - existing user, signed out', () => {
+  const INVITE_EMAIL = 'existing@example.com'
+
+  test('asks to sign in instead of offering one-click accept', async ({ page }) => {
+    await stubInviteStatus(page, { email: INVITE_EMAIL, user_exists: true })
+    await page.goto('/invite?token=valid-invite-token')
+
+    await expect(page.getByRole('button', { name: 'Sign in to accept' })).toBeVisible({
+      timeout: 5_000,
+    })
+    await expect(
+      page.getByRole('button', { name: `Accept invitation as ${INVITE_EMAIL}` }),
+    ).not.toBeVisible()
+    await expect(page.locator('#name')).not.toBeVisible()
+  })
+
+  test('sign-in button goes to login and returns to the invite', async ({ page }) => {
+    await stubInviteStatus(page, { email: INVITE_EMAIL, user_exists: true })
+    await page.goto('/invite?token=valid-invite-token')
+    await page.getByRole('button', { name: 'Sign in to accept' }).click()
+
+    await page.waitForURL(/\/login/, { timeout: 5_000 })
+    const redirect = new URL(page.url()).searchParams.get('redirect')
+    expect(redirect).toBe('/invite?token=valid-invite-token')
+  })
+})
+
 test.describe('Invite page - new user', () => {
   const INVITE_EMAIL = 'newuser@example.com'
 

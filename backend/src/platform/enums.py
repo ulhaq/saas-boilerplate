@@ -121,6 +121,14 @@ class ErrorCode(ErrorCodeEnum):
         "capacity_exceeded",
         "You have reached your plan's limit for this resource",
     )
+    INVITE_LOGIN_REQUIRED = (
+        "invite_login_required",
+        "Sign in to accept this invitation",
+    )
+    INVITE_EMAIL_MISMATCH = (
+        "invite_email_mismatch",
+        "This invitation was sent to a different email address",
+    )
     MFA_CODE_INVALID = (
         "mfa_code_invalid",
         "The two-factor authentication code is invalid",

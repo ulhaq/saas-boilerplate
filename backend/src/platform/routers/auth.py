@@ -4,11 +4,12 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Request, Response, stat
 from fastapi.security import OAuth2PasswordRequestForm
 
 from src.platform.core.config import settings
-from src.platform.core.dependencies import authenticate
+from src.platform.core.dependencies import authenticate, authenticate_user_session
 from src.platform.core.limiter import limiter
 from src.platform.core.security import Auth, Token
 from src.platform.schemas.mfa import MfaChallengeOut, MfaVerifyIn
 from src.platform.schemas.user import (
+    AcceptInviteIn,
     CompleteInviteIn,
     CompleteRegistrationIn,
     EmailIn,
@@ -183,10 +184,35 @@ async def complete_invite(
     bg_tasks: BackgroundTasks,
     service: Annotated[AuthService, Depends()],
     schema_in: CompleteInviteIn,
-) -> Token | MfaChallengeOut:
+) -> Token:
+    """Accept an invite by creating a new account. Existing accounts get
+    `invite_login_required` and must use POST /auth/accept-invite."""
     token = await service.complete_invite(schema_in, bg_tasks.add_task)
-    if isinstance(token, Token):
-        _set_refresh_token_cookie(response, token.refresh_token)
+    _set_refresh_token_cookie(response, token.refresh_token)
+    return token
+
+
+@router.post(
+    "/accept-invite", status_code=status.HTTP_201_CREATED, include_in_schema=False
+)
+@limiter.limit("5/minute")
+async def accept_invite(
+    request: Request,
+    response: Response,
+    bg_tasks: BackgroundTasks,
+    service: Annotated[AuthService, Depends()],
+    current_user: Annotated[Auth, Depends(authenticate_user_session)],
+    schema_in: AcceptInviteIn,
+) -> Token:
+    """Accept an invite as the signed-in user; switches the session to the
+    new organization."""
+    token = await service.accept_invite(
+        current_user,
+        schema_in.invite_token,
+        bg_tasks.add_task,
+        refresh_token=request.cookies.get("refresh_token"),
+    )
+    _set_refresh_token_cookie(response, token.refresh_token)
     return token
 
 

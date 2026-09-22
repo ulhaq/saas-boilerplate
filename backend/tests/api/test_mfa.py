@@ -372,7 +372,7 @@ def test_mfa_actions_are_audited(
 # --- invites ----------------------------------------------------------------
 
 
-def test_invite_for_existing_mfa_user_requires_code(
+def test_existing_mfa_user_must_complete_sign_in_to_accept_invite(
     mocker: MockerFixture, clock: _Clock
 ) -> None:
     with TestClient(app) as invitee, TestClient(app) as admin:
@@ -393,27 +393,38 @@ def test_invite_for_existing_mfa_user_requires_code(
         invite_token = mock_send.call_args.kwargs["data"]["invite_url"].split("token=")[
             1
         ]
-
         mocker.patch("src.platform.services.auth.send_email")
+
+        # The invite link alone neither signs in nor joins the org.
         rs = invitee.post(
             "/v1/auth/complete-invite", json={"invite_token": invite_token}
         )
-        assert rs.status_code == 201
-        body = rs.json()
-        assert body["mfa_required"] is True
-        assert "refresh_token" not in rs.cookies
+        assert rs.status_code == 403
+        assert rs.json()["error_code"] == "invite_login_required"
+        members = admin.get("/v1/organizations/1/users").json()["items"]
+        assert "admin2@example.org" not in {m["email"] for m in members}
 
+        # Password alone isn't a session either; the code is required.
+        mfa_token = _login(
+            invitee, {"username": "admin2@example.org", "password": "password"}
+        ).json()["mfa_token"]
+        rs = invitee.post(
+            "/v1/auth/accept-invite",
+            json={"invite_token": invite_token},
+            headers={"Authorization": f"Bearer {mfa_token}"},
+        )
+        assert rs.status_code == 401
+
+        # Full sign-in, then accept.
         rs = invitee.post(
             "/v1/auth/mfa/verify",
-            json={"mfa_token": body["mfa_token"], "code": clock.code(secret)},
+            json={"mfa_token": mfa_token, "code": clock.code(secret)},
         )
-        assert rs.status_code == 200
-        # The session lands in the organization the invite was for.
-        me_orgs = invitee.get(
-            "/v1/organizations",
-            headers={"Authorization": f"Bearer {rs.json()['access_token']}"},
-        ).json()
-        assert 1 in {o["id"] for o in me_orgs}
+        invitee.headers["Authorization"] = f"Bearer {rs.json()['access_token']}"
+        rs = invitee.post("/v1/auth/accept-invite", json={"invite_token": invite_token})
+        assert rs.status_code == 201
+        members = admin.get("/v1/organizations/1/users").json()["items"]
+        assert "admin2@example.org" in {m["email"] for m in members}
 
 
 # --- feature flag -----------------------------------------------------------
