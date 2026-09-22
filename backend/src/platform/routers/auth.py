@@ -7,6 +7,7 @@ from src.platform.core.config import settings
 from src.platform.core.dependencies import authenticate
 from src.platform.core.limiter import limiter
 from src.platform.core.security import Auth, Token
+from src.platform.schemas.mfa import MfaChallengeOut, MfaVerifyIn
 from src.platform.schemas.user import (
     CompleteInviteIn,
     CompleteRegistrationIn,
@@ -92,8 +93,24 @@ async def get_access_token(
     response: Response,
     auth_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     service: Annotated[AuthService, Depends()],
-) -> Token:
+) -> Token | MfaChallengeOut:
+    """Returns a Token, or - when the user has two-factor auth enabled - an
+    MfaChallengeOut to exchange at POST /auth/mfa/verify."""
     token = await service.get_access_token(auth_data.username, auth_data.password)
+    if isinstance(token, Token):
+        _set_refresh_token_cookie(response, token.refresh_token)
+    return token
+
+
+@router.post("/mfa/verify", status_code=status.HTTP_200_OK)
+@limiter.limit("5/minute")
+async def verify_mfa(
+    request: Request,
+    response: Response,
+    service: Annotated[AuthService, Depends()],
+    schema_in: MfaVerifyIn,
+) -> Token:
+    token = await service.verify_mfa(schema_in)
     _set_refresh_token_cookie(response, token.refresh_token)
     return token
 
@@ -166,9 +183,10 @@ async def complete_invite(
     bg_tasks: BackgroundTasks,
     service: Annotated[AuthService, Depends()],
     schema_in: CompleteInviteIn,
-) -> Token:
+) -> Token | MfaChallengeOut:
     token = await service.complete_invite(schema_in, bg_tasks.add_task)
-    _set_refresh_token_cookie(response, token.refresh_token)
+    if isinstance(token, Token):
+        _set_refresh_token_cookie(response, token.refresh_token)
     return token
 
 

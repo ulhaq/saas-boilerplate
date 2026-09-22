@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, String, and_
+from sqlalchemy import JSON, DateTime, Integer, String, and_
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.platform.models.mixins import ResourceModel
@@ -25,6 +25,18 @@ class User(ResourceModel):
         String(16), nullable=False, server_default="system"
     )
     terms_accepted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, default=None
+    )
+    mfa_secret: Mapped[str | None] = mapped_column(String, nullable=True)
+    mfa_enabled_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, default=None
+    )
+    mfa_recovery_codes: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    mfa_last_used_step: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    mfa_failed_attempts: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    mfa_locked_until: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True, default=None
     )
 
@@ -52,3 +64,7 @@ class User(ResourceModel):
     api_tokens: Mapped[list[ApiToken]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
+
+    @property
+    def mfa_active(self) -> bool:
+        return self.mfa_enabled_at is not None

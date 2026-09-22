@@ -121,6 +121,26 @@ class ErrorCode(ErrorCodeEnum):
         "capacity_exceeded",
         "You have reached your plan's limit for this resource",
     )
+    MFA_CODE_INVALID = (
+        "mfa_code_invalid",
+        "The two-factor authentication code is invalid",
+    )
+    MFA_ALREADY_ENABLED = (
+        "mfa_already_enabled",
+        "Two-factor authentication is already enabled",
+    )
+    MFA_NOT_ENABLED = (
+        "mfa_not_enabled",
+        "Two-factor authentication is not enabled",
+    )
+    MFA_LOCKED = (
+        "mfa_locked",
+        "Too many invalid two-factor codes; try again later",
+    )
+    MFA_SETUP_REQUIRED = (
+        "mfa_setup_required",
+        "Start two-factor setup before confirming a code",
+    )
 
 
 class Permission(StrEnum):
@@ -143,6 +163,7 @@ class AuditAction(StrEnum):
     AUTH_LOGIN = "auth.login"
     AUTH_REGISTER = "auth.register"
     AUTH_PASSWORD_RESET = "auth.password_reset"
+    AUTH_MFA_RECOVERY_CODE_USED = "auth.mfa_recovery_code_used"
     USER_INVITE = "user.invite"
     USER_UPDATE = "user.update"
     USER_DELETE = "user.delete"
@@ -153,6 +174,9 @@ class AuditAction(StrEnum):
     USER_EXPORT = "user.export"
     USER_SELF_DELETE = "user.self_delete"
     USER_ANONYMIZE = "user.anonymize"
+    USER_MFA_ENABLE = "user.mfa_enable"
+    USER_MFA_DISABLE = "user.mfa_disable"
+    USER_MFA_RECOVERY_CODES_REGENERATE = "user.mfa_recovery_codes_regenerate"
     ROLE_CREATE = "role.create"
     ROLE_UPDATE = "role.update"
     ROLE_DELETE = "role.delete"

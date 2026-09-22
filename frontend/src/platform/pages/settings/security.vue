@@ -44,6 +44,10 @@ meta:
         </form>
       </CardContent>
     </Card>
+
+    <div v-if="mfaEnabled" class="mt-8">
+      <MfaSettings />
+    </div>
   </div>
 </template>
 
@@ -54,6 +58,8 @@ import { Card, CardContent } from '@/platform/components/ui/card'
 import { Label } from '@/platform/components/ui/label'
 import PageHeader from '@/platform/components/common/PageHeader.vue'
 import PasswordStrength from '@/platform/components/common/PasswordStrength.vue'
+import MfaSettings from '@/platform/components/settings/MfaSettings.vue'
+import { MFA_ENABLED } from '@/platform/constants'
 import { useProfileStore } from '@/platform/stores/profile'
 import { useErrorHandler } from '@/platform/composables/useErrorHandler'
 import { useValidation } from '@/platform/composables/useValidation'
@@ -63,6 +69,7 @@ import { useSaveFeedback } from '@/platform/composables/useSaveFeedback'
 
 const { t } = useI18n()
 const profileStore = useProfileStore()
+const mfaEnabled = MFA_ENABLED
 const { resolveError } = useErrorHandler()
 
 const rules = useRules()

@@ -8,6 +8,7 @@ import { useSubscriptionStore } from '@/platform/stores/subscription'
 import { useNotificationsStore } from '@/platform/stores/notifications'
 import type {
   Token,
+  MfaChallenge,
   RegisterIn,
   RegisterOut,
   VerifyEmailIn,
@@ -34,6 +35,21 @@ export const useAuthStore = defineStore('auth', () => {
     session.setToken(token.access_token)
   }
 
+  function isMfaChallenge(res: Token | MfaChallenge): res is MfaChallenge {
+    return 'mfa_required' in res && res.mfa_required === true
+  }
+
+  // Establishes the session and bootstraps app state after any sign-in.
+  async function startSession(token: Token): Promise<void> {
+    setSession(token)
+    await Promise.all([
+      profile.fetchMe(),
+      organizationStore.fetchOrganizations(),
+      subscription.fetchSubscriptionStatus(),
+    ])
+    notificationsStore.startPolling()
+  }
+
   function clearSession(): void {
     session.clear()
     profile.clear()
@@ -58,15 +74,18 @@ export const useAuthStore = defineStore('auth', () => {
     session.isInitialized = true
   }
 
-  async function login(email: string, password: string): Promise<void> {
-    const { data: token } = await authApi.login(email, password)
-    setSession(token)
-    await Promise.all([
-      profile.fetchMe(),
-      organizationStore.fetchOrganizations(),
-      subscription.fetchSubscriptionStatus(),
-    ])
-    notificationsStore.startPolling()
+  // Returns an MfaChallenge (no session yet) when the account has 2FA on;
+  // finish with verifyMfa().
+  async function login(email: string, password: string): Promise<MfaChallenge | null> {
+    const { data } = await authApi.login(email, password)
+    if (isMfaChallenge(data)) return data
+    await startSession(data)
+    return null
+  }
+
+  async function verifyMfa(mfaToken: string, code: string): Promise<void> {
+    const { data: token } = await authApi.verifyMfa({ mfa_token: mfaToken, code })
+    await startSession(token)
   }
 
   async function logout(): Promise<void> {
@@ -88,26 +107,16 @@ export const useAuthStore = defineStore('auth', () => {
       name,
       password,
     })
-    setSession(token)
-    await Promise.all([
-      profile.fetchMe(),
-      organizationStore.fetchOrganizations(),
-      subscription.fetchSubscriptionStatus(),
-    ])
-    notificationsStore.startPolling()
+    await startSession(token)
   }
 
   // Accepts an org invite, establishes the session, and bootstraps app state
-  // (mirrors login/completeRegistration).
-  async function completeInvite(data: CompleteInviteIn): Promise<void> {
-    const { data: token } = await authApi.completeInvite(data)
-    setSession(token)
-    await Promise.all([
-      profile.fetchMe(),
-      organizationStore.fetchOrganizations(),
-      subscription.fetchSubscriptionStatus(),
-    ])
-    notificationsStore.startPolling()
+  // (mirrors login: an existing account with 2FA gets an MfaChallenge).
+  async function completeInvite(data: CompleteInviteIn): Promise<MfaChallenge | null> {
+    const { data: res } = await authApi.completeInvite(data)
+    if (isMfaChallenge(res)) return res
+    await startSession(res)
+    return null
   }
 
   // --- unauthenticated passthrough flows (no session side effects) ---
@@ -153,6 +162,7 @@ export const useAuthStore = defineStore('auth', () => {
     clearSession,
     initialize,
     login,
+    verifyMfa,
     logout,
     completeRegistration,
     completeInvite,

@@ -8,11 +8,21 @@ meta:
 <template>
   <Card>
     <CardHeader class="pb-4">
-      <CardTitle as="h2" class="text-lg">{{ $t('auth.signIn') }}</CardTitle>
-      <CardDescription>{{ $t('auth.signInDescription') }}</CardDescription>
+      <CardTitle as="h2" class="text-lg">
+        {{ mfaToken ? $t('auth.mfaTitle') : $t('auth.signIn') }}
+      </CardTitle>
+      <CardDescription>
+        {{ mfaToken ? $t('auth.mfaDescription') : $t('auth.signInDescription') }}
+      </CardDescription>
     </CardHeader>
     <CardContent>
-      <form class="space-y-4" @submit.prevent="onSubmit">
+      <MfaChallengeForm
+        v-if="mfaToken"
+        :mfa-token="mfaToken"
+        @verified="redirectAfterLogin"
+        @cancel="onCancelMfa"
+      />
+      <form v-else class="space-y-4" @submit.prevent="onSubmit">
         <div class="space-y-2">
           <Label for="email">{{ $t('common.email') }}</Label>
           <Input
@@ -51,7 +61,7 @@ meta:
         </Button>
       </form>
     </CardContent>
-    <CardFooter class="pt-0">
+    <CardFooter v-if="!mfaToken" class="pt-0">
       <p class="text-sm text-muted-foreground text-center w-full">
         {{ $t('auth.dontHaveAccount') }}
         <RouterLink to="/register" class="text-foreground font-medium hover:underline">
@@ -80,6 +90,7 @@ import { Button } from '@/platform/components/ui/button'
 import { useAuthStore } from '@/platform/stores/auth'
 import { appConfig } from '@/platform/config'
 import { useErrorHandler } from '@/platform/composables/useErrorHandler'
+import MfaChallengeForm from '@/platform/components/auth/MfaChallengeForm.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -90,16 +101,31 @@ const email = ref('')
 const password = ref('')
 const isLoading = ref(false)
 const errorMessage = ref('')
+// Set when the password was accepted but the account requires a 2FA code.
+const mfaToken = ref('')
+
+function redirectAfterLogin() {
+  const raw = (route.query.redirect as string) || appConfig.homeRoute
+  const redirect = raw.startsWith('/') && !raw.startsWith('//') ? raw : appConfig.homeRoute
+  router.push(redirect)
+}
+
+function onCancelMfa() {
+  mfaToken.value = ''
+  password.value = ''
+}
 
 async function onSubmit() {
   if (!email.value || !password.value) return
   isLoading.value = true
   errorMessage.value = ''
   try {
-    await authStore.login(email.value, password.value)
-    const raw = (route.query.redirect as string) || appConfig.homeRoute
-    const redirect = raw.startsWith('/') && !raw.startsWith('//') ? raw : appConfig.homeRoute
-    router.push(redirect)
+    const challenge = await authStore.login(email.value, password.value)
+    if (challenge) {
+      mfaToken.value = challenge.mfa_token
+      return
+    }
+    redirectAfterLogin()
   } catch (err: unknown) {
     errorMessage.value = resolveError(err)
   } finally {

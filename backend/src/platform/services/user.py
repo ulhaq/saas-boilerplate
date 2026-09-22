@@ -66,6 +66,7 @@ class UserService(
                 "email": user.email,
                 "locale": user.locale,
                 "theme": user.theme,
+                "mfa_enabled": user.mfa_active,
                 "created_at": user.created_at,
                 "updated_at": user.updated_at,
                 "roles": organization_roles,
@@ -403,6 +404,7 @@ class UserService(
                     if user.terms_accepted_at
                     else None
                 ),
+                "mfa_enabled": user.mfa_active,
                 "created_at": user.created_at.isoformat(),
                 "updated_at": user.updated_at.isoformat(),
             },

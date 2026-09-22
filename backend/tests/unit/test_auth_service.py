@@ -13,7 +13,7 @@ from src.platform.core.exceptions import (
     NotFoundException,
     PermissionDeniedException,
 )
-from src.platform.core.security import hash_secret, sign
+from src.platform.core.security import Token, hash_secret, sign
 from src.platform.repositories.repository_manager import RepositoryManager
 from src.platform.schemas.user import (
     CompleteInviteIn,
@@ -34,6 +34,12 @@ def _no_op_schedule(fn, **kwargs):
 async def _make_service(session, provider) -> AuthService:
     repos = RepositoryManager(session)
     return AuthService(repos, provider)
+
+
+def _token(result: object) -> Token:
+    """Narrow a `Token | MfaChallengeOut` result (MFA is off in these tests)."""
+    assert isinstance(result, Token)
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -156,7 +162,9 @@ async def test_get_access_token_valid_credentials(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
             service = await _make_service(session, mock_billing_provider)
-            token = await service.get_access_token("admin@example.org", "password")
+            token = _token(
+                await service.get_access_token("admin@example.org", "password")
+            )
 
     assert token.access_token
     assert token.refresh_token
@@ -188,7 +196,9 @@ async def test_refresh_access_token_valid(mock_billing_provider):
         async with session.begin():
             service = await _make_service(session, mock_billing_provider)
             # Log in first to get a persisted refresh token
-            original = await service.get_access_token("admin@example.org", "password")
+            original = _token(
+                await service.get_access_token("admin@example.org", "password")
+            )
             new_tokens = await service.refresh_access_token(original.refresh_token)
 
     assert new_tokens.access_token
@@ -259,7 +269,9 @@ async def test_logout_deletes_refresh_token(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
             service = await _make_service(session, mock_billing_provider)
-            tokens = await service.get_access_token("admin@example.org", "password")
+            tokens = _token(
+                await service.get_access_token("admin@example.org", "password")
+            )
             # logout should not raise even if the token is valid
             await service.logout(tokens.refresh_token)
 
@@ -418,14 +430,16 @@ async def test_complete_invite_new_user(mock_billing_provider):
             repos = RepositoryManager(session)
             await repos.invite_token.create(email=email, token=hash_secret(token))
             service = AuthService(repos, mock_billing_provider)
-            result = await service.complete_invite(
-                CompleteInviteIn(
-                    invite_token=token,
-                    name="New Invitee",
-                    password="Str0ng!Pass",
-                    terms_accepted=True,
-                ),
-                schedule_task=_no_op_schedule,
+            result = _token(
+                await service.complete_invite(
+                    CompleteInviteIn(
+                        invite_token=token,
+                        name="New Invitee",
+                        password="Str0ng!Pass",
+                        terms_accepted=True,
+                    ),
+                    schedule_task=_no_op_schedule,
+                )
             )
 
     assert result.access_token
@@ -445,9 +459,11 @@ async def test_complete_invite_existing_user(mock_billing_provider):
             repos = RepositoryManager(session)
             await repos.invite_token.create(email=email, token=hash_secret(token))
             service = AuthService(repos, mock_billing_provider)
-            result = await service.complete_invite(
-                CompleteInviteIn(invite_token=token),
-                schedule_task=_no_op_schedule,
+            result = _token(
+                await service.complete_invite(
+                    CompleteInviteIn(invite_token=token),
+                    schedule_task=_no_op_schedule,
+                )
             )
 
     assert result.access_token
@@ -614,9 +630,11 @@ async def test_complete_invite_existing_user_with_roles(mock_billing_provider):
             repos = RepositoryManager(session)
             await repos.invite_token.create(email=email, token=hash_secret(token))
             service = AuthService(repos, mock_billing_provider)
-            result = await service.complete_invite(
-                CompleteInviteIn(invite_token=token),
-                schedule_task=_no_op_schedule,
+            result = _token(
+                await service.complete_invite(
+                    CompleteInviteIn(invite_token=token),
+                    schedule_task=_no_op_schedule,
+                )
             )
 
     assert result.access_token
@@ -679,14 +697,16 @@ async def test_complete_invite_restores_soft_deleted_user(mock_billing_provider)
             repos = RepositoryManager(session)
             await repos.invite_token.create(email=email, token=hash_secret(token))
             service = AuthService(repos, mock_billing_provider)
-            result = await service.complete_invite(
-                CompleteInviteIn(
-                    invite_token=token,
-                    name="Restored",
-                    password="Str0ng!Pass",
-                    terms_accepted=True,
-                ),
-                schedule_task=_no_op_schedule,
+            result = _token(
+                await service.complete_invite(
+                    CompleteInviteIn(
+                        invite_token=token,
+                        name="Restored",
+                        password="Str0ng!Pass",
+                        terms_accepted=True,
+                    ),
+                    schedule_task=_no_op_schedule,
+                )
             )
 
     assert result.access_token
@@ -711,14 +731,16 @@ async def test_complete_invite_new_user_with_roles(mock_billing_provider):
             repos = RepositoryManager(session)
             await repos.invite_token.create(email=email, token=hash_secret(token))
             service = AuthService(repos, mock_billing_provider)
-            result = await service.complete_invite(
-                CompleteInviteIn(
-                    invite_token=token,
-                    name="New With Roles",
-                    password="Str0ng!Pass",
-                    terms_accepted=True,
-                ),
-                schedule_task=_no_op_schedule,
+            result = _token(
+                await service.complete_invite(
+                    CompleteInviteIn(
+                        invite_token=token,
+                        name="New With Roles",
+                        password="Str0ng!Pass",
+                        terms_accepted=True,
+                    ),
+                    schedule_task=_no_op_schedule,
+                )
             )
 
     assert result.access_token
@@ -801,8 +823,12 @@ async def test_second_login_does_not_invalidate_first_session(mock_billing_provi
     async with TestSessionLocal() as session:
         async with session.begin():
             service = await _make_service(session, mock_billing_provider)
-            first = await service.get_access_token("admin@example.org", "password")
-            second = await service.get_access_token("admin@example.org", "password")
+            first = _token(
+                await service.get_access_token("admin@example.org", "password")
+            )
+            second = _token(
+                await service.get_access_token("admin@example.org", "password")
+            )
             assert await service.refresh_access_token(first.refresh_token)
             assert await service.refresh_access_token(second.refresh_token)
 
@@ -814,7 +840,7 @@ async def test_refresh_token_reuse_revokes_all_sessions(mock_billing_provider):
     # revocation survives the 401, which conflicts with an outer transaction.
     async with TestSessionLocal() as session:
         service = await _make_service(session, mock_billing_provider)
-        first = await service.get_access_token("admin@example.org", "password")
+        first = _token(await service.get_access_token("admin@example.org", "password"))
         rotated = await service.refresh_access_token(first.refresh_token)
         # Replay the pre-rotation token
         with pytest.raises(NotAuthenticatedException):
@@ -838,7 +864,9 @@ async def test_refresh_access_token_no_membership_raises(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
             service = await _make_service(session, mock_billing_provider)
-            tokens = await service.get_access_token("admin@example.org", "password")
+            tokens = _token(
+                await service.get_access_token("admin@example.org", "password")
+            )
 
     async with TestSessionLocal() as session:
         async with session.begin():

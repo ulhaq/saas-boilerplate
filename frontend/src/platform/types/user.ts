@@ -21,6 +21,7 @@ export interface UserOut extends UserBase {
   id: number
   locale: SupportedLocale
   theme: string
+  mfa_enabled: boolean
   roles: RoleOut[]
   created_at: string
   updated_at: string

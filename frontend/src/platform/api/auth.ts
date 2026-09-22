@@ -1,6 +1,8 @@
 import { apiClient } from './client'
 import type {
   Token,
+  MfaChallenge,
+  MfaVerifyIn,
   RegisterIn,
   RegisterOut,
   VerifyEmailIn,
@@ -18,9 +20,13 @@ export const authApi = {
     const form = new URLSearchParams()
     form.append('username', email) // OAuth2 spec uses 'username'
     form.append('password', password)
-    return apiClient.post<Token>('/auth/token', form, {
+    return apiClient.post<Token | MfaChallenge>('/auth/token', form, {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     })
+  },
+
+  verifyMfa(data: MfaVerifyIn) {
+    return apiClient.post<Token>('/auth/mfa/verify', data)
   },
 
   register(data: RegisterIn) {
@@ -60,6 +66,6 @@ export const authApi = {
   },
 
   completeInvite(data: CompleteInviteIn) {
-    return apiClient.post<Token>('/auth/complete-invite', data)
+    return apiClient.post<Token | MfaChallenge>('/auth/complete-invite', data)
   },
 }

@@ -102,7 +102,11 @@ class JWTTokenClaims(BaseModel):
 
 
 type SignSalt = Literal[
-    "reset-password", "email-verification", "complete-registration", "invite"
+    "reset-password",
+    "email-verification",
+    "complete-registration",
+    "invite",
+    "mfa-challenge",
 ]
 
 

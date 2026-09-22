@@ -7,7 +7,7 @@ The product-specific code lives in one package per side (`backend/src/example/`,
 ## Features
 
 - **Multi-tenant** organisations with enforced tenant isolation and fine-grained RBAC (roles, permissions, API tokens)
-- **Auth**: JWT access tokens + httponly refresh cookies, email verification, password reset, invites, multiple organisations per user
+- **Auth**: JWT access tokens + httponly refresh cookies, email verification, password reset, invites, multiple organisations per user, optional TOTP two-factor auth with recovery codes (`MFA_ENABLED` / `VITE_MFA_ENABLED`)
 - **Billing** via Stripe: plans, trials, checkout, customer portal, webhooks, plan features, seat/usage/capacity limits
 - **Audit log, GDPR export/erasure/retention**, cookie consent
 - **Notifications**: localized transactional email (Danish/English, MJML templates) and in-app notifications

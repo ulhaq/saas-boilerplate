@@ -7,6 +7,8 @@ export type {
 } from './api'
 export type {
   Token,
+  MfaChallenge,
+  MfaVerifyIn,
   LoginIn,
   ResetPasswordRequestIn,
   ResetPasswordIn,
@@ -22,6 +24,7 @@ export type {
   InviteStatusResponse,
 } from './auth'
 export type { UserBase, UserPatch, UserRoleIn, UserOut } from './user'
+export type { MfaSetupOut, MfaCodeIn, MfaDisableIn, MfaRecoveryCodesOut } from './mfa'
 export type { OrganizationBase, OrganizationPatch, OrganizationOut } from './organization'
 export type { RoleBase, RoleIn, RolePatch, RolePermissionIn, RoleOut } from './role'
 export type { PermissionOut } from './permission'

@@ -11,6 +11,9 @@ meta:
       <CardDescription v-if="state === 'new-user'">
         {{ $t('auth.invite.description') }}
       </CardDescription>
+      <CardDescription v-else-if="state === 'mfa'">
+        {{ $t('auth.mfaDescription') }}
+      </CardDescription>
     </CardHeader>
     <CardContent>
       <!-- Invalid / expired token -->
@@ -46,6 +49,15 @@ meta:
           {{ $t('auth.invite.acceptAs', { email: inviteEmail }) }}
         </Button>
       </div>
+
+      <!-- Existing user with 2FA - invite accepted, code needed to sign in.
+           The invite is consumed by now, so "back" goes to the login page. -->
+      <MfaChallengeForm
+        v-else-if="state === 'mfa'"
+        :mfa-token="mfaToken"
+        @verified="router.push(appConfig.homeRoute)"
+        @cancel="router.push('/login')"
+      />
 
       <!-- New user - name + password form -->
       <form v-else-if="state === 'new-user'" class="space-y-4" @submit.prevent="onSubmitNew">
@@ -151,10 +163,11 @@ import { useRules } from '@/platform/composables/useRules'
 import { useErrorHandler } from '@/platform/composables/useErrorHandler'
 import { useI18n } from 'vue-i18n'
 import { useLocalePath } from '@/platform/composables/useLocalePath'
+import MfaChallengeForm from '@/platform/components/auth/MfaChallengeForm.vue'
 
 const { localePath } = useLocalePath()
 
-type InviteState = 'loading' | 'invalid' | 'wrong-account' | 'existing-user' | 'new-user'
+type InviteState = 'loading' | 'invalid' | 'wrong-account' | 'existing-user' | 'new-user' | 'mfa'
 
 const route = useRoute()
 const router = useRouter()
@@ -177,6 +190,7 @@ const termsAccepted = ref(false)
 const termsError = ref('')
 const isLoading = ref(false)
 const errorMessage = ref('')
+const mfaToken = ref('')
 
 const currentUserEmail = computed(() => profileStore.user?.email ?? '')
 
@@ -216,12 +230,17 @@ async function _finishAccept(
   isLoading.value = true
   errorMessage.value = ''
   try {
-    await authStore.completeInvite({
+    const challenge = await authStore.completeInvite({
       invite_token: inviteTokenValue,
       ...(name !== undefined && { name }),
       ...(password !== undefined && { password }),
       ...(termsAcceptedVal !== undefined && { terms_accepted: termsAcceptedVal }),
     })
+    if (challenge) {
+      mfaToken.value = challenge.mfa_token
+      state.value = 'mfa'
+      return
+    }
     router.push(appConfig.homeRoute)
   } catch (err: unknown) {
     errorMessage.value = resolveError(err)

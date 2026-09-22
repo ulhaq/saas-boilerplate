@@ -30,6 +30,7 @@ class UserOut(UserBase, Timestamp):
     locale: str = "da"
     theme: str = "system"
     terms_accepted_at: datetime | None = None
+    mfa_enabled: bool = False
     roles: Annotated[list[RoleOut], AfterValidator(sort_by_id)] = Field(
         default_factory=list
     )

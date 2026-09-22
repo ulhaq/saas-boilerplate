@@ -16,6 +16,7 @@ from src.platform.core.exceptions import (
     ValidationException,
 )
 from src.platform.core.hooks import HookEvent, emit
+from src.platform.core.mfa import decrypt_secret, match_recovery_code, verify_totp
 from src.platform.core.security import (
     BEARER_HEADERS,
     Auth,
@@ -36,7 +37,9 @@ from src.platform.enums import (
 )
 from src.platform.models.role import Role
 from src.platform.models.user import User
+from src.platform.models.user_organization import UserOrganization
 from src.platform.repositories.repository_manager import RepositoryManager
+from src.platform.schemas.mfa import MfaChallengeOut, MfaVerifyIn
 from src.platform.schemas.user import (
     CompleteInviteIn,
     CompleteRegistrationIn,
@@ -54,6 +57,21 @@ from src.platform.services.mailer import send_email
 from src.platform.services.organization import setup_new_organization
 
 log = logging.getLogger(__name__)
+
+# Applied when a soft-deleted user is restored: the returning person sets a new
+# password and must not be locked out by an authenticator from the old account.
+_MFA_RESET: dict = {
+    "mfa_secret": None,
+    "mfa_enabled_at": None,
+    "mfa_recovery_codes": None,
+    "mfa_last_used_step": None,
+    "mfa_failed_attempts": 0,
+    "mfa_locked_until": None,
+}
+
+
+def mfa_required(user: User) -> bool:
+    return settings.mfa_enabled and user.mfa_active
 
 
 def _filter_assignable_roles(roles: Sequence[Role]) -> list[Role]:
@@ -197,6 +215,7 @@ class AuthService(BaseService):
                 password=hashed_pw,
                 terms_accepted_at=terms_accepted_at,
                 locale=locale,
+                **_MFA_RESET,
             )
         else:
             user = await self.repos.user.create(
@@ -270,7 +289,7 @@ class AuthService(BaseService):
 
     async def complete_invite(
         self, schema_in: CompleteInviteIn, schedule_task: Callable
-    ) -> Token:
+    ) -> Token | MfaChallengeOut:
         data: dict = unsign(
             schema_in.invite_token,
             salt="invite",
@@ -363,6 +382,7 @@ class AuthService(BaseService):
                     name=schema_in.name,
                     password=hashed_pw,
                     terms_accepted_at=terms_at,
+                    **_MFA_RESET,
                 )
             else:
                 user = await self.repos.user.create(
@@ -403,13 +423,22 @@ class AuthService(BaseService):
             user_id=user.id,
         )
 
+        # The invite link proves email ownership only; an existing account
+        # with 2FA still has to present a code before getting a session.
+        if mfa_required(user):
+            challenge = self._mfa_challenge(user, organization_id)
+            await self.repos.db.commit()
+            return challenge
+
         token = await self._issue_tokens(user, organization_id)
 
         await self.repos.db.commit()
 
         return token
 
-    async def get_access_token(self, username: str, password: str) -> Token:
+    async def get_access_token(
+        self, username: str, password: str
+    ) -> Token | MfaChallengeOut:
         user = authenticate_user(
             password, await self.repos.user.get_by_email(username.lower())
         )
@@ -429,20 +458,106 @@ class AuthService(BaseService):
                 headers=BEARER_HEADERS,
             )
 
+        if mfa_required(user):
+            return self._mfa_challenge(user, membership.organization_id)
+
+        return await self._complete_login(user, membership)
+
+    async def _complete_login(self, user: User, membership: UserOrganization) -> Token:
+        organization_id = membership.organization_id
         await self.repos.user_organization.update_last_active(membership)
 
         # New session for this device; other sessions stay active. Expired
         # rows for this user are pruned opportunistically.
         await self.repos.refresh_token.delete_expired_for_user(user)
-        token = await self._issue_tokens(user, membership.organization_id)
+        token = await self._issue_tokens(user, organization_id)
 
         await self.log_audit(
             AuditAction.AUTH_LOGIN,
-            organization_id=membership.organization_id,
+            organization_id=organization_id,
             user_id=user.id,
         )
 
         return token
+
+    def _mfa_challenge(self, user: User, organization_id: int) -> MfaChallengeOut:
+        mfa_token = sign(
+            data={"uid": user.id, "oid": organization_id}, salt="mfa-challenge"
+        )
+        return MfaChallengeOut(mfa_token=mfa_token)
+
+    async def verify_mfa(self, schema_in: MfaVerifyIn) -> Token:
+        if not settings.mfa_enabled:
+            raise NotFoundException()
+
+        payload: dict = unsign(
+            schema_in.mfa_token,
+            salt="mfa-challenge",
+            max_age=settings.mfa_challenge_expiry,
+        )
+        user = await self.repos.user.unscoped.get(int(payload["uid"]))
+        if not user or not user.mfa_active or not user.mfa_secret:
+            raise NotAuthenticatedException(
+                "Token invalid", error_code=ErrorCode.TOKEN_INVALID
+            )
+
+        organization_id = int(payload["oid"])
+        memberships = await self.repos.user_organization.get_all_for_user(user.id)
+        membership = next(
+            (m for m in memberships if m.organization_id == organization_id), None
+        )
+        if not membership:
+            raise NotAuthenticatedException(
+                error_code=ErrorCode.LOGIN_FAILED, headers=BEARER_HEADERS
+            )
+
+        now = datetime.now(UTC)
+        if user.mfa_locked_until and user.mfa_locked_until > now:
+            raise NotAuthenticatedException(
+                "Two-factor verification locked", error_code=ErrorCode.MFA_LOCKED
+            )
+
+        secret = decrypt_secret(user.mfa_secret)
+        step = (
+            verify_totp(secret, schema_in.code, user.mfa_last_used_step)
+            if secret
+            else None
+        )
+        if step is not None:
+            await self.repos.user.update(user, mfa_last_used_step=step)
+        elif used := match_recovery_code(schema_in.code, user.mfa_recovery_codes):
+            remaining = [h for h in user.mfa_recovery_codes or [] if h != used]
+            await self.repos.user.update(user, mfa_recovery_codes=remaining)
+            await self.log_audit(
+                AuditAction.AUTH_MFA_RECOVERY_CODE_USED,
+                organization_id=organization_id,
+                user_id=user.id,
+                details={"remaining": len(remaining)},
+            )
+        else:
+            attempts = user.mfa_failed_attempts + 1
+            locked = attempts >= settings.mfa_max_failed_attempts
+            await self.repos.user.update(
+                user,
+                mfa_failed_attempts=0 if locked else attempts,
+                mfa_locked_until=(
+                    now + timedelta(seconds=settings.mfa_lockout_seconds)
+                    if locked
+                    else None
+                ),
+            )
+            if locked:
+                log.warning("MFA verification locked [user_id=%s]", user.id)
+            await self.repos.db.commit()
+            raise NotAuthenticatedException(
+                "Invalid two-factor code", error_code=ErrorCode.MFA_CODE_INVALID
+            )
+
+        if user.mfa_failed_attempts or user.mfa_locked_until:
+            await self.repos.user.update(
+                user, mfa_failed_attempts=0, mfa_locked_until=None
+            )
+        return await self._complete_login(user, membership)
 
     async def refresh_access_token(self, refresh_token: str | None) -> Token:
         if not refresh_token:

@@ -1,8 +1,9 @@
 from typing import Annotated
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Path, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Path, Request, status
 
 from src.platform.core.dependencies import require_permission
+from src.platform.core.limiter import limiter
 from src.platform.core.security import Auth
 from src.platform.enums import Permission
 from src.platform.routers.query_options import (
@@ -13,6 +14,12 @@ from src.platform.routers.query_options import (
     sort_query,
 )
 from src.platform.schemas.common import FilterItem, PageQueryParams, PaginatedResponse
+from src.platform.schemas.mfa import (
+    MfaCodeIn,
+    MfaDisableIn,
+    MfaRecoveryCodesOut,
+    MfaSetupOut,
+)
 from src.platform.schemas.user import (
     ChangePasswordIn,
     DeleteMeIn,
@@ -22,6 +29,7 @@ from src.platform.schemas.user import (
     UserPatch,
     UserRoleIn,
 )
+from src.platform.services.mfa import MfaService
 from src.platform.services.user import UserService
 
 router = APIRouter(prefix="/users")
@@ -60,6 +68,37 @@ async def export_my_data(
     service: Annotated[UserService, Depends()],
 ) -> UserDataExportOut:
     return await service.export_me()
+
+
+@router.post("/me/mfa/setup", status_code=status.HTTP_200_OK)
+async def start_mfa_setup(service: Annotated[MfaService, Depends()]) -> MfaSetupOut:
+    return await service.setup()
+
+
+@router.post("/me/mfa/enable", status_code=status.HTTP_200_OK)
+@limiter.limit("5/minute")
+async def enable_mfa(
+    request: Request, service: Annotated[MfaService, Depends()], schema_in: MfaCodeIn
+) -> MfaRecoveryCodesOut:
+    return await service.enable(schema_in)
+
+
+@router.post("/me/mfa/disable", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("5/minute")
+async def disable_mfa(
+    request: Request,
+    service: Annotated[MfaService, Depends()],
+    schema_in: MfaDisableIn,
+) -> None:
+    await service.disable(schema_in)
+
+
+@router.post("/me/mfa/recovery-codes", status_code=status.HTTP_200_OK)
+@limiter.limit("5/minute")
+async def regenerate_mfa_recovery_codes(
+    request: Request, service: Annotated[MfaService, Depends()], schema_in: MfaCodeIn
+) -> MfaRecoveryCodesOut:
+    return await service.regenerate_recovery_codes(schema_in)
 
 
 @router.get("", status_code=status.HTTP_200_OK)

@@ -24,6 +24,11 @@ export const MS_PER_DAY = 24 * 60 * 60 * 1000
 export const ALLOW_MULTIPLE_ORGANIZATIONS =
   import.meta.env.VITE_ALLOW_MULTIPLE_ORGANIZATIONS !== 'false'
 
+// Feature flag mirroring the backend `MFA_ENABLED` setting: shows the
+// two-factor section in security settings. Login handles MFA challenges from
+// the API regardless of this flag. Defaults to disabled.
+export const MFA_ENABLED = import.meta.env.VITE_MFA_ENABLED === 'true'
+
 // Swagger UI served by the API process itself, so it lives on the API host
 // rather than behind the app's `/v1` proxy. Overridable per environment.
 export const API_DOCS_URL =

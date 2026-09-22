@@ -11,12 +11,72 @@
           "Authentication"
         ],
         "summary": "Get Access Token",
+        "description": "Returns a Token, or - when the user has two-factor auth enabled - an\nMfaChallengeOut to exchange at POST /auth/mfa/verify.",
         "operationId": "get_access_token_v1_auth_token_post",
         "requestBody": {
           "content": {
             "application/x-www-form-urlencoded": {
               "schema": {
                 "$ref": "#/components/schemas/Body_get_access_token_v1_auth_token_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/Token"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MfaChallengeOut"
+                    }
+                  ],
+                  "title": "Response Get Access Token V1 Auth Token Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/mfa/verify": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Verify Mfa",
+        "operationId": "verify_mfa_v1_auth_mfa_verify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MfaVerifyIn"
               }
             }
           },
@@ -596,6 +656,46 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "MfaChallengeOut": {
+        "properties": {
+          "mfa_required": {
+            "type": "boolean",
+            "const": true,
+            "title": "Mfa Required",
+            "default": true
+          },
+          "mfa_token": {
+            "type": "string",
+            "title": "Mfa Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mfa_token"
+        ],
+        "title": "MfaChallengeOut",
+        "description": "Returned instead of a Token when the password was correct but a second\nfactor is required. Exchange it at POST /auth/mfa/verify."
+      },
+      "MfaVerifyIn": {
+        "properties": {
+          "mfa_token": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Mfa Token"
+          },
+          "code": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mfa_token",
+          "code"
+        ],
+        "title": "MfaVerifyIn"
       },
       "PaginatedResponse_ProjectOut_": {
         "properties": {

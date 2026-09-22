@@ -4,6 +4,18 @@ export interface Token {
   token_type: string
 }
 
+// Returned instead of a Token when the account has two-factor auth enabled;
+// exchange it (plus a code) for a Token via POST /auth/mfa/verify.
+export interface MfaChallenge {
+  mfa_required: true
+  mfa_token: string
+}
+
+export interface MfaVerifyIn {
+  mfa_token: string
+  code: string
+}
+
 export interface LoginIn {
   username: string
   password: string

@@ -48,6 +48,12 @@ class Settings(EnvSettings):
     complete_registration_expiry: int = 30 * 60
     invite_expiry: int = 7 * 24 * 60 * 60
 
+    mfa_enabled: bool = False
+    mfa_challenge_expiry: int = 5 * 60
+    mfa_recovery_code_count: int = 10
+    mfa_max_failed_attempts: int = 5
+    mfa_lockout_seconds: int = 15 * 60
+
     raw_allow_origins: str = Field(
         default="http://localhost:5173", validation_alias="allow_origins"
     )
