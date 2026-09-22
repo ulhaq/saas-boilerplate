@@ -12,7 +12,7 @@ from src.platform.core.config import settings
 from src.platform.core.telemetry import track_worker_run
 from src.platform.enums import AuditAction
 from src.platform.models.email_verification_token import EmailVerificationToken
-from src.platform.models.invite_token import InviteToken
+from src.platform.models.invitation import Invitation
 from src.platform.models.organization import Organization
 from src.platform.models.password_reset_token import PasswordResetToken
 from src.platform.models.refresh_token import RefreshToken
@@ -31,7 +31,6 @@ async def purge_expired_tokens(db: AsyncSession) -> int:
     email_verify_cutoff = (
         now - timedelta(seconds=settings.email_verification_expiry) - cutoff_buffer
     )
-    invite_cutoff = now - timedelta(seconds=settings.invite_expiry) - cutoff_buffer
 
     r1 = await db.execute(
         delete(PasswordResetToken).where(
@@ -44,7 +43,7 @@ async def purge_expired_tokens(db: AsyncSession) -> int:
         )
     )
     r3 = await db.execute(
-        delete(InviteToken).where(InviteToken.created_at < invite_cutoff)
+        delete(Invitation).where(Invitation.expires_at < now - cutoff_buffer)
     )
     # Refresh-token rows carry their own expiry; one row per session/device,
     # so expired sessions accumulate until purged here.

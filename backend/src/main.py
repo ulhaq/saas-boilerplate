@@ -38,6 +38,7 @@ from src.platform.routers import (
     auth,
     billing,
     contact,
+    invitation,
     notification,
     organization,
     permission,
@@ -271,6 +272,9 @@ app.include_router(
     organization.router, tags=["Organizations"], prefix="/v1", include_in_schema=False
 )
 app.include_router(user.router, tags=["Users"], prefix="/v1", include_in_schema=False)
+app.include_router(
+    invitation.router, tags=["Invitations"], prefix="/v1", include_in_schema=False
+)
 app.include_router(role.router, tags=["Roles"], prefix="/v1", include_in_schema=False)
 app.include_router(
     permission.router, tags=["Permissions"], prefix="/v1", include_in_schema=False

@@ -125,6 +125,11 @@ class ErrorCode(ErrorCodeEnum):
         "invite_login_required",
         "Sign in to accept this invitation",
     )
+    INVITE_INVALID = (
+        "invite_invalid",
+        "This invitation link is invalid or has already been used",
+    )
+    INVITE_EXPIRED = ("invite_expired", "This invitation has expired")
     INVITE_EMAIL_MISMATCH = (
         "invite_email_mismatch",
         "This invitation was sent to a different email address",
@@ -173,6 +178,7 @@ class AuditAction(StrEnum):
     AUTH_PASSWORD_RESET = "auth.password_reset"
     AUTH_MFA_RECOVERY_CODE_USED = "auth.mfa_recovery_code_used"
     USER_INVITE = "user.invite"
+    USER_INVITE_REVOKE = "user.invite_revoke"
     USER_UPDATE = "user.update"
     USER_DELETE = "user.delete"
     USER_ROLE_ASSIGN = "user.role_assign"

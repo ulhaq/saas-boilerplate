@@ -118,9 +118,13 @@ meta:
       </template>
     </DataTable>
 
+    <PermissionGuard permission="manage:organization_user">
+      <PendingInvitations />
+    </PermissionGuard>
+
     <UserForm v-model:open="showForm" :user="selectedUser" @saved="refresh" />
     <UserRoleDialog v-model:open="showRoles" :user="selectedUser" @saved="refresh" />
-    <InviteUserDialog v-model:open="showInvite" @invited="refresh" />
+    <InviteUserDialog v-model:open="showInvite" @invited="onInvited" />
   </div>
 </template>
 
@@ -145,7 +149,9 @@ import PermissionGuard from '@/platform/components/common/PermissionGuard.vue'
 import UserForm from '@/platform/components/users/UserForm.vue'
 import UserRoleDialog from '@/platform/components/users/UserRoleDialog.vue'
 import InviteUserDialog from '@/platform/components/users/InviteUserDialog.vue'
+import PendingInvitations from '@/platform/components/users/PendingInvitations.vue'
 import { useUsersStore } from '@/platform/stores/users'
+import { useInvitationsStore } from '@/platform/stores/invitations'
 import { useSubscriptionStore } from '@/platform/stores/subscription'
 import { useDataTable } from '@/platform/composables/useDataTable'
 import { usePermission } from '@/platform/composables/usePermission'
@@ -159,6 +165,7 @@ import type { UserOut } from '@/platform/types'
 const { t } = useI18n()
 const subscriptionStore = useSubscriptionStore()
 const usersStore = useUsersStore()
+const invitationsStore = useInvitationsStore()
 const { formatDate } = useFormatDate()
 const { toast } = useToast()
 const { handleError } = useErrorHandler()
@@ -208,6 +215,12 @@ const selectedUser = ref<UserOut | null>(null)
 
 function openInvite() {
   showInvite.value = true
+}
+
+// Only reachable with manage:organization_user (the invite button is guarded).
+function onInvited() {
+  refresh()
+  invitationsStore.fetchInvitations().catch((err: unknown) => handleError(err))
 }
 
 function openEdit(user: UserOut) {

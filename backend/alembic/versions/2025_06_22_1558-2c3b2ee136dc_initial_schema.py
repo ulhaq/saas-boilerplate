@@ -228,17 +228,26 @@ def upgrade() -> None:
     )
 
     op.create_table(
-        "invite_token",
+        "invitation",
         sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("organization_id", sa.Integer(), nullable=False),
         sa.Column("email", sa.String(), nullable=False),
-        sa.Column("token", sa.String(), nullable=False),
+        sa.Column("role_ids", sa.JSON(), nullable=False),
+        sa.Column("token_hash", sa.String(), nullable=False),
+        sa.Column("invited_by_id", sa.Integer(), nullable=True),
+        sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["organization_id"], ["organization.id"], ondelete="CASCADE"
+        ),
+        sa.ForeignKeyConstraint(["invited_by_id"], ["user.id"], ondelete="SET NULL"),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("token"),
+        sa.UniqueConstraint("token_hash"),
+        sa.UniqueConstraint(
+            "organization_id", "email", name="uq_invitation_organization_email"
+        ),
     )
-    op.create_index(
-        op.f("ix_invite_token_email"), "invite_token", ["email"], unique=True
-    )
+    op.create_index(op.f("ix_invitation_email"), "invitation", ["email"])
 
     op.create_table(
         "email_verification_token",
@@ -751,8 +760,8 @@ def downgrade() -> None:
     )
     op.drop_table("email_verification_token")
 
-    op.drop_index(op.f("ix_invite_token_email"), table_name="invite_token")
-    op.drop_table("invite_token")
+    op.drop_index(op.f("ix_invitation_email"), table_name="invitation")
+    op.drop_table("invitation")
 
     op.drop_index(op.f("ix_api_token_organization_id"), table_name="api_token")
     op.drop_index(op.f("ix_api_token_user_id"), table_name="api_token")

@@ -10,7 +10,7 @@ from src.platform.models.billing import (
     WebhookEvent,
 )
 from src.platform.models.email_verification_token import EmailVerificationToken
-from src.platform.models.invite_token import InviteToken
+from src.platform.models.invitation import Invitation
 from src.platform.models.notification import Notification
 from src.platform.models.organization import Organization
 from src.platform.models.password_reset_token import PasswordResetToken
@@ -26,7 +26,7 @@ __all__ = [
     "ApiToken",
     "AuditLog",
     "EmailVerificationToken",
-    "InviteToken",
+    "Invitation",
     "Notification",
     "Organization",
     "PasswordResetToken",

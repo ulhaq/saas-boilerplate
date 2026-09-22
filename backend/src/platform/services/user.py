@@ -1,4 +1,6 @@
+import secrets
 from collections.abc import Callable
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from fastapi import Depends
@@ -12,7 +14,7 @@ from src.platform.core.exceptions import (
     PermissionDeniedException,
 )
 from src.platform.core.hooks import HookEvent, emit
-from src.platform.core.security import Auth, authenticate_user, hash_secret, sign
+from src.platform.core.security import Auth, authenticate_user, hash_secret
 from src.platform.enums import (
     OWNER_ROLE_NAME,
     AuditAction,
@@ -228,18 +230,14 @@ class UserService(
                     error_code=ErrorCode.EMAIL_ALREADY_EXISTS,
                 )
 
-        token = sign(
-            data={
-                "email": invite_in.email,
-                "organization_id": self.current_user.organization_id,
-                "role_ids": invite_in.role_ids,
-            },
-            salt="invite",
-        )
-
-        await self.repos.invite_token.delete_by_email(invite_in.email)
-        await self.repos.invite_token.create(
-            email=invite_in.email, token=hash_secret(token)
+        token = secrets.token_urlsafe(32)
+        await self.repos.invitation.replace(
+            organization_id=self.current_user.organization_id,
+            email=invite_in.email,
+            role_ids=invite_in.role_ids,
+            token=token,
+            invited_by_id=self.current_user.id,
+            expires_at=datetime.now(UTC) + timedelta(seconds=settings.invite_expiry),
         )
 
         await self.log_audit(

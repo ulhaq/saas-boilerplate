@@ -5,6 +5,9 @@ coverage tracking) and instead instantiate the service with a real SQLAlchemy
 session. This guarantees that coverage.py captures all executed lines.
 """
 
+import secrets
+from datetime import UTC, datetime, timedelta
+
 import pytest
 
 from src.platform.core.exceptions import (
@@ -41,6 +44,25 @@ async def _auth(repos: RepositoryManager, email: str, organization_id: int) -> A
     user = await repos.user.get_by_email(email)
     assert user is not None
     return Auth.from_user_model(user, organization_id)
+
+
+async def _seed_invite(
+    repos: RepositoryManager,
+    email: str,
+    organization_id: int,
+    role_ids: list[int] | None = None,
+) -> str:
+    """Create a pending invitation and return its link token."""
+    token = secrets.token_urlsafe(16)
+    await repos.invitation.replace(
+        organization_id=organization_id,
+        email=email,
+        role_ids=role_ids or [],
+        token=token,
+        invited_by_id=None,
+        expires_at=datetime.now(UTC) + timedelta(days=1),
+    )
+    return token
 
 
 def _token(result: object) -> Token:
@@ -383,17 +405,13 @@ async def test_reset_password_unknown_email_raises(mock_billing_provider):
 
 
 async def test_invite_status_valid(mock_billing_provider):
-    from src.platform.core.security import hash_secret, sign
 
     email = "invitee@example.com"
-    token = sign(
-        data={"email": email, "organization_id": 1, "role_ids": []}, salt="invite"
-    )
 
     async with TestSessionLocal() as session:
         async with session.begin():
             repos = RepositoryManager(session)
-            await repos.invite_token.create(email=email, token=hash_secret(token))
+            token = await _seed_invite(repos, email, organization_id=1, role_ids=[])
             service = AuthService(repos, mock_billing_provider)
             out = await service.invite_status(token)
 
@@ -402,17 +420,13 @@ async def test_invite_status_valid(mock_billing_provider):
 
 
 async def test_invite_status_existing_user(mock_billing_provider):
-    from src.platform.core.security import hash_secret, sign
 
     email = "admin@example.org"  # already seeded
-    token = sign(
-        data={"email": email, "organization_id": 1, "role_ids": []}, salt="invite"
-    )
 
     async with TestSessionLocal() as session:
         async with session.begin():
             repos = RepositoryManager(session)
-            await repos.invite_token.create(email=email, token=hash_secret(token))
+            token = await _seed_invite(repos, email, organization_id=1, role_ids=[])
             service = AuthService(repos, mock_billing_provider)
             out = await service.invite_status(token)
 
@@ -425,17 +439,13 @@ async def test_invite_status_existing_user(mock_billing_provider):
 
 
 async def test_complete_invite_new_user(mock_billing_provider):
-    from src.platform.core.security import hash_secret, sign
 
     email = "invite_new@example.com"
-    token = sign(
-        data={"email": email, "organization_id": 1, "role_ids": []}, salt="invite"
-    )
 
     async with TestSessionLocal() as session:
         async with session.begin():
             repos = RepositoryManager(session)
-            await repos.invite_token.create(email=email, token=hash_secret(token))
+            token = await _seed_invite(repos, email, organization_id=1, role_ids=[])
             service = AuthService(repos, mock_billing_provider)
             result = _token(
                 await service.complete_invite(
@@ -454,17 +464,13 @@ async def test_complete_invite_new_user(mock_billing_provider):
 
 async def test_complete_invite_existing_user_requires_sign_in(mock_billing_provider):
     """The invite link alone can't add an existing account; the invite stays."""
-    from src.platform.core.security import hash_secret, sign
 
     email = "admin@example.org"  # already in org 1
-    token = sign(
-        data={"email": email, "organization_id": 2, "role_ids": []}, salt="invite"
-    )
 
     async with TestSessionLocal() as session:
         async with session.begin():
             repos = RepositoryManager(session)
-            await repos.invite_token.create(email=email, token=hash_secret(token))
+            token = await _seed_invite(repos, email, organization_id=2, role_ids=[])
             service = AuthService(repos, mock_billing_provider)
             with pytest.raises(PermissionDeniedException) as exc:
                 await service.complete_invite(
@@ -472,22 +478,19 @@ async def test_complete_invite_existing_user_requires_sign_in(mock_billing_provi
                     schedule_task=_no_op_schedule,
                 )
             assert exc.value.error_code == ErrorCode.INVITE_LOGIN_REQUIRED
-            assert await repos.invite_token.get_by_email(email) is not None
+            assert await repos.invitation.get_by_token(token) is not None
 
 
 async def test_accept_invite_existing_user(mock_billing_provider):
     """Signed-in user accepts an invite to org 2 and gets an org-2 session."""
-    from src.platform.core.security import decode_token, hash_secret, sign
+    from src.platform.core.security import decode_token
 
     email = "admin@example.org"  # already in org 1
-    token = sign(
-        data={"email": email, "organization_id": 2, "role_ids": []}, salt="invite"
-    )
 
     async with TestSessionLocal() as session:
         async with session.begin():
             repos = RepositoryManager(session)
-            await repos.invite_token.create(email=email, token=hash_secret(token))
+            token = await _seed_invite(repos, email, organization_id=2, role_ids=[])
             service = AuthService(repos, mock_billing_provider)
             result = await service.accept_invite(
                 await _auth(repos, email, organization_id=1),
@@ -549,12 +552,8 @@ async def test_complete_registration_restores_soft_deleted_user(mock_billing_pro
 
 async def test_invite_status_invalid_token_raises(mock_billing_provider):
     """Valid signature but no DB record > NotAuthenticatedException."""
-    from src.platform.core.security import sign
 
-    token = sign(
-        data={"email": "notindb@example.com", "organization_id": 1, "role_ids": []},
-        salt="invite",
-    )
+    token = "not-a-real-invite-token"
 
     async with TestSessionLocal() as session:
         async with session.begin():
@@ -571,12 +570,8 @@ async def test_invite_status_invalid_token_raises(mock_billing_provider):
 
 async def test_complete_invite_invalid_token_raises(mock_billing_provider):
     """Valid signature but no DB record > NotAuthenticatedException."""
-    from src.platform.core.security import sign
 
-    token = sign(
-        data={"email": "nodb@example.com", "organization_id": 1, "role_ids": []},
-        salt="invite",
-    )
+    token = "not-a-real-invite-token"
 
     async with TestSessionLocal() as session:
         async with session.begin():
@@ -594,18 +589,18 @@ async def test_complete_invite_invalid_token_raises(mock_billing_provider):
 # ---------------------------------------------------------------------------
 
 
-async def test_complete_invite_org_not_found_raises(mock_billing_provider):
-    from src.platform.core.security import hash_secret, sign
-
+async def test_complete_invite_org_deleted_raises(mock_billing_provider):
+    """The inviting org was (soft-)deleted after the invite was sent."""
     email = "orgnotfound@example.com"
-    token = sign(
-        data={"email": email, "organization_id": 9999, "role_ids": []}, salt="invite"
-    )
 
     async with TestSessionLocal() as session:
         async with session.begin():
             repos = RepositoryManager(session)
-            await repos.invite_token.create(email=email, token=hash_secret(token))
+            token = await _seed_invite(repos, email, organization_id=2, role_ids=[])
+            organization = await repos.organization.get(2)
+            assert organization is not None
+            organization.deleted_at = datetime.now(UTC)
+            await session.flush()
             service = AuthService(repos, mock_billing_provider)
             with pytest.raises(NotFoundException):
                 await service.complete_invite(
@@ -620,17 +615,13 @@ async def test_complete_invite_org_not_found_raises(mock_billing_provider):
 
 
 async def test_accept_invite_already_member_raises(mock_billing_provider):
-    from src.platform.core.security import hash_secret, sign
 
     email = "admin@example.org"  # already in org 1
-    token = sign(
-        data={"email": email, "organization_id": 1, "role_ids": []}, salt="invite"
-    )
 
     async with TestSessionLocal() as session:
         async with session.begin():
             repos = RepositoryManager(session)
-            await repos.invite_token.create(email=email, token=hash_secret(token))
+            token = await _seed_invite(repos, email, organization_id=1, role_ids=[])
             service = AuthService(repos, mock_billing_provider)
             with pytest.raises(AlreadyExistsException):
                 await service.accept_invite(
@@ -647,18 +638,14 @@ async def test_accept_invite_already_member_raises(mock_billing_provider):
 
 async def test_accept_invite_with_roles(mock_billing_provider):
     """Existing user invited to new org with role_ids > roles assigned."""
-    from src.platform.core.security import hash_secret, sign
 
     email = "admin@example.org"  # in org 1; being invited to org 2
     # Role id=4 is Org 2's Member role (non-protected) - must use same-org role
-    token = sign(
-        data={"email": email, "organization_id": 2, "role_ids": [4]}, salt="invite"
-    )
 
     async with TestSessionLocal() as session:
         async with session.begin():
             repos = RepositoryManager(session)
-            await repos.invite_token.create(email=email, token=hash_secret(token))
+            token = await _seed_invite(repos, email, organization_id=2, role_ids=[4])
             service = AuthService(repos, mock_billing_provider)
             await service.accept_invite(
                 await _auth(repos, email, organization_id=1),
@@ -679,17 +666,13 @@ async def test_accept_invite_with_roles(mock_billing_provider):
 
 async def test_complete_invite_new_user_no_credentials_raises(mock_billing_provider):
     from src.platform.core.exceptions import ValidationException
-    from src.platform.core.security import hash_secret, sign
 
     email = "nocreds@example.com"
-    token = sign(
-        data={"email": email, "organization_id": 1, "role_ids": []}, salt="invite"
-    )
 
     async with TestSessionLocal() as session:
         async with session.begin():
             repos = RepositoryManager(session)
-            await repos.invite_token.create(email=email, token=hash_secret(token))
+            token = await _seed_invite(repos, email, organization_id=1, role_ids=[])
             service = AuthService(repos, mock_billing_provider)
             with pytest.raises(ValidationException):
                 await service.complete_invite(
@@ -706,13 +689,10 @@ async def test_complete_invite_new_user_no_credentials_raises(mock_billing_provi
 async def test_complete_invite_restores_soft_deleted_user(mock_billing_provider):
     from datetime import UTC, datetime
 
-    from src.platform.core.security import hash_secret, sign
+    from src.platform.core.security import hash_secret
     from src.platform.models.user import User
 
     email = "deleted_invite@example.com"
-    token = sign(
-        data={"email": email, "organization_id": 1, "role_ids": []}, salt="invite"
-    )
 
     async with TestSessionLocal() as session:
         async with session.begin():
@@ -727,7 +707,7 @@ async def test_complete_invite_restores_soft_deleted_user(mock_billing_provider)
     async with TestSessionLocal() as session:
         async with session.begin():
             repos = RepositoryManager(session)
-            await repos.invite_token.create(email=email, token=hash_secret(token))
+            token = await _seed_invite(repos, email, organization_id=1, role_ids=[])
             service = AuthService(repos, mock_billing_provider)
             result = _token(
                 await service.complete_invite(
@@ -750,18 +730,14 @@ async def test_complete_invite_restores_soft_deleted_user(mock_billing_provider)
 
 
 async def test_complete_invite_new_user_with_roles(mock_billing_provider):
-    from src.platform.core.security import hash_secret, sign
 
     email = "newwithroles@example.com"
     # Role id=2 is Org 1's Admin role (non-protected) - valid_roles must be non-empty
-    token = sign(
-        data={"email": email, "organization_id": 1, "role_ids": [2]}, salt="invite"
-    )
 
     async with TestSessionLocal() as session:
         async with session.begin():
             repos = RepositoryManager(session)
-            await repos.invite_token.create(email=email, token=hash_secret(token))
+            token = await _seed_invite(repos, email, organization_id=1, role_ids=[2])
             service = AuthService(repos, mock_billing_provider)
             result = _token(
                 await service.complete_invite(

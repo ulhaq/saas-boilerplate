@@ -35,6 +35,7 @@ from src.platform.enums import (
     ErrorCode,
     RefreshTokenRevokeReason,
 )
+from src.platform.models.invitation import Invitation
 from src.platform.models.organization import Organization
 from src.platform.models.role import Role
 from src.platform.models.user import User
@@ -276,30 +277,23 @@ class AuthService(BaseService):
         return token
 
     async def invite_status(self, token: str) -> InviteStatusOut:
-        data: dict = unsign(token, salt="invite", max_age=settings.invite_expiry)
-        email: str = data["email"]
+        invitation = await self._load_invitation(token)
+        user_exists = await self.repos.user.get_by_email(invitation.email) is not None
+        return InviteStatusOut(email=invitation.email, user_exists=user_exists)
 
-        record = await self.repos.invite_token.get_by_email(email)
-        if not record or not verify_secret(token, record.token):
+    async def _load_invitation(self, invite_token: str) -> Invitation:
+        """Return the pending invitation for a link token. Does not consume it."""
+        invitation = await self.repos.invitation.get_by_token(invite_token)
+        if not invitation:
+            # Unknown, already accepted, or replaced by a newer invite.
             raise NotAuthenticatedException(
-                "Token invalid", error_code=ErrorCode.TOKEN_INVALID
+                "Invitation invalid", error_code=ErrorCode.INVITE_INVALID
             )
-
-        user_exists = await self.repos.user.get_by_email(email) is not None
-        return InviteStatusOut(email=email, user_exists=user_exists)
-
-    async def _load_invite(self, invite_token: str) -> tuple[str, int, list[int]]:
-        """Validate an invite token (signature, expiry, not yet used) and
-        return (email, organization_id, role_ids). Does not consume it."""
-        data: dict = unsign(invite_token, salt="invite", max_age=settings.invite_expiry)
-        email: str = data["email"]
-
-        record = await self.repos.invite_token.get_by_email(email)
-        if not record or not verify_secret(invite_token, record.token):
+        if invitation.expires_at <= datetime.now(UTC):
             raise NotAuthenticatedException(
-                "Token invalid", error_code=ErrorCode.TOKEN_INVALID
+                "Invitation expired", error_code=ErrorCode.INVITE_EXPIRED
             )
-        return email, data["organization_id"], data.get("role_ids", [])
+        return invitation
 
     async def _get_live_organization(self, organization_id: int) -> Organization:
         organization = await self.repos.organization.get(organization_id)
@@ -345,9 +339,10 @@ class AuthService(BaseService):
         accept_invite() instead - the invite link only proves control of the
         mailbox, which is not enough to act on an existing account.
         """
-        email, organization_id, role_ids = await self._load_invite(
-            schema_in.invite_token
-        )
+        invitation = await self._load_invitation(schema_in.invite_token)
+        email = invitation.email
+        organization_id = invitation.organization_id
+        role_ids = invitation.role_ids
 
         if await self.repos.user.get_by_email(email):
             raise PermissionDeniedException(
@@ -355,7 +350,7 @@ class AuthService(BaseService):
                 error_code=ErrorCode.INVITE_LOGIN_REQUIRED,
             )
 
-        await self.repos.invite_token.delete_by_email(email)
+        await self.repos.invitation.delete(invitation)
         await self._get_live_organization(organization_id)
 
         if not schema_in.name or not schema_in.password:
@@ -416,17 +411,19 @@ class AuthService(BaseService):
         if not user:
             raise NotAuthenticatedException(headers=BEARER_HEADERS)
 
-        email, organization_id, role_ids = await self._load_invite(invite_token)
+        invitation = await self._load_invitation(invite_token)
+        organization_id = invitation.organization_id
+        role_ids = invitation.role_ids
 
         # Checked before consuming, so a wrong-account attempt leaves the
         # invite usable by its real recipient.
-        if email.lower() != user.email.lower():
+        if invitation.email.lower() != user.email.lower():
             raise PermissionDeniedException(
                 "This invitation was sent to a different email address.",
                 error_code=ErrorCode.INVITE_EMAIL_MISMATCH,
             )
 
-        await self.repos.invite_token.delete_by_email(email)
+        await self.repos.invitation.delete(invitation)
         organization = await self._get_live_organization(organization_id)
 
         if await self.repos.user_organization.get_by_user_and_organization(

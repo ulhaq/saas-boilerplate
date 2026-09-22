@@ -20,7 +20,7 @@ from src.platform.repositories.billing import (
 from src.platform.repositories.email_verification_token import (
     EmailVerificationTokenRepository,
 )
-from src.platform.repositories.invite_token import InviteTokenRepository
+from src.platform.repositories.invitation import InvitationRepository
 from src.platform.repositories.notification import NotificationRepository
 from src.platform.repositories.organization import OrganizationRepository
 from src.platform.repositories.permission import PermissionRepository
@@ -55,7 +55,7 @@ class RepositoryManager:
         self._subscription: SubscriptionRepository | None = None
         self._webhook_event: WebhookEventRepository | None = None
         self._email_verification_token: EmailVerificationTokenRepository | None = None
-        self._invite_token: InviteTokenRepository | None = None
+        self._invitation: InvitationRepository | None = None
         self._waitlist_entry: WaitlistEntryRepository | None = None
 
     @property
@@ -155,10 +155,10 @@ class RepositoryManager:
         return self._email_verification_token
 
     @property
-    def invite_token(self) -> InviteTokenRepository:
-        if self._invite_token is None:
-            self._invite_token = InviteTokenRepository(self.db)
-        return self._invite_token
+    def invitation(self) -> InvitationRepository:
+        if self._invitation is None:
+            self._invitation = InvitationRepository(self.db)
+        return self._invitation
 
     @property
     def notification(self) -> NotificationRepository:

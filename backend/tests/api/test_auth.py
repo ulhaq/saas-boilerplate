@@ -779,20 +779,20 @@ def test_cannot_complete_invite_with_invalid_token(client: TestClient) -> None:
         },
     )
     assert response.status_code == 401
-    assert response.json()["error_code"] == "signature_invalid"
+    assert response.json()["error_code"] == "invite_invalid"
 
 
 def test_cannot_complete_invite_with_expired_token(
     mocker: MockerFixture, admin_authenticated: TestClient, client: TestClient
 ) -> None:
-    token = _do_invite(mocker, admin_authenticated)
     with patch("src.platform.core.config.settings.invite_expiry", -1):
-        response = client.post(
-            "/v1/auth/complete-invite",
-            json={"invite_token": token, "name": "User", "password": "password1"},
-        )
+        token = _do_invite(mocker, admin_authenticated)
+    response = client.post(
+        "/v1/auth/complete-invite",
+        json={"invite_token": token, "name": "User", "password": "password1"},
+    )
     assert response.status_code == 401
-    assert response.json()["error_code"] == "signature_expired"
+    assert response.json()["error_code"] == "invite_expired"
 
 
 def test_complete_invite_rate_limit(client: TestClient) -> None:
@@ -839,17 +839,74 @@ def test_invite_status_existing_user(
 def test_invite_status_invalid_token(client: TestClient) -> None:
     response = client.post("/v1/auth/invite-status", json={"token": "notavalidtoken"})
     assert response.status_code == 401
-    assert response.json()["error_code"] == "signature_invalid"
+    assert response.json()["error_code"] == "invite_invalid"
 
 
 def test_invite_status_expired_token(
     mocker: MockerFixture, admin_authenticated: TestClient, client: TestClient
 ) -> None:
-    token = _do_invite(mocker, admin_authenticated)
     with patch("src.platform.core.config.settings.invite_expiry", -1):
-        response = client.post("/v1/auth/invite-status", json={"token": token})
+        token = _do_invite(mocker, admin_authenticated)
+    response = client.post("/v1/auth/invite-status", json={"token": token})
     assert response.status_code == 401
-    assert response.json()["error_code"] == "signature_expired"
+    assert response.json()["error_code"] == "invite_expired"
+
+
+# --- invitations across organizations ---
+
+
+def test_invites_from_different_orgs_coexist(
+    mocker: MockerFixture,
+    admin_authenticated: TestClient,
+    organization2_admin_authenticated: TestClient,
+) -> None:
+    """Regression: a second org inviting the same email must not invalidate
+    the first org's pending invite."""
+    mocker.patch("src.platform.services.auth.send_email")
+    email = "shared@example.org"
+    token_org1 = _do_invite(mocker, admin_authenticated, email=email)
+    mock_send = mocker.patch("src.platform.services.user.send_email")
+    organization2_admin_authenticated.post(
+        "/v1/users/invite", json={"email": email, "role_ids": [4]}
+    )
+    token_org2 = mock_send.call_args.kwargs["data"]["invite_url"].split("token=")[1]
+
+    with TestClient(app) as invitee:
+        for token in (token_org1, token_org2):
+            rs = invitee.post("/v1/auth/invite-status", json={"token": token})
+            assert rs.status_code == 200
+
+        # Join org 1 as a new account, then accept org 2 while signed in.
+        rs = invitee.post(
+            "/v1/auth/complete-invite",
+            json={
+                "invite_token": token_org1,
+                "name": "Shared",
+                "password": "password1",
+            },
+        )
+        assert rs.status_code == 201
+        invitee.headers["Authorization"] = f"Bearer {rs.json()['access_token']}"
+        rs = invitee.post("/v1/auth/accept-invite", json={"invite_token": token_org2})
+        assert rs.status_code == 201
+
+        invitee.headers["Authorization"] = f"Bearer {rs.json()['access_token']}"
+        orgs = invitee.get("/v1/organizations").json()
+        assert {o["id"] for o in orgs} == {1, 2}
+
+
+def test_reinvite_from_same_org_replaces_link(
+    mocker: MockerFixture, admin_authenticated: TestClient, client: TestClient
+) -> None:
+    old_token = _do_invite(mocker, admin_authenticated)
+    new_token = _do_invite(mocker, admin_authenticated)
+    assert old_token != new_token
+
+    rs = client.post("/v1/auth/invite-status", json={"token": old_token})
+    assert rs.status_code == 401
+    assert rs.json()["error_code"] == "invite_invalid"
+    rs = client.post("/v1/auth/invite-status", json={"token": new_token})
+    assert rs.status_code == 200
 
 
 # --- existing user invite flow ---

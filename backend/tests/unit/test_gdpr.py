@@ -17,7 +17,7 @@ from tests.conftest import TestSessionLocal
 async def test_purge_expired_tokens_removes_old_records():
     from src.platform.core.security import hash_secret
     from src.platform.models.email_verification_token import EmailVerificationToken
-    from src.platform.models.invite_token import InviteToken
+    from src.platform.models.invitation import Invitation
     from src.platform.models.password_reset_token import PasswordResetToken
 
     very_old = datetime.now(UTC) - timedelta(days=400)
@@ -40,9 +40,12 @@ async def test_purge_expired_tokens_removes_old_records():
                 )
             )
             session.add(
-                InviteToken(
+                Invitation(
+                    organization_id=1,
                     email="old_inv@example.com",
-                    token=hash_secret("tok3"),
+                    role_ids=[],
+                    token_hash="tok3-hash",
+                    expires_at=very_old,
                     created_at=very_old,
                 )
             )

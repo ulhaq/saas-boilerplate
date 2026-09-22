@@ -25,6 +25,7 @@ export type {
 } from './auth'
 export type { UserBase, UserPatch, UserRoleIn, UserOut } from './user'
 export type { MfaSetupOut, MfaCodeIn, MfaDisableIn, MfaRecoveryCodesOut } from './mfa'
+export type { InvitationOut, InvitationRoleOut, InvitationInviterOut } from './invitation'
 export type { OrganizationBase, OrganizationPatch, OrganizationOut } from './organization'
 export type { RoleBase, RoleIn, RolePatch, RolePermissionIn, RoleOut } from './role'
 export type { PermissionOut } from './permission'
