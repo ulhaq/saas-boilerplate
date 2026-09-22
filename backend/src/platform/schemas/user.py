@@ -37,10 +37,21 @@ class UserOut(UserBase, Timestamp):
 
 
 class UserPatch(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     name: NonEmptyStr | None = None
-    email: ConstrainedEmail | None = None
     locale: Locale | None = None
     theme: str | None = None
+
+
+class EmailChangeIn(BaseModel):
+    new_email: ConstrainedEmail
+    password: NonEmptyStr
+    code: str | None = None
+
+
+class ConfirmEmailChangeIn(BaseModel):
+    token: NonEmptyStr
 
 
 class EmailIn(BaseModel):

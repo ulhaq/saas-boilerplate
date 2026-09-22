@@ -216,6 +216,7 @@ export default {
       editDescription: 'Opdater medlemsoplysninger',
       namePlaceholder: 'Hans Hansen',
       emailPlaceholder: "hans{'@'}eksempel.dk",
+      emailManagedByUser: 'Medlemmer ændrer selv deres email fra deres profil.',
       saved: 'Medlem opdateret',
     },
     roleDialog: {
@@ -332,6 +333,21 @@ export default {
     failedToSaveChanges: 'Kunne ikke gemme ændringer.',
     passwordUpdated: 'Adgangskode opdateret',
     incorrectCurrentPassword: 'Forkert nuværende adgangskode',
+    changeEmail: {
+      button: 'Skift',
+      title: 'Skift email',
+      description:
+        'Vi sender et bekræftelseslink til den nye adresse. Din email ændres først, når du klikker på det.',
+      newEmail: 'Ny email',
+      submit: 'Send bekræftelseslink',
+      sentTitle: 'Tjek din nye indbakke',
+      sentDescription:
+        'Vi har sendt et bekræftelseslink til {email}. Din email ændres, når du klikker på det.',
+      confirmTitle: 'Bekræft ændring af email',
+      confirmed: 'Din email er ændret, og alle sessioner er logget ud. Log ind med din nye email.',
+      invalidLink: 'Dette bekræftelseslink er ugyldigt, udløbet eller allerede brugt.',
+      requestAgain: 'Anmod om en ny ændring af email fra dine profilindstillinger.',
+    },
     mfa: {
       title: 'Totrinsgodkendelse',
       description:
@@ -699,6 +715,8 @@ export default {
       capacity_exceeded: 'Du har nået din plans grænse. Opgrader din plan for at tilføje flere.',
       invite_invalid: 'Dette invitationslink er ugyldigt eller allerede brugt.',
       invite_expired: 'Denne invitation er udløbet.',
+      mfa_code_required: 'Indtast din totrinskode.',
+      email_unchanged: 'Dette er allerede din emailadresse.',
       invite_login_required: 'Du har allerede en konto. Log ind for at acceptere denne invitation.',
       invite_email_mismatch: 'Denne invitation blev sendt til en anden email-adresse.',
       mfa_code_invalid: 'Ugyldig kode. Tjek din godkendelsesapp, og prøv igen.',

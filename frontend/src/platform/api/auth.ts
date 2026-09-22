@@ -57,6 +57,10 @@ export const authApi = {
     return apiClient.post('/auth/reset-password', data)
   },
 
+  confirmEmailChange(token: string) {
+    return apiClient.post('/auth/confirm-email-change', { token })
+  },
+
   switchOrganization(data: SwitchOrganizationIn) {
     return apiClient.post<Token>('/auth/switch-organization', data)
   },

@@ -1,6 +1,7 @@
 """Direct unit tests for UserService."""
 
 import pytest
+from pydantic import ValidationError as PydanticValidationError
 
 from src.platform.core.exceptions import (
     AlreadyExistsException,
@@ -80,18 +81,15 @@ async def test_patch_profile_updates_name(mock_billing_provider):
     assert out.name == "New Name"
 
 
-async def test_patch_profile_duplicate_email_raises(mock_billing_provider):
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            # standard@example.org already exists; try to take it as admin
-            service = _make_service(session, _admin_auth(), mock_billing_provider)
-            with pytest.raises(AlreadyExistsException):
-                await service.patch_profile(UserPatch(email="standard@example.org"))
-
-
 # ---------------------------------------------------------------------------
 # change_password
 # ---------------------------------------------------------------------------
+
+
+def test_user_patch_rejects_email() -> None:
+    """Email isn't patchable by owner or admin; unknown fields are rejected."""
+    with pytest.raises(PydanticValidationError):
+        UserPatch.model_validate({"email": "someone@example.org"})
 
 
 async def test_change_password_success(mock_billing_provider):
@@ -141,14 +139,6 @@ async def test_patch_user_updates_name(mock_billing_provider):
             service = _make_service(session, _admin_auth(), mock_billing_provider)
             out = await service.patch_user(2, UserPatch(name="Patched Name"))
     assert out.name == "Patched Name"
-
-
-async def test_patch_user_duplicate_email_raises(mock_billing_provider):
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            service = _make_service(session, _admin_auth(), mock_billing_provider)
-            with pytest.raises(AlreadyExistsException):
-                await service.patch_user(2, UserPatch(email="admin@example.org"))
 
 
 # ---------------------------------------------------------------------------

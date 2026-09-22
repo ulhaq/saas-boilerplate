@@ -12,9 +12,11 @@ from src.platform.core.exceptions import (
     NotAuthenticatedException,
     NotFoundException,
     PermissionDeniedException,
+    ValidationException,
 )
 from src.platform.core.hooks import HookEvent, emit
-from src.platform.core.security import Auth, authenticate_user, hash_secret
+from src.platform.core.mfa import mfa_required
+from src.platform.core.security import Auth, authenticate_user, hash_secret, sign
 from src.platform.enums import (
     OWNER_ROLE_NAME,
     AuditAction,
@@ -30,6 +32,7 @@ from src.platform.schemas.common import PageQueryParams, PaginatedResponse
 from src.platform.schemas.user import (
     ChangePasswordIn,
     DeleteMeIn,
+    EmailChangeIn,
     InviteUserIn,
     UserDataExportOut,
     UserOut,
@@ -38,6 +41,7 @@ from src.platform.schemas.user import (
 )
 from src.platform.services.base import ResourceService
 from src.platform.services.mailer import send_email
+from src.platform.services.mfa import verify_user_mfa_code
 
 
 class UserService(
@@ -119,16 +123,7 @@ class UserService(
         return self._user_out(await self.get(self.current_user.id))
 
     async def patch_profile(self, schema_in: UserPatch) -> UserOut:
-        async def validate() -> None:
-            if schema_in.email:
-                user = await self.repo.get_by_email(schema_in.email)
-                if user and user.email != self.current_user.email:
-                    raise AlreadyExistsException(
-                        f"User already exists. [email={schema_in.email}]",
-                        error_code=ErrorCode.EMAIL_ALREADY_EXISTS,
-                    )
-
-        user = await super().patch(self.current_user.id, schema_in, validate)
+        user = await super().patch(self.current_user.id, schema_in)
 
         await self.log_audit(
             AuditAction.USER_PROFILE_UPDATE,
@@ -139,6 +134,84 @@ class UserService(
             details={"fields": list(schema_in.model_dump(exclude_unset=True).keys())},
         )
         return self._user_out(user)
+
+    async def request_email_change(
+        self, schema_in: EmailChangeIn, schedule_task: Callable
+    ) -> None:
+        """Re-authenticate (password + 2FA code if enabled), then email a
+        confirmation link to the new address and a notice to the old one.
+        The email only changes when the link is confirmed."""
+        user = authenticate_user(
+            schema_in.password,
+            await self.repos.user.get_by_email(self.current_user.email),
+        )
+        if not user:
+            raise NotAuthenticatedException(
+                "Incorrect password", error_code=ErrorCode.LOGIN_FAILED
+            )
+
+        if mfa_required(user):
+            if not schema_in.code:
+                raise ValidationException(
+                    "Two-factor code required", error_code=ErrorCode.MFA_CODE_REQUIRED
+                )
+            await verify_user_mfa_code(
+                self.repos, user, schema_in.code, allow_recovery=True
+            )
+
+        new_email = schema_in.new_email
+        if new_email == user.email.lower():
+            raise ValidationException(
+                "The new email is the same as the current one",
+                error_code=ErrorCode.EMAIL_UNCHANGED,
+            )
+        # include_deleted: soft-deleted accounts still hold their address.
+        if await self.repos.user.get_by_email(new_email, include_deleted=True):
+            raise AlreadyExistsException(
+                f"Email already in use. [email={new_email}]",
+                error_code=ErrorCode.EMAIL_ALREADY_EXISTS,
+            )
+
+        # Bound to the current address: once the email changes (or is
+        # changed again), older links stop working.
+        token = sign(
+            data={"uid": user.id, "old": user.email, "new": new_email},
+            salt="email-change",
+        )
+
+        confirm_url = f"{settings.frontend_url}/confirm-email-change?token={token}"
+        schedule_task(
+            send_email,
+            address=new_email,
+            user_name=user.name,
+            email_template="verify-email-change",
+            locale=user.locale,
+            data={
+                "new_email": new_email,
+                "confirm_url": confirm_url,
+                "expiration_hours": settings.email_change_expiry // 3600,
+            },
+        )
+        schedule_task(
+            send_email,
+            address=user.email,
+            user_name=user.name,
+            email_template="email-change-requested",
+            locale=user.locale,
+            data={
+                "new_email": new_email,
+                "reset_url": f"{settings.frontend_url}/forgot-password",
+            },
+        )
+
+        await self.log_audit(
+            AuditAction.USER_EMAIL_CHANGE_REQUEST,
+            organization_id=self.current_user.organization_id,
+            user_id=user.id,
+            resource_type="user",
+            resource_id=user.id,
+            details={"new_email": new_email},
+        )
 
     async def change_password(self, schema_in: ChangePasswordIn) -> UserOut:
         auth = self.current_user
@@ -164,18 +237,9 @@ class UserService(
         return self._user_out(updated)
 
     async def patch_user(self, identifier: int, schema_in: UserPatch) -> UserOut:
-        user = await self.get(identifier)
-
-        async def validate() -> None:
-            if schema_in.email:
-                existing = await self.repo.get_by_email(schema_in.email)
-                if existing and existing.email != user.email:
-                    raise AlreadyExistsException(
-                        f"User already exists. [email={schema_in.email}]",
-                        error_code=ErrorCode.EMAIL_ALREADY_EXISTS,
-                    )
-
-        updated = await super().patch(identifier, schema_in, validate)
+        # Admins can't change a member's email: it's the member's login and
+        # password-reset address across every organization they belong to.
+        updated = await super().patch(identifier, schema_in)
 
         await self.log_audit(
             AuditAction.USER_UPDATE,

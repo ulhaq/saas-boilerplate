@@ -150,6 +150,13 @@ export const useAuthStore = defineStore('auth', () => {
     await authApi.resetPassword(data)
   }
 
+  // Applies an email change from its confirmation link. The server ends
+  // every session, so any local one is dropped too.
+  async function confirmEmailChange(token: string): Promise<void> {
+    await authApi.confirmEmailChange(token)
+    clearSession()
+  }
+
   async function switchOrganization(organizationId: number): Promise<void> {
     const { data: token } = await authApi.switchOrganization({ organization_id: organizationId })
     setSession(token)
@@ -178,6 +185,7 @@ export const useAuthStore = defineStore('auth', () => {
     inviteStatus,
     requestPasswordReset,
     resetPassword,
+    confirmEmailChange,
     switchOrganization,
   }
 })

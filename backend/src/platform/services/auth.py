@@ -16,7 +16,12 @@ from src.platform.core.exceptions import (
     ValidationException,
 )
 from src.platform.core.hooks import HookEvent, emit
-from src.platform.core.mfa import decrypt_secret, match_recovery_code, verify_totp
+from src.platform.core.mfa import (
+    decrypt_secret,
+    match_recovery_code,
+    mfa_required,
+    verify_totp,
+)
 from src.platform.core.security import (
     BEARER_HEADERS,
     Auth,
@@ -70,10 +75,6 @@ _MFA_RESET: dict = {
     "mfa_failed_attempts": 0,
     "mfa_locked_until": None,
 }
-
-
-def mfa_required(user: User) -> bool:
-    return settings.mfa_enabled and user.mfa_active
 
 
 def _filter_assignable_roles(roles: Sequence[Role]) -> list[Role]:
@@ -689,6 +690,50 @@ class AuthService(BaseService):
         if user_id is not None and int(payload.get("sub", 0)) != user_id:
             return None
         return payload.get("jti")
+
+    async def confirm_email_change(self, token: str, schedule_task: Callable) -> None:
+        """Apply a requested email change from the link sent to the new
+        address, then sign the user out everywhere."""
+        payload: dict = unsign(
+            token, salt="email-change", max_age=settings.email_change_expiry
+        )
+        user = await self.repos.user.unscoped.get(int(payload["uid"]))
+        # A changed current email means the link is stale or already used.
+        if not user or user.email != payload["old"]:
+            raise NotAuthenticatedException(
+                "Token invalid", error_code=ErrorCode.TOKEN_INVALID
+            )
+
+        old_email: str = payload["old"]
+        new_email: str = payload["new"]
+        # Re-checked: the address may have been taken since the request.
+        if await self.repos.user.get_by_email(new_email, include_deleted=True):
+            raise AlreadyExistsException(
+                f"Email already in use. [email={new_email}]",
+                error_code=ErrorCode.EMAIL_ALREADY_EXISTS,
+            )
+
+        await self.repos.user.update(user, email=new_email)
+        # The link may be opened on any device, so every session is ended;
+        # the user signs in again with the new address.
+        await self.repos.refresh_token.delete_by_user(user)
+
+        await self.log_audit(
+            AuditAction.USER_EMAIL_CHANGE,
+            user_id=user.id,
+            resource_type="user",
+            resource_id=user.id,
+            details={"old_email": old_email, "new_email": new_email},
+        )
+
+        schedule_task(
+            send_email,
+            address=old_email,
+            user_name=user.name,
+            email_template="email-changed",
+            locale=user.locale,
+            data={"new_email": new_email},
+        )
 
     async def request_password_reset(
         self, email_in: EmailIn, schedule_task: Callable

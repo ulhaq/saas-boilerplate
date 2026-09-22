@@ -1,0 +1,40 @@
+<mjml>
+  <mj-head>
+    <mj-title>Your email was changed - {{ app_name }}</mj-title>
+    <mj-preview>The email on your {{ app_name }} account was changed.</mj-preview>
+    <mj-include path="../shared/_head.mjml" />
+  </mj-head>
+  <mj-body background-color="#eff1f5" width="600px">
+    <mj-wrapper background-color="#ffffff" border="1px solid #e0e3eb" border-radius="12px" padding="0" css-class="app-card">
+      <mj-include path="../shared/_header.mjml" />
+
+      <mj-section padding="28px 32px 32px 32px" css-class="app-pad">
+        <mj-column>
+          <mj-text font-size="13px" font-weight="600" color="#636b7e" text-transform="uppercase" letter-spacing="0.04em" padding="0 0 10px 0">
+            Security notice
+          </mj-text>
+          <mj-text font-size="22px" font-weight="700" color="#131825" line-height="1.3" padding="0 0 14px 0">
+            Your email address was changed
+          </mj-text>
+
+          <mj-text padding="0 0 8px 0">
+            Hi {{ user_name }},
+          </mj-text>
+          <mj-text padding="0 0 24px 0">
+            The email on your {{ app_name }} account was changed from this address to <strong>{{ new_email }}</strong>, and all sessions were signed out. This is the last email we'll send to this address about the account.
+          </mj-text>
+
+          <mj-button href="mailto:{{ info_email }}" align="left">
+            Contact support
+          </mj-button>
+
+          <mj-text padding="24px 0 0 0" color="#636b7e" font-size="14px">
+            If you didn't make this change, contact support immediately so we can help you recover your account.
+          </mj-text>
+        </mj-column>
+      </mj-section>
+    </mj-wrapper>
+
+    <mj-include path="./partials/_footer.mjml" />
+  </mj-body>
+</mjml>

@@ -45,6 +45,7 @@ class Settings(EnvSettings):
     auth_refresh_token_expiry: int = 15 * 24 * 60 * 60
     auth_password_reset_expiry: int = 10 * 60
     email_verification_expiry: int = 60 * 60 * 24
+    email_change_expiry: int = 60 * 60 * 24
     complete_registration_expiry: int = 30 * 60
     invite_expiry: int = 7 * 24 * 60 * 60
 

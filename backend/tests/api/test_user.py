@@ -211,13 +211,13 @@ def test_cannot_invite_a_user_while_unauthorized(client: TestClient) -> None:
 
 def test_patch_a_user(admin_authenticated: TestClient) -> None:
     response = admin_authenticated.patch(
-        "/v1/users/2", json={"name": "Standard Patched", "email": "patched@example.org"}
+        "/v1/users/2", json={"name": "Standard Patched"}
     )
     assert response.status_code == 200
     rs = response.json()
     assert rs["id"] == 2
     assert rs["name"] == "Standard Patched"
-    assert rs["email"] == "patched@example.org"
+    assert rs["email"] == "standard@example.org"
     assert rs["created_at"]
     assert rs["updated_at"]
 
@@ -231,44 +231,24 @@ def test_patch_a_user_with_partial_body(admin_authenticated: TestClient) -> None
     assert rs["email"] == "standard@example.org"
 
 
-def test_cannot_patch_a_user_with_duplicate_email(
-    admin_authenticated: TestClient,
-) -> None:
+def test_admin_cannot_change_member_email(admin_authenticated: TestClient) -> None:
+    # The email is the member's login across all their orgs - not org-editable.
     response = admin_authenticated.patch(
-        "/v1/users/2", json={"email": "admin@example.org"}
-    )
-    assert response.status_code == 409
-    rs = response.json()
-    assert "already exists" in rs["msg"]
-
-
-def test_cannot_patch_user_profile_with_disposable_email(
-    admin_authenticated: TestClient,
-) -> None:
-    response = admin_authenticated.patch(
-        "/v1/users/me", json={"email": "user@mailinator.com"}
+        "/v1/users/2", json={"email": "patched@example.org"}
     )
     assert response.status_code == 422
-    rs = response.json()
-    assert rs["error_code"] == "validation_error"
-    assert rs["msg"] == "The request failed due to validation errors"
-    assert rs["errors"][0]["msg"] == (
-        "Value error, Disposable email addresses are not allowed"
-    )
+    member = admin_authenticated.get("/v1/users/2").json()
+    assert member["email"] == "standard@example.org"
 
 
-def test_cannot_patch_a_user_with_disposable_email(
-    admin_authenticated: TestClient,
-) -> None:
+def test_cannot_patch_own_email_directly(admin_authenticated: TestClient) -> None:
+    # Own email changes go through POST /users/me/email (re-auth + confirm).
     response = admin_authenticated.patch(
-        "/v1/users/2", json={"email": "user@mailinator.com"}
+        "/v1/users/me", json={"email": "patched@example.org"}
     )
     assert response.status_code == 422
-    rs = response.json()
-    assert rs["error_code"] == "validation_error"
-    assert rs["msg"] == "The request failed due to validation errors"
-    assert rs["errors"][0]["msg"] == (
-        "Value error, Disposable email addresses are not allowed"
+    assert admin_authenticated.get("/v1/users/me").json()["email"] == (
+        "admin@example.org"
     )
 
 

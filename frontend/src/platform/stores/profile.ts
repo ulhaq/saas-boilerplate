@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { usersApi } from '@/platform/api/users'
 import { DEFAULT_LOCALE, i18n } from '@/plugins/i18n'
-import type { UserOut, UserPatch, ChangePasswordIn } from '@/platform/types'
+import type { UserOut, UserPatch, ChangePasswordIn, EmailChangeIn } from '@/platform/types'
 
 export const useProfileStore = defineStore('profile', () => {
   const user = ref<UserOut | null>(null)
@@ -32,6 +32,12 @@ export const useProfileStore = defineStore('profile', () => {
     await usersApi.changePassword(data)
   }
 
+  // Nothing changes locally: the email only changes once the link sent to
+  // the new address is confirmed.
+  async function requestEmailChange(data: EmailChangeIn): Promise<void> {
+    await usersApi.requestEmailChange(data)
+  }
+
   function applyTheme(mode: 'light' | 'dark' | 'system') {
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
     const dark = mode === 'dark' || (mode === 'system' && prefersDark)
@@ -43,5 +49,14 @@ export const useProfileStore = defineStore('profile', () => {
     permissions.value = []
   }
 
-  return { user, permissions, hasPermission, fetchMe, updateMe, changePassword, clear }
+  return {
+    user,
+    permissions,
+    hasPermission,
+    fetchMe,
+    updateMe,
+    changePassword,
+    requestEmailChange,
+    clear,
+  }
 })

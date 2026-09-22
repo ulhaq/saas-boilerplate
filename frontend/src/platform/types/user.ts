@@ -6,11 +6,18 @@ export interface UserBase {
   email: string
 }
 
+// Email isn't patchable (the API rejects it); see EmailChangeIn.
 export interface UserPatch {
   name?: string
-  email?: string
   locale?: SupportedLocale
   theme?: string
+}
+
+export interface EmailChangeIn {
+  new_email: string
+  password: string
+  /** Required when two-factor auth is on: TOTP or recovery code. */
+  code?: string
 }
 
 export interface UserRoleIn {

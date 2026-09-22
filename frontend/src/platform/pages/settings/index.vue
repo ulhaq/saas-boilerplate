@@ -22,22 +22,26 @@ meta:
           </div>
           <div class="space-y-2">
             <Label>{{ $t('common.email') }}</Label>
-            <Input v-model="profile.email" type="text" :disabled="savingProfile" />
-            <p v-if="profileErrors.email" class="text-xs text-destructive">
-              {{ profileErrors.email }}
-            </p>
+            <div class="flex gap-2">
+              <Input :model-value="profileStore.user?.email ?? ''" type="text" disabled />
+              <Button type="button" variant="outline" @click="changeEmailOpen = true">
+                {{ $t('settings.changeEmail.button') }}
+              </Button>
+            </div>
           </div>
           <p v-if="profileError" class="text-sm text-destructive">{{ profileError }}</p>
           <SaveButton
             :saving="savingProfile"
             :saved="profileSaved"
-            :disabled="!profile.name.trim() || !profile.email.trim()"
+            :disabled="!profile.name.trim()"
           >
             {{ $t('common.saveChanges') }}
           </SaveButton>
         </form>
       </CardContent>
     </Card>
+
+    <ChangeEmailDialog v-model:open="changeEmailOpen" />
 
     <PageHeader
       :title="$t('settings.appearance')"
@@ -242,6 +246,8 @@ import { Card, CardContent } from '@/platform/components/ui/card'
 import { Input } from '@/platform/components/ui/input'
 import { Label } from '@/platform/components/ui/label'
 import PageHeader from '@/platform/components/common/PageHeader.vue'
+import ChangeEmailDialog from '@/platform/components/settings/ChangeEmailDialog.vue'
+import { Button } from '@/platform/components/ui/button'
 import { useProfileStore } from '@/platform/stores/profile'
 import { useErrorHandler } from '@/platform/composables/useErrorHandler'
 import { useFormGuard } from '@/platform/composables/useFormGuard'
@@ -286,41 +292,35 @@ async function saveLocale(lang: SupportedLocale) {
   await profileStore.updateMe({ locale: lang })
 }
 
-const profile = reactive({ name: '', email: '' })
-const initial = reactive({ name: '', email: '' })
-const profileErrors = reactive({ name: '', email: '' })
+const profile = reactive({ name: '' })
+const initial = reactive({ name: '' })
+const profileErrors = reactive({ name: '' })
+const changeEmailOpen = ref(false)
 const profileError = ref('')
 const { saving: savingProfile, saved: profileSaved, save: saveWithFeedback } = useSaveFeedback()
 
-useFormGuard(() => profile.name !== initial.name || profile.email !== initial.email)
+useFormGuard(() => profile.name !== initial.name)
 
 onMounted(() => {
   if (profileStore.user) {
     profile.name = profileStore.user.name
-    profile.email = profileStore.user.email
     initial.name = profileStore.user.name
-    initial.email = profileStore.user.email
   }
 })
 
 async function saveProfile() {
   profileErrors.name = profile.name.trim() ? '' : t('common.nameRequired')
-  profileErrors.email = profile.email.trim() ? '' : t('common.emailRequired')
-  if (profileErrors.name || profileErrors.email) return
+  if (profileErrors.name) return
 
   profileError.value = ''
   try {
-    const data = await saveWithFeedback(() =>
-      profileStore.updateMe({ name: profile.name, email: profile.email }),
-    )
+    const data = await saveWithFeedback(() => profileStore.updateMe({ name: profile.name }))
     profileStore.user = data
     initial.name = profile.name
-    initial.email = profile.email
   } catch (err: unknown) {
     const fieldErrors = resolveFieldErrors(err)
     profileErrors.name = fieldErrors['body__name'] ?? ''
-    profileErrors.email = fieldErrors['body__email'] ?? ''
-    if (!profileErrors.name && !profileErrors.email) {
+    if (!profileErrors.name) {
       profileError.value = resolveError(err)
     }
   }

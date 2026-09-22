@@ -23,6 +23,7 @@ from src.platform.schemas.mfa import (
 from src.platform.schemas.user import (
     ChangePasswordIn,
     DeleteMeIn,
+    EmailChangeIn,
     InviteUserIn,
     UserDataExportOut,
     UserOut,
@@ -54,6 +55,20 @@ async def delete_my_account(
     delete_me_in: DeleteMeIn,
 ) -> None:
     await service.delete_me(delete_me_in, bg_tasks.add_task)
+
+
+@router.post("/me/email", status_code=status.HTTP_202_ACCEPTED)
+@limiter.limit("5/minute")
+async def request_email_change(
+    request: Request,
+    bg_tasks: BackgroundTasks,
+    service: Annotated[UserService, Depends()],
+    schema_in: EmailChangeIn,
+) -> None:
+    """Re-authenticate (password + 2FA code if enabled) and send a
+    confirmation link to the new address. The email changes only once that
+    link is confirmed via POST /auth/confirm-email-change."""
+    await service.request_email_change(schema_in, bg_tasks.add_task)
 
 
 @router.put("/me/change-password", status_code=status.HTTP_200_OK)

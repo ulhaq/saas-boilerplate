@@ -23,7 +23,7 @@ export type {
   CompleteInviteIn,
   InviteStatusResponse,
 } from './auth'
-export type { UserBase, UserPatch, UserRoleIn, UserOut } from './user'
+export type { UserBase, UserPatch, UserRoleIn, UserOut, EmailChangeIn } from './user'
 export type { MfaSetupOut, MfaCodeIn, MfaDisableIn, MfaRecoveryCodesOut } from './mfa'
 export type { InvitationOut, InvitationRoleOut, InvitationInviterOut } from './invitation'
 export type { OrganizationBase, OrganizationPatch, OrganizationOut } from './organization'

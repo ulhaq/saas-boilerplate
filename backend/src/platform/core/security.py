@@ -106,6 +106,7 @@ type SignSalt = Literal[
     "email-verification",
     "complete-registration",
     "mfa-challenge",
+    "email-change",
 ]
 
 

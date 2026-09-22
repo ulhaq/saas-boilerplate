@@ -31,4 +31,27 @@ test.describe('Profile settings', () => {
     await nameInput.fill('Alice Owner')
     await page.getByRole('button', { name: 'Save changes' }).click()
   })
+
+  test('email is read-only and changed through the confirmation dialog', async ({ page }) => {
+    await expect(page.locator('input').last()).toBeDisabled()
+
+    let body: Record<string, unknown> | null = null
+    await page.route('**/v1/users/me/email', async (route) => {
+      body = route.request().postDataJSON()
+      await route.fulfill({ status: 202, contentType: 'application/json', body: 'null' })
+    })
+
+    await page.getByRole('button', { name: 'Change', exact: true }).click()
+    const dialog = page.getByRole('dialog')
+    await dialog.locator('#change-email-new').fill('alice.new@example.org')
+    await dialog.locator('#change-email-password').fill('password')
+    await dialog.getByRole('button', { name: 'Send confirmation link' }).click()
+
+    await expect(page.getByRole('list').getByText('Check your new inbox')).toBeVisible({
+      timeout: 5000,
+    })
+    expect(body).toMatchObject({ new_email: 'alice.new@example.org', password: 'password' })
+    // Nothing changes until the link is confirmed.
+    await expect(page.locator('input').last()).toHaveValue('admin@example.org')
+  })
 })

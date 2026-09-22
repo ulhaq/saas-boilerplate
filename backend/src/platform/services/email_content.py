@@ -85,6 +85,9 @@ EMAIL_SUBJECTS: dict[str, dict[str, str]] = {
         "welcome": "Welcome to {app_name}",
         "verify-email": "Verify your email for {app_name}",
         "reset-password": "Reset your {app_name} password",
+        "verify-email-change": "Confirm your new email for {app_name}",
+        "email-change-requested": "Email change requested for your {app_name} account",
+        "email-changed": "The email on your {app_name} account was changed",
         "invite-user": "You've been invited to {organization_name}",
         "added-to-org": "You've been added to {organization_name}",
         "trial-available": "Your free {app_name} trial is still waiting",
@@ -102,6 +105,11 @@ EMAIL_SUBJECTS: dict[str, dict[str, str]] = {
         "welcome": "Velkommen til {app_name}",
         "verify-email": "Bekræft din email for {app_name}",
         "reset-password": "Nulstil din {app_name}-adgangskode",
+        "verify-email-change": "Bekræft din nye email til {app_name}",
+        "email-change-requested": (
+            "Anmodning om ændring af email på din {app_name}-konto"
+        ),
+        "email-changed": "Emailen på din {app_name}-konto er ændret",
         "invite-user": "Du er inviteret til {organization_name}",
         "added-to-org": "Du er blevet tilføjet til {organization_name}",
         "trial-available": "Din gratis {app_name}-prøveperiode venter stadig",

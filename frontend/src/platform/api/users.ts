@@ -6,6 +6,7 @@ import type {
   UserRoleIn,
   OrganizationOut,
   ChangePasswordIn,
+  EmailChangeIn,
 } from '@/platform/types'
 
 interface ListParams {
@@ -39,6 +40,12 @@ export const usersApi = {
 
   patchMe(data: UserPatch) {
     return apiClient.patch<UserOut>('/users/me', data)
+  },
+
+  // Sends a confirmation link to the new address; the email changes only
+  // once that link is confirmed (authApi.confirmEmailChange).
+  requestEmailChange(data: EmailChangeIn) {
+    return apiClient.post('/users/me/email', data)
   },
 
   changePassword(data: ChangePasswordIn) {

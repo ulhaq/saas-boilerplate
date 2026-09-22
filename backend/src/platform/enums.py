@@ -146,6 +146,14 @@ class ErrorCode(ErrorCodeEnum):
         "mfa_not_enabled",
         "Two-factor authentication is not enabled",
     )
+    MFA_CODE_REQUIRED = (
+        "mfa_code_required",
+        "A two-factor authentication code is required",
+    )
+    EMAIL_UNCHANGED = (
+        "email_unchanged",
+        "The new email is the same as the current one",
+    )
     MFA_LOCKED = (
         "mfa_locked",
         "Too many invalid two-factor codes; try again later",
@@ -184,6 +192,8 @@ class AuditAction(StrEnum):
     USER_ROLE_ASSIGN = "user.role_assign"
     USER_PASSWORD_CHANGE = "user.password_change"
     USER_PROFILE_UPDATE = "user.profile_update"
+    USER_EMAIL_CHANGE_REQUEST = "user.email_change_request"
+    USER_EMAIL_CHANGE = "user.email_change"
     USER_CONSENT = "user.consent"
     USER_EXPORT = "user.export"
     USER_SELF_DELETE = "user.self_delete"

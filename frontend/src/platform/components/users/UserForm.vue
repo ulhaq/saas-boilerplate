@@ -18,13 +18,9 @@
         </div>
         <div class="space-y-2">
           <Label>{{ $t('common.email') }}</Label>
-          <Input
-            v-model="form.email"
-            type="text"
-            :placeholder="$t('users.form.emailPlaceholder')"
-            :disabled="isLoading"
-          />
-          <p v-if="errors.email" class="text-xs text-destructive">{{ errors.email }}</p>
+          <!-- The member's login across all their orgs; only they can change it. -->
+          <Input :model-value="user?.email ?? ''" type="text" disabled />
+          <p class="text-xs text-muted-foreground">{{ $t('users.form.emailManagedByUser') }}</p>
         </div>
 
         <p v-if="errorMessage" class="text-sm text-destructive">{{ errorMessage }}</p>
@@ -38,10 +34,7 @@
           >
             {{ $t('common.cancel') }}
           </Button>
-          <Button
-            type="submit"
-            :disabled="isLoading || !isDirty || !form.name.trim() || !form.email.trim()"
-          >
+          <Button type="submit" :disabled="isLoading || !isDirty || !form.name.trim()">
             <Loader2 v-if="isLoading" class="w-4 h-4 mr-2 animate-spin" />
             {{ $t('common.saveChanges') }}
           </Button>
@@ -90,23 +83,20 @@ const { resolveError, resolveFieldErrors } = useErrorHandler()
 const rules = useRules()
 const { form, errors, validate, clearErrors } = useValidation({
   name: rules.required,
-  email: rules.email,
 })
 
 const isLoading = ref(false)
 const errorMessage = ref('')
-const baseline = reactive({ name: '', email: '' })
+const baseline = reactive({ name: '' })
 
-const isDirty = computed(() => form.name !== baseline.name || form.email !== baseline.email)
+const isDirty = computed(() => form.name !== baseline.name)
 
 watch(
   [() => props.open, () => props.user],
   ([open]) => {
     if (!open) return
     form.name = props.user?.name ?? ''
-    form.email = props.user?.email ?? ''
     baseline.name = form.name
-    baseline.email = form.email
     clearErrors()
     errorMessage.value = ''
   },
@@ -118,15 +108,13 @@ async function onSubmit() {
   isLoading.value = true
   errorMessage.value = ''
   try {
-    await usersStore.patch(props.user.id, { name: form.name, email: form.email })
+    await usersStore.patch(props.user.id, { name: form.name })
     toast({ title: t('users.form.saved') })
     emit('update:open', false)
     emit('saved')
   } catch (err: unknown) {
     const fieldErrors = resolveFieldErrors(err)
-    if (fieldErrors['body__email']) {
-      errors.email = fieldErrors['body__email']
-    } else if (fieldErrors['body__name']) {
+    if (fieldErrors['body__name']) {
       errors.name = fieldErrors['body__name']
     } else {
       errorMessage.value = resolveError(err)

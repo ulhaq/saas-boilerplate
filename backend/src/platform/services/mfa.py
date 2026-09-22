@@ -34,6 +34,27 @@ from src.platform.schemas.mfa import (
 from src.platform.services.base import BaseService
 
 
+async def verify_user_mfa_code(
+    repos: RepositoryManager, user: User, code: str, *, allow_recovery: bool
+) -> None:
+    """Accept a fresh TOTP code (or, if allowed, an unused recovery code,
+    which is consumed) for a signed-in user's re-authentication. Raises
+    MFA_CODE_INVALID otherwise. Login uses AuthService.verify_mfa instead,
+    which adds the failed-attempt lockout."""
+    secret = decrypt_secret(user.mfa_secret) if user.mfa_secret else None
+    step = verify_totp(secret, code, user.mfa_last_used_step) if secret else None
+    if step is not None:
+        await repos.user.update(user, mfa_last_used_step=step)
+        return
+    if allow_recovery and (used := match_recovery_code(code, user.mfa_recovery_codes)):
+        remaining = [h for h in user.mfa_recovery_codes or [] if h != used]
+        await repos.user.update(user, mfa_recovery_codes=remaining)
+        return
+    raise ValidationException(
+        "Invalid two-factor code", error_code=ErrorCode.MFA_CODE_INVALID
+    )
+
+
 class MfaService(BaseService):
     """Self-service TOTP enrollment for the authenticated user."""
 
@@ -65,21 +86,8 @@ class MfaService(BaseService):
     async def _verify_code(
         self, user: User, code: str, *, allow_recovery: bool
     ) -> None:
-        """Accept a fresh TOTP code (or, if allowed, an unused recovery code,
-        which is consumed). Raises MFA_CODE_INVALID otherwise."""
-        secret = decrypt_secret(user.mfa_secret) if user.mfa_secret else None
-        step = verify_totp(secret, code, user.mfa_last_used_step) if secret else None
-        if step is not None:
-            await self.repos.user.update(user, mfa_last_used_step=step)
-            return
-        if allow_recovery and (
-            used := match_recovery_code(code, user.mfa_recovery_codes)
-        ):
-            remaining = [h for h in user.mfa_recovery_codes or [] if h != used]
-            await self.repos.user.update(user, mfa_recovery_codes=remaining)
-            return
-        raise ValidationException(
-            "Invalid two-factor code", error_code=ErrorCode.MFA_CODE_INVALID
+        await verify_user_mfa_code(
+            self.repos, user, code, allow_recovery=allow_recovery
         )
 
     async def _issue_recovery_codes(self, user: User) -> MfaRecoveryCodesOut:

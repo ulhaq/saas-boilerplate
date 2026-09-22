@@ -12,6 +12,7 @@ from src.platform.schemas.user import (
     AcceptInviteIn,
     CompleteInviteIn,
     CompleteRegistrationIn,
+    ConfirmEmailChangeIn,
     EmailIn,
     InviteStatusIn,
     InviteStatusOut,
@@ -214,6 +215,24 @@ async def accept_invite(
     )
     _set_refresh_token_cookie(response, token.refresh_token)
     return token
+
+
+@router.post(
+    "/confirm-email-change",
+    status_code=status.HTTP_204_NO_CONTENT,
+    include_in_schema=False,
+)
+@limiter.limit("10/minute")
+async def confirm_email_change(
+    request: Request,
+    response: Response,
+    bg_tasks: BackgroundTasks,
+    service: Annotated[AuthService, Depends()],
+    schema_in: ConfirmEmailChangeIn,
+) -> None:
+    """Apply an email change from the confirmation link; ends all sessions."""
+    await service.confirm_email_change(schema_in.token, bg_tasks.add_task)
+    _delete_refresh_token_cookie(response)
 
 
 @router.post("/switch-organization", status_code=status.HTTP_200_OK)

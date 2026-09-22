@@ -214,6 +214,7 @@ export default {
       editDescription: 'Update member details',
       namePlaceholder: 'John Doe',
       emailPlaceholder: "john{'@'}example.com",
+      emailManagedByUser: 'Members change their own email from their profile.',
       saved: 'Member updated',
     },
     roleDialog: {
@@ -330,6 +331,22 @@ export default {
     failedToSaveChanges: 'Failed to save changes.',
     passwordUpdated: 'Password updated',
     incorrectCurrentPassword: 'Incorrect current password',
+    changeEmail: {
+      button: 'Change',
+      title: 'Change email',
+      description:
+        "We'll send a confirmation link to the new address. Your email only changes after you click it.",
+      newEmail: 'New email',
+      submit: 'Send confirmation link',
+      sentTitle: 'Check your new inbox',
+      sentDescription:
+        'We sent a confirmation link to {email}. Your email changes once you click it.',
+      confirmTitle: 'Confirm email change',
+      confirmed:
+        'Your email has been changed and all sessions were signed out. Sign in with your new email.',
+      invalidLink: 'This confirmation link is invalid, expired, or has already been used.',
+      requestAgain: 'Request a new email change from your profile settings.',
+    },
     mfa: {
       title: 'Two-factor authentication',
       description:
@@ -692,6 +709,8 @@ export default {
       capacity_exceeded: "You have reached your plan's limit. Upgrade your plan to add more.",
       invite_invalid: 'This invitation link is invalid or has already been used.',
       invite_expired: 'This invitation has expired.',
+      mfa_code_required: 'Enter your two-factor authentication code.',
+      email_unchanged: 'This is already your email address.',
       invite_login_required: 'You already have an account. Sign in to accept this invitation.',
       invite_email_mismatch: 'This invitation was sent to a different email address.',
       mfa_code_invalid: 'Invalid code. Check your authenticator app and try again.',
