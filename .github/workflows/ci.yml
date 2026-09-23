@@ -78,9 +78,35 @@ jobs:
       - name: Lint
         run: npm run lint
 
+  site:
+    name: Site - check & build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: site
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: "npm"
+          cache-dependency-path: site/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check
+        run: npm run check
+
+      - name: Build
+        run: npm run build
+
   build-and-push:
     name: Build & push images
-    needs: [backend, frontend]
+    needs: [backend, frontend, site]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     permissions:
@@ -121,6 +147,18 @@ jobs:
             ghcr.io/${{ github.repository }}/frontend:latest
             ghcr.io/${{ github.repository }}/frontend:${{ github.sha }}
 
+      - name: Write site env
+        run: echo "${{ secrets.SITE_ENV }}" > site/.env
+
+      - name: Build and push site
+        uses: docker/build-push-action@v7
+        with:
+          context: ./site
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/site:latest
+            ghcr.io/${{ github.repository }}/site:${{ github.sha }}
+
   deploy:
     name: Deploy to Hetzner
     needs: [build-and-push]
@@ -143,6 +181,7 @@ jobs:
         env:
           BACKEND_IMAGE: ghcr.io/${{ github.repository }}/backend:${{ github.sha }}
           FRONTEND_IMAGE: ghcr.io/${{ github.repository }}/frontend:${{ github.sha }}
+          SITE_IMAGE: ghcr.io/${{ github.repository }}/site:${{ github.sha }}
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
           OBSERVABILITY_ENV: ${{ secrets.OBSERVABILITY_ENV }}
@@ -150,7 +189,7 @@ jobs:
           host: ${{ secrets.HETZNER_HOST }}
           username: ${{ secrets.HETZNER_USER }}
           key: ${{ secrets.HETZNER_SSH_KEY }}
-          envs: BACKEND_IMAGE,FRONTEND_IMAGE,GHCR_TOKEN,GITHUB_ACTOR,OBSERVABILITY_ENV
+          envs: BACKEND_IMAGE,FRONTEND_IMAGE,SITE_IMAGE,GHCR_TOKEN,GITHUB_ACTOR,OBSERVABILITY_ENV
           script: |
             set -e
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
@@ -158,6 +197,7 @@ jobs:
             echo "${{ secrets.BACKEND_ENV }}" > /opt/app/.env
             echo "BACKEND_IMAGE=$BACKEND_IMAGE" >> /opt/app/.env
             echo "FRONTEND_IMAGE=$FRONTEND_IMAGE" >> /opt/app/.env
+            echo "SITE_IMAGE=$SITE_IMAGE" >> /opt/app/.env
             cd /opt/app
             docker compose pull
             # Migrate with the new image while the old containers still serve.

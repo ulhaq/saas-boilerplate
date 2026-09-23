@@ -1,0 +1,37 @@
+server {
+    listen 80;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Redirect /en/terms -> /en/terms/ with a relative Location, so it works
+    # behind the host's TLS proxy.
+    absolute_redirect off;
+
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' ${ANALYTICS_ORIGIN}; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' ${ANALYTICS_ORIGIN}; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
+
+    # Only the public endpoints the site's forms use; everything else on the
+    # API stays on api.example.com.
+    location ~ ^/v1/(contact|waitlist)$ {
+        limit_except POST { deny all; }
+        client_max_body_size 32k;
+        proxy_pass ${API_TARGET};
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
+    location /_astro/ {
+        add_header Cache-Control "public, max-age=31536000, immutable";
+        try_files $uri =404;
+    }
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    error_page 404 /404.html;
+}

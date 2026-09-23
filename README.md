@@ -21,7 +21,7 @@ The product-specific code lives in one package per side (`backend/src/example/`,
 | Backend | Python 3.14, FastAPI, async SQLAlchemy, PostgreSQL, Alembic, `uv` |
 | Worker | Standalone asyncio process (product loops, GDPR retention, billing cleanup, trial reminders) |
 | Frontend | Vue 3, TypeScript, Vite, Pinia, vue-i18n, Tailwind + Reka UI, file-based routing |
-| Infra | Docker Compose (postgres, pgadmin, mailpit, backend, worker, frontend); opt-in profiles: `analytics` (Umami), `observability` (Alloy agent + Grafana, Prometheus, Loki, Tempo) |
+| Infra | Docker Compose (postgres, pgadmin, mailpit, backend, worker, frontend, site); opt-in profiles: `analytics` (Umami), `observability` (Alloy agent + Grafana, Prometheus, Loki, Tempo) |
 
 ## Architecture
 
@@ -64,7 +64,7 @@ Background loops live only in the worker so the API can scale horizontally witho
 1. **Brand**: edit `frontend/src/brand.ts` (name, app and marketing domains) and set `APP_NAME` / `EMAIL_FROM_NAME` in `backend/.env`. Replace `frontend/public/{favicon.svg,logo.png}`.
 2. **Product code**: replace the `example` package on both sides - step-by-step in [`docs/adding-a-domain-module.md`](docs/adding-a-domain-module.md).
 3. **Plans**: adjust the seeded plans/prices/seat limits in the initial migration, product limits in your product migration, and the plan copy (`planComparisonRows`, `planDescriptions`) in the product locales.
-4. **Marketing site**: not part of this repo. The app links to its terms and privacy pages (`LEGAL_PATHS` in `frontend/src/platform/constants.ts`) and expects `/og-image.png` there.
+4. **Marketing site**: `site/` (static Astro). Set the name, company details and support email in `site/src/config.ts`, the plans in `site/src/content/plans.ts`, the copy in `site/src/i18n/ui.ts` and the legal texts in `site/src/content/legal/`. `SITE_THEME` picks one of eight designs at build time (editorial, tech, soft, swiss, brutal, enterprise, nordic, aurora), and `PUBLIC_CTA_MODE=waitlist` switches every call to action to the waitlist for a pre-launch. The app links to its terms and privacy pages (`LEGAL_PATHS` in `frontend/src/platform/constants.ts`) and to its `/og-image.png`.
 5. **Deploy config**: `etc.nginx.sites-available.example` (marketing domain -> site, `app.` subdomain -> app), `ANALYTICS_ORIGIN` in `docker-compose.yml` (only with the `analytics` profile), the deploy path in `.github/workflows/ci.yml`.
 
 Architecture details live in `backend/CLAUDE.md` and `frontend/CLAUDE.md`.

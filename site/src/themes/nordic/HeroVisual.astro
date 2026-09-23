@@ -1,0 +1,97 @@
+---
+/** An arched landscape - sky, low sun, hills - holding a quiet "this week" card. */
+import { useSample } from '../../content/sample'
+import type { Locale } from '../../i18n/routes'
+
+interface Props {
+  locale: Locale
+}
+
+const s = useSample(Astro.props.locale)
+---
+
+<div class="ov-arch" aria-hidden="true">
+  <span class="ov-sun"></span>
+  <span class="ov-hill ov-far"></span>
+  <span class="ov-hill ov-near"></span>
+  <div class="ov-card">
+    <b>{s.thisWeek}</b>
+    {
+      s.projects.slice(0, 3).map((project) => (
+        <div class="ov-row">
+          <span>{project.name}</span>
+          <span>{project.state === 'active' ? `${project.people} ${s.peopleSuffix}` : project.status}</span>
+        </div>
+      ))
+    }
+  </div>
+</div>
+
+<style>
+  .ov-arch {
+    position: relative;
+    aspect-ratio: 4 / 5;
+    max-width: 440px;
+    margin-inline: auto;
+    overflow: hidden;
+    border-radius: 999px 999px 24px 24px;
+    background: linear-gradient(180deg, #e4e8df 0%, #d3dccd 55%, #c3cfbc 100%);
+  }
+
+  .ov-sun {
+    position: absolute;
+    left: 56%;
+    top: 16%;
+    width: 24%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: #efe3cf;
+  }
+
+  .ov-hill {
+    position: absolute;
+    left: -15%;
+    right: -15%;
+    border-radius: 50% 50% 0 0 / 40% 40% 0 0;
+  }
+
+  .ov-far {
+    bottom: 22%;
+    height: 34%;
+    background: #a8b8a1;
+  }
+
+  .ov-near {
+    bottom: 0;
+    height: 38%;
+    left: -40%;
+    background: var(--accent);
+  }
+
+  .ov-card {
+    position: absolute;
+    left: 8%;
+    right: 8%;
+    bottom: 7%;
+    padding: 16px 18px;
+    border-radius: 18px;
+    background: rgb(248 247 243 / 0.95);
+    font-size: 0.85rem;
+  }
+
+  .ov-card b {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 500;
+    font-size: 0.95rem;
+  }
+
+  .ov-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 0;
+    border-top: 1px solid var(--rule);
+    color: var(--muted);
+  }
+</style>

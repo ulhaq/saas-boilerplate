@@ -1,6 +1,6 @@
 # Frontend
 
-Vue 3 + TypeScript SPA for the SaaS boilerplate: the signed-in app (auth, organizations, users, roles, billing, settings) and the example product's Projects feature. The marketing site (home, pricing, legal pages) lives outside this repo on its own domain; the app links to its terms/privacy pages via `legalUrl()` in `platform/constants.ts`. Built with Vite, Pinia state management, file-based routing via `unplugin-vue-router`, Tailwind + Reka UI components.
+Vue 3 + TypeScript SPA for the SaaS boilerplate: the signed-in app (auth, organizations, users, roles, billing, settings) and the example product's Projects feature. The marketing site (home, pricing, legal pages) is the separate `site/` package on its own domain; the app links to its terms/privacy pages via `legalUrl()` in `platform/constants.ts`. Built with Vite, Pinia state management, file-based routing via `unplugin-vue-router`, Tailwind + Reka UI components.
 
 ## Commands (`cd frontend` first)
 

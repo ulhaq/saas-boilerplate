@@ -1,0 +1,24 @@
+---
+import theme from '@theme/config'
+import { stepMark } from '../themes/types'
+import type { Locale } from '../i18n/routes'
+
+interface Props {
+  locale: Locale
+  items: { title: string; desc: string }[]
+}
+
+const { locale, items } = Astro.props
+---
+
+<ol class="steps">
+  {
+    items.map((step, i) => (
+      <li class="step">
+        <span class="step-mark">{stepMark(theme.stepMarks, i, locale)}</span>
+        <h3>{step.title}</h3>
+        <p>{step.desc}</p>
+      </li>
+    ))
+  }
+</ol>

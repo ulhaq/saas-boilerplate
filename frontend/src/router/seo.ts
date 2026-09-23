@@ -16,8 +16,8 @@ const INDEXABLE_PAGES: Record<string, string> = {
 
 /**
  * Head tags for a route. Called from `App.vue` inside a `computed`, so it
- * re-runs on every navigation and language switch. The marketing pages live
- * outside this repo, on their own domain.
+ * re-runs on every navigation and language switch. The marketing pages are
+ * the separate `site/` package, on their own domain.
  */
 export function buildRouteHead(path: string, breadcrumb?: string) {
   const { t, locale } = i18n.global

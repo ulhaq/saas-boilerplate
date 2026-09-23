@@ -1,0 +1,29 @@
+---
+/*
+ * `/` has no content of its own: it sends visitors to the front page in the
+ * language their browser prefers, or to the default locale.
+ */
+import { DEFAULT_LOCALE, LOCALES, path } from '../i18n/routes'
+
+const fallback = path('home', DEFAULT_LOCALE)
+---
+
+<!doctype html>
+<html lang={DEFAULT_LOCALE}>
+  <head>
+    <meta charset="utf-8" />
+    <title>Redirecting…</title>
+    <meta name="robots" content="noindex" />
+    <link rel="canonical" href={fallback} />
+    <script is:inline define:vars={{ locales: LOCALES, fallback }}>
+      const preferred = (navigator.languages || [navigator.language])
+        .map((tag) => tag.slice(0, 2).toLowerCase())
+        .find((lang) => locales.includes(lang))
+      location.replace(preferred ? `/${preferred}/` : fallback)
+    </script>
+    <meta http-equiv="refresh" content={`0; url=${fallback}`} />
+  </head>
+  <body>
+    <a href={fallback}>{fallback}</a>
+  </body>
+</html>

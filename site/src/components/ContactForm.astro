@@ -1,0 +1,80 @@
+---
+import type { Locale } from '../i18n/routes'
+import { useMessages } from '../i18n/ui'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const t = useMessages(locale)
+const f = t.contact.form
+// Limits mirror `ContactMessageIn` in backend/src/platform/schemas/contact.py.
+---
+
+<form
+  class="contact-form"
+  data-api="/v1/contact"
+  data-sending={f.sending}
+  data-success={`${f.sentTitle} ${f.sentBody}`}
+  data-error={t.forms.error}
+  data-rate-limited={t.forms.rateLimited}
+>
+  <input type="hidden" name="locale" value={locale} />
+  <div class="row">
+    <div class="field">
+      <label for="c-name">{f.name}</label>
+      <input
+        id="c-name"
+        class="input"
+        name="name"
+        required
+        maxlength="100"
+        autocomplete="name"
+        placeholder={f.namePlaceholder}
+      />
+    </div>
+    <div class="field">
+      <label for="c-email">{f.email}</label>
+      <input
+        id="c-email"
+        class="input"
+        type="email"
+        name="email"
+        required
+        autocomplete="email"
+        placeholder={f.emailPlaceholder}
+      />
+    </div>
+  </div>
+  <div class="field">
+    <label for="c-subject">{f.subject}</label>
+    <input
+      id="c-subject"
+      class="input"
+      name="subject"
+      required
+      maxlength="150"
+      placeholder={f.subjectPlaceholder}
+    />
+  </div>
+  <div class="field">
+    <label for="c-message">{f.message}</label>
+    <textarea
+      id="c-message"
+      class="input"
+      name="message"
+      required
+      minlength="10"
+      maxlength="5000"
+      placeholder={f.messagePlaceholder}></textarea>
+  </div>
+  <div class="submit">
+    <button class="btn" type="submit">{f.submit}</button>
+    <p class="form-status" data-status role="status" aria-live="polite"></p>
+  </div>
+</form>
+
+<script>
+  import '../scripts/forms'
+</script>

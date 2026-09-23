@@ -4,14 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Product
 
-**SaaS Boilerplate** - a multi-tenant B2B SaaS starter: auth, organizations, RBAC, Stripe billing with plan limits, audit log, GDPR tooling, email + in-app notifications. The marketing site is not part of this repo.
+**SaaS Boilerplate** - a multi-tenant B2B SaaS starter: auth, organizations, RBAC, Stripe billing with plan limits, audit log, GDPR tooling, email + in-app notifications, plus a static marketing site.
 
 Product-specific code lives in one package per side - `backend/src/example/` and `frontend/src/example/` - currently a minimal **Projects** feature (org-scoped CRUD, permissions, a `projects` plan limit, a hook handler, a worker loop). It exists to exercise every extension point; replace it with the real product.
 
 Starting a new product from this template:
 - Replace/rename the `example` package on both sides - see `docs/adding-a-domain-module.md`.
 - Set the product identity in `frontend/src/brand.ts` (name, app and marketing domains) and `APP_NAME` / `EMAIL_FROM_*` in `backend/.env`.
-- Adapt plan seeds (initial migration + product migration), and plan copy (`planComparisonRows` / `planDescriptions` in the product locales). The app links to the marketing site's terms/privacy pages (`LEGAL_PATHS` in `frontend/src/platform/constants.ts`).
+- Adapt plan seeds (initial migration + product migration), and plan copy (`planComparisonRows` / `planDescriptions` in the product locales). Mirror plan and brand changes in the marketing site (`site/src/config.ts`, `site/src/content/plans.ts`); the app links to its terms/privacy pages (`LEGAL_PATHS` in `frontend/src/platform/constants.ts`).
 - Replace `frontend/public/{favicon.svg,logo.png}`.
 
 ## Repository Structure
@@ -19,15 +19,16 @@ Starting a new product from this template:
 Full-stack multi-tenant SaaS:
 - `backend/` - FastAPI + Python, PostgreSQL, async SQLAlchemy, Alembic migrations. See `backend/CLAUDE.md`.
 - `frontend/` - the signed-in app: Vue 3 + TypeScript SPA, Vite, Pinia, file-based routing. See `frontend/CLAUDE.md`.
+- `site/` - the marketing site (landing, features, pricing, about, contact, legal pages): standalone static Astro site, da/en. See `site/CLAUDE.md`.
 
-Both sides are split into a generic SaaS **platform** package and the
+The backend and frontend are each split into a generic SaaS **platform** package and the
 **product** package (`src/platform/` + `src/example/`), wired together by a thin
 assembly layer (`bootstrap.py` / `main.ts`). The platform never imports product
 code - enforced by import-linter (backend) and ESLint (frontend).
 
 ## Running Locally
 
-**Recommended: Docker Compose** (runs postgres, mailpit, backend, worker, and frontend together):
+**Recommended: Docker Compose** (runs postgres, mailpit, backend, worker, frontend and site together):
 
 ```bash
 cp backend/.env.example backend/.env   # fill in secrets
@@ -37,7 +38,7 @@ make down                              # stop everything
 make logs                              # tail all logs
 ```
 
-Services: backend API on `:8000`, app on `:5173`, pgadmin on `:5050`, mailpit UI on `:8025`.
+Services: backend API on `:8000`, app on `:5173`, marketing site on `:4321`, pgadmin on `:5050`, mailpit UI on `:8025`.
 
 **Without Docker** (run each in a separate terminal, `cd` first):
 
@@ -50,9 +51,12 @@ cd backend && uv run python worker.py
 
 # Terminal 3 - app
 cd frontend && npm run dev
+
+# Terminal 4 - marketing site (optional)
+cd site && npm run dev
 ```
 
-The frontend dev server proxies `/v1` → `localhost:8000`.
+The frontend and site dev servers proxy `/v1` → `localhost:8000`.
 
 ## Two-Process Backend Architecture
 

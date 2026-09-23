@@ -1,0 +1,45 @@
+---
+import Base from '../layouts/Base.astro'
+import ComparisonTable from '../components/ComparisonTable.astro'
+import Faq from '../components/Faq.astro'
+import PageHero from '../components/PageHero.astro'
+import Plans from '../components/Plans.astro'
+import SectionHead from '../components/SectionHead.astro'
+import { path, type Locale } from '../i18n/routes'
+import { useMessages } from '../i18n/ui'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const t = useMessages(locale)
+const pricingFaq = t.faq.filter((item) => 'pricing' in item && item.pricing)
+---
+
+<Base
+  locale={locale}
+  page="pricing"
+  title={t.meta.pricing.title}
+  description={t.meta.pricing.description}
+>
+  <PageHero kicker={t.pricing.kicker} title={t.pricing.title} lede={t.pricing.lede} />
+
+  <section class="wrap" aria-label={t.pricing.kicker}>
+    <Plans locale={locale} />
+    <p class="custom">
+      {t.pricing.customText}
+      <a class="arrow-link" href={path('contact', locale)}>{t.pricing.customLink}</a>
+    </p>
+  </section>
+
+  <section class="section wrap" aria-labelledby="compare">
+    <SectionHead id="compare" num="§ 1" title={t.pricing.compareTitle} />
+    <ComparisonTable locale={locale} />
+  </section>
+
+  <section class="section wrap" aria-labelledby="pricing-faq">
+    <SectionHead id="pricing-faq" num="§ 2" title={t.pricing.faqTitle} />
+    <Faq items={pricingFaq} />
+  </section>
+</Base>

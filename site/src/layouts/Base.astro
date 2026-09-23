@@ -1,0 +1,84 @@
+---
+import '../styles/global.css'
+// The build-time theme (SITE_THEME): fonts, tokens and overrides.
+import '@theme/theme.css'
+import theme from '@theme/config'
+
+import Header from '../components/Header.astro'
+import Footer from '../components/Footer.astro'
+import Ticker from '../components/Ticker.astro'
+import { SITE, UMAMI } from '../config'
+import { LOCALES, path, type Locale, type PageKey } from '../i18n/routes'
+import { useMessages } from '../i18n/ui'
+
+interface Props {
+  locale: Locale
+  /** The page's key in the inventory; null for pages without a twin (404). */
+  page: PageKey | null
+  title: string
+  description: string
+}
+
+const { locale, page, title, description } = Astro.props
+const t = useMessages(locale)
+const origin = Astro.site ?? new URL(Astro.url.origin)
+const canonical = page ? new URL(path(page, locale), origin).href : undefined
+const ogImage = new URL('/og-image.png', origin).href
+---
+
+<!doctype html>
+<html lang={t.htmlLang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    {
+      theme.themeColor.dark ? (
+        <>
+          <meta name="theme-color" content={theme.themeColor.light} media="(prefers-color-scheme: light)" />
+          <meta name="theme-color" content={theme.themeColor.dark} media="(prefers-color-scheme: dark)" />
+        </>
+      ) : (
+        <meta name="theme-color" content={theme.themeColor.light} />
+      )
+    }
+    {page === null && <meta name="robots" content="noindex" />}
+    {canonical && <link rel="canonical" href={canonical} />}
+    {
+      page &&
+        LOCALES.map((l) => (
+          <link rel="alternate" hreflang={l} href={new URL(path(page, l), origin).href} />
+        ))
+    }
+    {page && <link rel="alternate" hreflang="x-default" href={new URL('/', origin).href} />}
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={SITE.name} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:locale" content={locale === 'da' ? 'da_DK' : 'en_GB'} />
+    {canonical && <meta property="og:url" content={canonical} />}
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content={ogImage} />
+
+    {
+      UMAMI.scriptUrl && UMAMI.websiteId && (
+        <script is:inline defer src={UMAMI.scriptUrl} data-website-id={UMAMI.websiteId} />
+      )
+    }
+  </head>
+  <body>
+    <a class="skip" href="#main">{t.skipToContent}</a>
+    {theme.highlights === 'ticker' && <Ticker locale={locale} />}
+    <Header locale={locale} page={page} />
+    <main id="main">
+      <slot />
+    </main>
+    <Footer locale={locale} />
+  </body>
+</html>

@@ -19,6 +19,7 @@ port = $(shell echo $$(( $(1) + $(OFFSET) )))
 
 export BACKEND_PORT      := $(call port,8000)
 export FRONTEND_PORT     := $(call port,5173)
+export SITE_PORT         := $(call port,4321)
 export POSTGRES_PORT     := $(call port,5432)
 export PGADMIN_PORT      := $(call port,5050)
 export MAILPIT_SMTP_PORT := $(call port,1025)
@@ -37,11 +38,11 @@ endif
 
 up:
 	$(COMPOSE) up -d
-	@echo "backend http://localhost:$(BACKEND_PORT)  app http://localhost:$(FRONTEND_PORT)  pgadmin http://localhost:$(PGADMIN_PORT)"
+	@echo "backend http://localhost:$(BACKEND_PORT)  app http://localhost:$(FRONTEND_PORT)  site http://localhost:$(SITE_PORT)  pgadmin http://localhost:$(PGADMIN_PORT)"
 
 up-local:
 	COMPOSE_PROFILES=local$(if $(ENV_PROFILES),$(comma)$(ENV_PROFILES)) $(COMPOSE) up -d
-	@echo "backend http://localhost:$(BACKEND_PORT)  app http://localhost:$(FRONTEND_PORT)  pgadmin http://localhost:$(PGADMIN_PORT)  mailpit http://localhost:$(MAILPIT_UI_PORT)  umami http://localhost:$(UMAMI_PORT) (profile analytics)"
+	@echo "backend http://localhost:$(BACKEND_PORT)  app http://localhost:$(FRONTEND_PORT)  site http://localhost:$(SITE_PORT)  pgadmin http://localhost:$(PGADMIN_PORT)  mailpit http://localhost:$(MAILPIT_UI_PORT)  umami http://localhost:$(UMAMI_PORT) (profile analytics)"
 
 down:
 	$(COMPOSE) --profile local --profile observability --profile analytics down --remove-orphans

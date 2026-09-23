@@ -1,0 +1,17 @@
+---
+interface Props {
+  kicker: string
+  /** May contain `<em>` for the accented phrase. */
+  title: string
+  lede?: string
+}
+
+const { kicker, title, lede } = Astro.props
+---
+
+<header class="page-hero wrap">
+  <p class="kicker">{kicker}</p>
+  <h1 class="display" set:html={title} />
+  {lede && <p class="lede">{lede}</p>}
+  <slot />
+</header>

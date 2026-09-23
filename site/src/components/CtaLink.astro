@@ -1,0 +1,37 @@
+---
+/**
+ * The site's primary call to action. In `signup` mode it sends visitors to
+ * the app's registration page; in `waitlist` mode to the waitlist form on the
+ * front page.
+ */
+import { CTA_MODE, appUrl } from '../config'
+import { TRIAL_DAYS } from '../content/plans'
+import { path, type Locale } from '../i18n/routes'
+import { fmt, useMessages } from '../i18n/ui'
+
+interface Props {
+  locale: Locale
+  /** `small` is the short label for the masthead; `trial` spells out the trial. */
+  size?: 'small' | 'default' | 'trial'
+  variant?: 'solid' | 'ghost'
+  class?: string
+}
+
+const { locale, size = 'default', variant = 'solid', class: extra } = Astro.props
+const t = useMessages(locale)
+
+const waitlist = CTA_MODE === 'waitlist'
+const href = waitlist ? `${path('home', locale)}#waitlist` : appUrl('/register')
+const label = waitlist
+  ? t.nav.waitlist
+  : size === 'trial' && TRIAL_DAYS
+    ? fmt(t.cta.trial, { days: TRIAL_DAYS })
+    : t.nav.signup
+---
+
+<a
+  class:list={['btn', { 'btn--small': size === 'small', 'btn--ghost': variant === 'ghost' }, extra]}
+  href={href}
+>
+  {label}
+</a>

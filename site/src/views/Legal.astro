@@ -1,0 +1,32 @@
+---
+import Base from '../layouts/Base.astro'
+import { type Locale, type PageKey } from '../i18n/routes'
+import { useMessages } from '../i18n/ui'
+
+interface Props {
+  locale: Locale
+  page: Extract<PageKey, 'privacy' | 'terms'>
+  /** ISO date, e.g. 2026-09-13. */
+  updated: string
+}
+
+const { locale, page, updated } = Astro.props
+const t = useMessages(locale)
+const meta = t.meta[page]
+const date = new Intl.DateTimeFormat(locale === 'da' ? 'da-DK' : 'en-GB', {
+  dateStyle: 'long',
+}).format(new Date(updated))
+---
+
+<Base locale={locale} page={page} title={meta.title} description={meta.description}>
+  <article class="wrap legal">
+    <header class="legal-head">
+      <p class="kicker">{t.footer.legal}</p>
+      <h1 class="title">{t.nav[page]}</h1>
+      <p class="kicker">{t.legal.lastUpdated}: <time datetime={updated}>{date}</time></p>
+    </header>
+    <div class="prose">
+      <slot />
+    </div>
+  </article>
+</Base>

@@ -1,0 +1,11 @@
+---
+/**
+ * The product name as a wordmark. `.wordmark-mark` (a small logo shape) and
+ * `.wordmark-dot` (an accent full stop) are hidden by default; each theme
+ * turns on and shapes the one it uses.
+ */
+import { SITE } from '../config'
+---
+
+<!-- prettier-ignore -->
+<span class="wordmark"><span class="wordmark-mark" aria-hidden="true"></span>{SITE.name}<span class="wordmark-dot" aria-hidden="true">.</span></span>

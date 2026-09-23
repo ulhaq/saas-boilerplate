@@ -1,0 +1,28 @@
+---
+/*
+ * Served by nginx for every unknown path. It is static, so it can't know the
+ * visitor's locale; it renders in the default locale and links both fronts.
+ */
+import Base from '../layouts/Base.astro'
+import PageHero from '../components/PageHero.astro'
+import { DEFAULT_LOCALE, LOCALES, path } from '../i18n/routes'
+import { useMessages } from '../i18n/ui'
+
+const t = useMessages(DEFAULT_LOCALE)
+const other = LOCALES.find((l) => l !== DEFAULT_LOCALE)!
+const o = useMessages(other)
+---
+
+<Base
+  locale={DEFAULT_LOCALE}
+  page={null}
+  title={t.meta.notFound.title}
+  description={t.meta.notFound.description}
+>
+  <PageHero kicker={t.notFound.kicker} title={t.notFound.title} lede={t.notFound.lede}>
+    <p class="page-links">
+      <a class="arrow-link" href={path('home', DEFAULT_LOCALE)}>{t.notFound.home}</a>
+      <a class="arrow-link" href={path('home', other)} lang={other}>{o.notFound.home}</a>
+    </p>
+  </PageHero>
+</Base>

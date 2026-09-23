@@ -1,0 +1,375 @@
+/*
+ * Nordic calm: stone ground, forest green, sage and clay. Manrope set light,
+ * with Cormorant Garamond italics for the emphasised phrase. Generous space,
+ * soft paper cards, no hard edges.
+ */
+@import '@fontsource-variable/manrope/index.css';
+@import '@fontsource/cormorant-garamond/400-italic.css';
+@import '@fontsource/cormorant-garamond/500-italic.css';
+
+@layer base, theme;
+
+@layer theme {
+  :root {
+    --bg: #f1efe9;
+    --surface: #f8f7f3;
+    --surface-2: #e3ddd0;
+    --ink: #22302b;
+    --ink-2: #3f4a45;
+    --muted: #5f6862;
+    --rule: #d8d6cc;
+    --rule-strong: #c4c1b4;
+    --accent: #2f4a3f;
+    --accent-ink: #f8f7f3;
+    --accent-soft: #2f4a3f12;
+    --accent-text: #2f4a3f;
+    --sage: #a8b8a1;
+    --clay: #9a6f52;
+
+    --font-display: 'Manrope Variable', ui-sans-serif, system-ui, sans-serif;
+    --font-body: 'Manrope Variable', ui-sans-serif, system-ui, sans-serif;
+    --font-mono: 'Manrope Variable', ui-sans-serif, system-ui, sans-serif;
+    --font-italic: 'Cormorant Garamond', Georgia, serif;
+    --display-weight: 300;
+    --display-tracking: -0.03em;
+    --display-leading: 1.05;
+    --heading-weight: 400;
+    --heading-tracking: -0.02em;
+    --em-style: italic;
+    --em-color: var(--accent);
+
+    --radius: 22px;
+    --radius-sm: 12px;
+    --radius-btn: 999px;
+    --card-bg: var(--surface);
+    --card-border: transparent;
+    --btn-hover-bg: #22362e;
+    --btn-hover-ink: #f8f7f3;
+    --ghost-border: var(--accent);
+    --ghost-ink: var(--accent);
+    --header-bg: color-mix(in srgb, var(--bg) 92%, transparent);
+    --header-border: transparent;
+    --section-y: clamp(72px, 11vw, 136px);
+  }
+
+  body {
+    font-weight: 300;
+    line-height: 1.7;
+  }
+
+  h1 em,
+  h2 em,
+  .display em {
+    font-family: var(--font-italic);
+    font-weight: 400;
+    letter-spacing: 0;
+    font-size: 1.08em;
+  }
+
+  .kicker {
+    font-weight: 500;
+    letter-spacing: 0.16em;
+  }
+
+  .kicker--accent {
+    color: var(--muted);
+  }
+
+  .masthead {
+    backdrop-filter: none;
+  }
+
+  .bar {
+    min-height: 84px;
+  }
+
+  .wordmark {
+    font-weight: 500;
+    font-size: 1.05rem;
+    letter-spacing: -0.01em;
+  }
+
+  .wordmark-mark {
+    display: block;
+    width: 14px;
+    height: 14px;
+    margin-right: 18px;
+    border-radius: 50%;
+    background: var(--sage);
+    box-shadow: 8px 0 0 #c9a58a;
+  }
+
+  .primary a {
+    font-weight: 400;
+  }
+
+  .primary a[aria-current='page'] {
+    font-weight: 500;
+  }
+
+  .lang {
+    font-family: var(--font-body);
+    font-weight: 500;
+  }
+
+  .btn {
+    font-weight: 500;
+  }
+
+  .lede {
+    color: var(--muted);
+  }
+
+  /* hero: headline beside the arch, bottoms aligned */
+  .hero-title {
+    max-width: 13ch;
+  }
+
+  .hero-secondary {
+    display: inline-flex;
+  }
+
+  .hero-notes li::before {
+    content: none;
+  }
+
+  @media (min-width: 980px) {
+    .hero {
+      grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr);
+      align-items: end;
+    }
+  }
+
+  /* quiet section heads */
+  .section-head {
+    gap: 18px;
+  }
+
+  .section-num {
+    display: none;
+  }
+
+  .section-label:not(:has(.section-name:not(:empty))) {
+    display: none;
+  }
+
+  .title {
+    font-weight: 300;
+    font-size: clamp(2.1rem, 4.6vw, 3.5rem);
+  }
+
+  .section-sub {
+    color: var(--muted);
+  }
+
+  /* steps: words in italic serif */
+  .step {
+    padding: 0;
+    background: none;
+    border: 0;
+  }
+
+  .step-mark {
+    font-family: var(--font-italic);
+    font-style: italic;
+    font-weight: 400;
+    font-size: 2.5rem;
+    line-height: 1;
+    color: var(--clay);
+  }
+
+  .step h3,
+  .feature-title {
+    font-weight: 400;
+    font-size: 1.3rem;
+  }
+
+  .step p,
+  .feature-desc,
+  .plan-desc {
+    color: var(--muted);
+  }
+
+  @media (min-width: 880px) {
+    .steps {
+      gap: 56px;
+    }
+  }
+
+  /* features: an unadorned two-column list */
+  .features {
+    gap: 0 72px;
+  }
+
+  .feature {
+    padding: 28px 0;
+    background: none;
+    border: 0;
+    border-top: 1px solid var(--rule);
+  }
+
+  .feature-num,
+  .feature-icon {
+    display: none;
+  }
+
+  @media (min-width: 1080px) {
+    .features {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  /* plans: soft paper cards, the recommended one in forest */
+  .plan.is-recommended {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-color: var(--accent);
+    box-shadow: none;
+  }
+
+  .plan.is-recommended .plan-desc,
+  .plan.is-recommended .plan-per,
+  .plan.is-recommended .plan-stats dt {
+    color: #b9c7bd;
+  }
+
+  .plan-badge {
+    padding: 0;
+    background: none;
+    color: #b9c7bd;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .plan-name {
+    font-weight: 400;
+  }
+
+  .plan-amount {
+    font-weight: 300;
+  }
+
+  .plan-stats dd {
+    font-weight: 400;
+  }
+
+  .plan-features li::before {
+    content: '— ';
+    color: inherit;
+  }
+
+  .plan.is-recommended .btn {
+    background: var(--accent-ink);
+    border-color: var(--accent-ink);
+    color: var(--accent);
+  }
+
+  .compare {
+    border-top-color: var(--rule-strong);
+  }
+
+  .compare .yes {
+    background: var(--accent);
+  }
+
+  .faq {
+    border-top-color: var(--rule);
+  }
+
+  .faq-item summary {
+    font-weight: 400;
+    font-size: 1.25rem;
+  }
+
+  .faq-item summary::after {
+    font-family: var(--font-body);
+    font-weight: 200;
+    font-size: 1.6rem;
+    line-height: 1;
+    color: var(--clay);
+  }
+
+  /* closing: a sand band, centred */
+  .closing {
+    background: var(--surface-2);
+    color: var(--ink);
+    text-align: center;
+  }
+
+  .closing-inner,
+  .closing-cta {
+    justify-items: center;
+  }
+
+  .closing-title {
+    font-weight: 300;
+  }
+
+  .closing .btn {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-ink);
+  }
+
+  .closing .btn:hover {
+    background: #22362e;
+    border-color: #22362e;
+  }
+
+  @media (min-width: 880px) {
+    .closing-inner {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* inner pages */
+  .page-hero .display {
+    font-weight: 300;
+  }
+
+  .trust-item,
+  .value {
+    border: 0;
+  }
+
+  .value-mark {
+    font-family: var(--font-italic);
+    font-style: italic;
+    font-size: 1.4rem;
+    color: var(--clay);
+  }
+
+  .mission {
+    border: 0;
+    border-radius: var(--radius);
+    padding: clamp(28px, 5vw, 56px);
+    background: var(--surface);
+  }
+
+  .mission-quote {
+    font-weight: 300;
+  }
+
+  .contact-layout,
+  .legal-head {
+    border-color: var(--rule);
+  }
+
+  .field label {
+    font-weight: 500;
+  }
+
+  .input {
+    border-color: var(--rule-strong);
+    background: var(--surface);
+  }
+
+  .colophon {
+    border-top-color: var(--rule);
+  }
+
+  .colophon-bottom {
+    font-family: var(--font-body);
+  }
+}

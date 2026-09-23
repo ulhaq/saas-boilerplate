@@ -1,0 +1,168 @@
+---
+/*
+ * SKABELON - tilpas til dit produkt og dine databehandlere, og få den
+ * gennemgået af en advokat før lancering. Virksomhedsoplysninger kommer fra
+ * src/config.ts. Hold den engelske version (PrivacyEn.astro) i trit.
+ */
+import { SITE, appUrl } from '../../config'
+import { path } from '../../i18n/routes'
+
+const e = SITE.legalEntity
+---
+
+<p>
+  Denne privatlivspolitik beskriver, hvordan {SITE.name} ("vi", "os", "vores") indsamler, bruger og
+  beskytter dine personoplysninger, når du besøger vores hjemmeside eller bruger vores tjenester
+  ("Tjenesten"). Vi behandler personoplysninger i overensstemmelse med forordning (EU) 2016/679
+  (GDPR) og gældende dansk databeskyttelseslovgivning.
+</p>
+
+<h2>Dataansvarlig</h2>
+<p>
+  Den dataansvarlige for dine personoplysninger er:<br />
+  <strong>{e.name}</strong><br />
+  {e.registrationLabel}: {e.registrationNumber}<br />
+  {e.address}<br />
+  Email: {SITE.supportEmail}
+</p>
+
+<h2>Hvilke oplysninger vi indsamler</h2>
+<p>Vi kan indsamle følgende typer oplysninger:</p>
+<ul>
+  <li><strong>Personoplysninger</strong> - dit navn, din emailadresse og faktureringsoplysninger.</li>
+  <li>
+    <strong>Kundedata</strong> - data, som du eller dine brugere lægger ind i systemet som led i
+    brugen af Tjenesten, og som kun opbevares og behandles for at levere Tjenesten og relaterede
+    ydelser til dig.
+  </li>
+  <li>
+    <strong>Brugsdata</strong> - oplysninger om, hvordan du bruger Tjenesten, f.eks. logfiler,
+    IP-adresser, browsertype, enhedsoplysninger og besøgte sider.
+  </li>
+  <li>
+    <strong>Henvendelser</strong> - det navn, den emailadresse og den besked, du sender os via
+    kontaktformularen eller ventelisten på denne hjemmeside.
+  </li>
+</ul>
+
+<h2>Dataansvarlig og databehandler</h2>
+<p>
+  For personoplysninger om tredjeparter, som du eller dine brugere opbevarer i Tjenesten, er du
+  dataansvarlig, og vi er din databehandler. Denne behandling er reguleret af afsnittet om
+  databehandling i vores <a href={path('terms', 'da')}>handelsbetingelser</a>. For konto-,
+  fakturerings-, brugs- og henvendelsesdata er vi dataansvarlige.
+</p>
+
+<h2>Retsgrundlag for behandlingen</h2>
+<ul>
+  <li>
+    <strong>Opfyldelse af en kontrakt</strong> (art. 6, stk. 1, litra b) - konto- og brugsdata
+    behandles for at levere den tjeneste, du abonnerer på.
+  </li>
+  <li>
+    <strong>Retlig forpligtelse</strong> (art. 6, stk. 1, litra c) - faktureringsbilag opbevares for at
+    overholde bogføringsloven.
+  </li>
+  <li>
+    <strong>Legitim interesse</strong> (art. 6, stk. 1, litra f) - transaktionelle emails
+    (nulstilling af adgangskode, notifikationer), servicemeddelelser, svar på dine henvendelser og
+    supportchat i appen bygger på vores legitime interesse i at drive og yde support på tjenesten.
+  </li>
+</ul>
+
+<h2>Databehandlere og tredjepartstjenester</h2>
+<p>
+  Vi deler kun personoplysninger med databehandlere, der er nødvendige for at levere tjenesten. Alle
+  databehandlere er bundet af databehandleraftaler i henhold til GDPR art. 28:
+</p>
+<ul>
+  <li>
+    <strong>Stripe</strong> - betalingshåndtering. Modtager faktureringsoplysninger og behandler
+    kortdata på vores vegne. Kunder i EU betjenes af Stripe Payments Europe, Ltd. (Irland).
+  </li>
+  <li>
+    <strong>Hetzner Online GmbH</strong> - cloudinfrastruktur og hosting. Opbevarer og behandler data
+    på servere placeret i EU på vores vegne.
+  </li>
+  <li>
+    <strong>Leverandør af transaktionelle emails</strong> - levering af systemmails. Modtager din
+    emailadresse og indholdet af systemnotifikationer. Leverandøren er placeret uden for EU/EØS; se
+    Overførsel til tredjelande nedenfor.
+  </li>
+  <li>
+    <strong>tawk.to inc.</strong> - livechat-support i den indloggede applikation. Modtager de
+    beskeder, du sender, og de tekniske data, der er nødvendige for at drive chatten.
+  </li>
+</ul>
+<p>Vi sælger ikke dine personoplysninger og deler dem ikke med tredjeparter til markedsføring.</p>
+
+<h2>Overførsel til tredjelande</h2>
+<p>
+  Nogle af vores databehandlere overfører personoplysninger uden for EU/EØS. Overførsler til Stripes
+  amerikanske selskaber er sikret gennem EU-US Data Privacy Framework og EU-Kommissionens
+  standardkontraktbestemmelser. Overførsler til vores emailleverandør og til tawk.to (USA) er sikret
+  gennem standardkontraktbestemmelser. I alle tilfælde sikres et tilstrækkeligt beskyttelsesniveau.
+</p>
+
+<h2>Cookies, statistik og chat</h2>
+<p>
+  Denne hjemmeside sætter ingen cookies. Til besøgsstatistik bruger vi et selvhostet, cookiefrit
+  analyseværktøj, der kører på vores egen infrastruktur i EU. Det gemmer intet på din enhed,
+  indsamler kun samlet statistik og deler ingen data med tredjeparter.
+</p>
+<p>
+  Den indloggede applikation bruger en sessionscookie, der er strengt nødvendig for login, og tilbyder
+  en livechat til support (Tawk.to), som sætter de cookies, der er nødvendige for at drive chatten.
+  Vi bruger ikke reklame- eller tredjepartssporingscookies.
+</p>
+
+<h2>Opbevaring</h2>
+<p>
+  Konto- og brugsdata opbevares, så længe din konto er aktiv. Revisionslogs, herunder IP-adresser,
+  opbevares, mens kontoen er aktiv, og indgår i din dataeksport. Når en konto slettes, fjernes den
+  permanent, inklusive revisionslogs, efter en frist på 30 dage. Faktureringsbilag opbevares i 5 år
+  fra udgangen af det regnskabsår, de vedrører, jf. bogføringsloven. Henvendelser opbevares kun, så
+  længe det er nødvendigt for at behandle dem.
+</p>
+
+<h2>Sikkerhed</h2>
+<p>
+  Vi beskytter personoplysninger med passende tekniske og organisatoriske foranstaltninger (GDPR art.
+  32), herunder kryptering under overførsel (TLS), rollebaseret adgangskontrol og hosting på
+  infrastruktur placeret i EU.
+</p>
+
+<h2>Automatiske afgørelser</h2>
+<p>
+  Vi bruger ikke dine personoplysninger til automatiske afgørelser eller profilering som defineret i
+  GDPR art. 22.
+</p>
+
+<h2>Dine rettigheder</h2>
+<p>Efter GDPR har du ret til at:</p>
+<ul>
+  <li>Få indsigt i de personoplysninger, vi har om dig</li>
+  <li>Få urigtige oplysninger berigtiget</li>
+  <li>Få dine oplysninger slettet ("retten til at blive glemt")</li>
+  <li>Få dine oplysninger udleveret i et overførbart format</li>
+  <li>Gøre indsigelse mod eller begrænse visse behandlinger</li>
+  <li>
+    Klage til Datatilsynet, <a href="https://www.datatilsynet.dk" rel="noopener noreferrer"
+      >www.datatilsynet.dk</a
+    >
+  </li>
+</ul>
+<p>
+  Du kan udøve dine rettigheder under kontoindstillinger i <a href={appUrl('/settings/privacy')}
+    >Privatliv og data</a
+  >, eller ved at skrive til os på {SITE.supportEmail}.
+</p>
+
+<h2>Ændringer af denne politik</h2>
+<p>
+  Vi kan opdatere denne politik fra tid til anden. Væsentlige ændringer meddeles pr. email og fremgår
+  af datoen "Senest opdateret" øverst på siden.
+</p>
+
+<h2>Kontakt</h2>
+<p>Har du spørgsmål om privatliv, er du velkommen til at kontakte os på {SITE.supportEmail}.</p>

@@ -1,0 +1,72 @@
+---
+import Wordmark from './Wordmark.astro'
+import { API_DOCS_URL, CTA_MODE, SITE, appUrl } from '../config'
+import { path, type Locale } from '../i18n/routes'
+import { useMessages } from '../i18n/ui'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const t = useMessages(locale)
+const year = new Date().getFullYear()
+const entity = SITE.legalEntity
+
+const columns = [
+  {
+    title: t.footer.product,
+    links: [
+      { href: path('features', locale), label: t.nav.features },
+      { href: path('pricing', locale), label: t.nav.pricing },
+      ...(CTA_MODE === 'signup' ? [{ href: appUrl('/register'), label: t.footer.register }] : []),
+      ...(API_DOCS_URL ? [{ href: API_DOCS_URL, label: t.footer.apiDocs }] : []),
+    ],
+  },
+  {
+    title: t.footer.company,
+    links: [
+      { href: path('about', locale), label: t.nav.about },
+      { href: path('contact', locale), label: t.nav.contact },
+    ],
+  },
+  {
+    title: t.footer.legal,
+    links: [
+      { href: path('privacy', locale), label: t.nav.privacy },
+      { href: path('terms', locale), label: t.nav.terms },
+    ],
+  },
+]
+---
+
+<footer class="colophon">
+  <div class="wrap">
+    <div class="colophon-top">
+      <div class="colophon-intro">
+        <Wordmark />
+        <p>{t.footer.tagline}</p>
+      </div>
+      {
+        columns.map((column) => (
+          <nav aria-label={column.title}>
+            <h2 class="kicker">{column.title}</h2>
+            <ul>
+              {column.links.map((link) => (
+                <li>
+                  <a href={link.href}>{link.label}</a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        ))
+      }
+    </div>
+    <div class="colophon-bottom">
+      <span>© {year} {entity.name}. {t.footer.rights}</span>
+      <span>
+        {`${entity.registrationLabel} ${entity.registrationNumber} · ${entity.address}`}
+      </span>
+    </div>
+  </div>
+</footer>

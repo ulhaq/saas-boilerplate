@@ -1,0 +1,55 @@
+---
+import type { Locale } from '../i18n/routes'
+import { useMessages } from '../i18n/ui'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const t = useMessages(locale)
+---
+
+<section id="waitlist" class="waitlist" aria-labelledby="waitlist-title">
+  <span class="kicker kicker--accent">{t.waitlist.badge}</span>
+  <h2 id="waitlist-title" class="title">{t.waitlist.title}</h2>
+  <p class="waitlist-sub">{t.waitlist.sub}</p>
+
+  <form
+    data-api="/v1/waitlist"
+    data-success={t.waitlist.success}
+    data-error={t.forms.error}
+    data-rate-limited={t.forms.rateLimited}
+  >
+    <div class="field">
+      <label for="wl-email">{t.waitlist.email}</label>
+      <input
+        id="wl-email"
+        class="input"
+        type="email"
+        name="email"
+        required
+        autocomplete="email"
+        placeholder={t.waitlist.emailPlaceholder}
+      />
+    </div>
+    <div class="field">
+      <label for="wl-name">{t.waitlist.name}</label>
+      <input
+        id="wl-name"
+        class="input"
+        type="text"
+        name="name"
+        autocomplete="name"
+        maxlength="100"
+        placeholder={t.waitlist.namePlaceholder}
+      />
+    </div>
+    <button class="btn" type="submit">{t.waitlist.submit}</button>
+    <p class="form-status" data-status role="status" aria-live="polite"></p>
+  </form>
+</section>
+
+<script>
+  import '../scripts/forms'
+</script>

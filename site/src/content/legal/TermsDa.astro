@@ -1,0 +1,146 @@
+---
+/*
+ * SKABELON - tilpas til dit produkt, og få den gennemgået af en advokat før
+ * lancering. Virksomhedsoplysninger kommer fra src/config.ts. Hold den
+ * engelske version (TermsEn.astro) i trit.
+ */
+import { SITE } from '../../config'
+import { path } from '../../i18n/routes'
+
+const e = SITE.legalEntity
+const privacy = path('privacy', 'da')
+---
+
+<p>
+  Disse handelsbetingelser gælder for din brug af {SITE.name} ("Tjenesten"). Ved at oprette en konto
+  bekræfter du, at du handler som led i erhvervsvirksomhed og ikke som forbruger, og at du accepterer
+  disse betingelser. Tjenesten er udelukkende rettet mod erhvervskunder (B2B).
+</p>
+
+<h2>Udbyder</h2>
+<p>
+  Tjenesten udbydes af:<br />
+  <strong>{e.name}</strong><br />
+  {e.registrationLabel}: {e.registrationNumber}<br />
+  {e.address}<br />
+  Email: {SITE.supportEmail}
+</p>
+
+<h2>Tjenesten</h2>
+<p>
+  {SITE.name} er et software-as-a-service-produkt, der leveres via internettet. Hvilke funktioner du
+  har adgang til, afhænger af dit abonnement. Vi kan løbende udvikle, ændre eller udfase funktioner i
+  Tjenesten.
+</p>
+
+<h2>Acceptabel brug</h2>
+<p>
+  Du må ikke bruge Tjenesten til ulovlige formål, til at krænke immaterielle rettigheder, til at
+  sprede skadelig software eller til at forstyrre Tjenestens drift eller sikkerhed.
+</p>
+
+<h2>Ansvar for kontoen</h2>
+<p>
+  Du er ansvarlig for at holde dine loginoplysninger fortrolige og for al aktivitet, der foregår under
+  din konto og din organisation.
+</p>
+
+<h2>Abonnement og betaling</h2>
+<p>
+  Tjenesten har en gratis plan med begrænset funktionalitet samt betalte abonnementer. Betalte
+  abonnementer faktureres forud og fornyes løbende. Priser vises ekskl. moms, hvor det er relevant.
+  Betalinger håndteres af Stripe.
+</p>
+<p>
+  Hver organisation kan benytte én gratis prøveperiode på en betalt plan. Der kræves intet
+  betalingskort for at starte en prøveperiode. Er der ikke tilføjet en betalingsmetode, når
+  prøveperioden udløber, flyttes organisationen til den gratis plan.
+</p>
+<p>
+  Du kan til enhver tid opsige et betalt abonnement under faktureringsindstillinger. Opsigelsen får
+  virkning ved udgangen af den igangværende betalingsperiode; indtil da forbliver abonnementet aktivt
+  og kan genoptages. Vi refunderer ikke betaling for delvise perioder, medmindre gældende lovgivning
+  kræver det.
+</p>
+<p>
+  Hvis en løbende betaling fejler, forsøger vi at trække beløbet igen og giver dig besked. Adgangen
+  til betalte funktioner bevares i en kort henstandsperiode; modtages betalingen stadig ikke, flyttes
+  organisationen til den gratis plan.
+</p>
+<p>
+  Vi forbeholder os ret til at ændre priserne med mindst 30 dages varsel. Fortsat brug af Tjenesten,
+  efter at en prisændring er trådt i kraft, anses som accept af den nye pris.
+</p>
+
+<h2>Immaterielle rettigheder og kundedata</h2>
+<p>
+  Du bevarer alle rettigheder til de data, du og dine brugere lægger ind i Tjenesten. Vi gør ikke krav
+  på ejerskab over dem og bruger dem kun til at levere Tjenesten. I abonnementsperioden får du en
+  begrænset, ikke-eksklusiv og ikke-overdragelig licens til at bruge Tjenesten. Selve Tjenesten,
+  herunder software, design og varemærker, forbliver vores ejendom.
+</p>
+
+<h2>Databehandling</h2>
+<p>
+  Når du opbevarer personoplysninger om tredjeparter i Tjenesten, er du dataansvarlig for disse
+  oplysninger, og vi er din databehandler i henhold til GDPR art. 28. I den egenskab: behandler vi
+  kun oplysningerne for at levere Tjenesten og efter din dokumenterede instruks; sikrer vi, at
+  personer med adgang til oplysningerne har tavshedspligt; anvender vi passende tekniske og
+  organisatoriske sikkerhedsforanstaltninger; benytter vi kun de underdatabehandlere, der er nævnt i
+  vores <a href={privacy}>privatlivspolitik</a>, og orienterer dig om planlagte ændringer af listen;
+  bistår vi dig, så vidt det er rimeligt muligt, med at besvare anmodninger fra registrerede; og
+  sletter vi oplysningerne ved ophør i overensstemmelse med vores privatlivspolitik.
+</p>
+
+<h2>Tilgængelighed</h2>
+<p>
+  Vi tilstræber høj oppetid, men garanterer ikke uafbrudt adgang. Planlagt vedligeholdelse og nedbrud
+  hos tredjepartsleverandører kan påvirke Tjenesten uden at udgøre misligholdelse af disse
+  betingelser.
+</p>
+
+<h2>Ansvarsbegrænsning</h2>
+<p>
+  I det omfang gældende lovgivning tillader det, er vores samlede ansvar over for dig for ethvert krav
+  i forbindelse med din brug af Tjenesten begrænset til de abonnementsbetalinger, du har betalt i de
+  tre måneder forud for den begivenhed, der gav anledning til kravet. Vi hæfter ikke for indirekte
+  tab, følgeskader eller tabt fortjeneste.
+</p>
+
+<h2>Force majeure</h2>
+<p>
+  Vi er ikke ansvarlige for fejl eller forsinkelser, der skyldes forhold uden for vores rimelige
+  kontrol, herunder nedbrud hos infrastrukturleverandører, ændringer i regulering eller andre
+  begivenheder, vi ikke har indflydelse på.
+</p>
+
+<h2>Ophør</h2>
+<p>
+  Vi forbeholder os ret til at suspendere eller lukke konti, der overtræder disse betingelser. Du kan
+  til enhver tid slette din konto under kontoindstillinger. Ved ophør slettes dine data permanent
+  efter en frist på 30 dage i overensstemmelse med vores <a href={privacy}>privatlivspolitik</a>.
+</p>
+
+<h2>Ændringer af betingelserne</h2>
+<p>
+  Vi kan opdatere disse betingelser fra tid til anden. Ved væsentlige ændringer giver vi mindst 14
+  dages varsel pr. email; prisændringer følger varslet på 30 dage beskrevet ovenfor. Fortsat brug af
+  Tjenesten efter varslets udløb anses som accept af de ændrede betingelser.
+</p>
+
+<h2>Lovvalg og værneting</h2>
+<p>
+  Disse betingelser er underlagt dansk ret. Enhver tvist i forbindelse med betingelserne skal
+  indbringes for de danske domstole med retten ved vores hjemsted som første instans.
+</p>
+
+<h2>Øvrige bestemmelser</h2>
+<p>
+  Hvis en bestemmelse i disse betingelser findes ugyldig eller ikke kan håndhæves, forbliver de
+  øvrige bestemmelser fuldt gældende. Du må ikke overdrage dine rettigheder eller forpligtelser efter
+  disse betingelser uden vores forudgående skriftlige samtykke; vi kan overdrage dem i forbindelse med
+  fusion, opkøb eller salg af aktiver.
+</p>
+
+<h2>Kontakt</h2>
+<p>Har du spørgsmål til disse betingelser, er du velkommen til at kontakte os på {SITE.supportEmail}.</p>

@@ -91,6 +91,18 @@ services:
       backend:
         condition: service_healthy
 
+  site:
+    image: ${SITE_IMAGE}
+    restart: unless-stopped
+    environment:
+      API_TARGET: http://backend:8000
+      ANALYTICS_ORIGIN: ${ANALYTICS_ORIGIN:-}
+    ports:
+      - "3002:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
   umami:
     image: ghcr.io/umami-software/umami:postgresql-latest
     profiles: [analytics]

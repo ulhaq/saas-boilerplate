@@ -1,0 +1,50 @@
+---
+import Base from '../layouts/Base.astro'
+import PageHero from '../components/PageHero.astro'
+import SectionHead from '../components/SectionHead.astro'
+import { path, type Locale } from '../i18n/routes'
+import { useMessages } from '../i18n/ui'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const t = useMessages(locale)
+const numerals = ['I', 'II', 'III']
+---
+
+<Base locale={locale} page="about" title={t.meta.about.title} description={t.meta.about.description}>
+  <PageHero kicker={t.about.kicker} title={t.about.title} />
+
+  <section class="wrap" aria-labelledby="mission">
+    <div class="mission">
+      <h2 id="mission" class="kicker kicker--accent">{t.about.missionTitle}</h2>
+      <blockquote class="mission-quote">
+        <p>{t.about.missionQuote}</p>
+      </blockquote>
+      <p class="mission-body">{t.about.missionBody}</p>
+    </div>
+  </section>
+
+  <section class="section wrap" aria-labelledby="values">
+    <SectionHead id="values" num="§" title={t.about.valuesTitle} />
+    <ol class="values">
+      {
+        t.about.values.map((value, i) => (
+          <li class="value">
+            <span class="value-mark">{numerals[i]}</span>
+            <h3>{value.title}</h3>
+            <p>{value.desc}</p>
+          </li>
+        ))
+      }
+    </ol>
+  </section>
+
+  <section class="wrap letter" aria-labelledby="questions">
+    <h2 id="questions" class="title">{t.about.contactTitle}</h2>
+    <p>{t.about.contactSub}</p>
+    <a class="arrow-link" href={path('contact', locale)}>{t.about.contactLink}</a>
+  </section>
+</Base>

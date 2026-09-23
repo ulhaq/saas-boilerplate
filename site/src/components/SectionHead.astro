@@ -1,0 +1,29 @@
+---
+/**
+ * A section's heading block. It carries both a number (`num`, e.g. "01") and
+ * a name (`name`, e.g. "How it works"); each theme shows the number, the
+ * name, both or neither.
+ */
+interface Props {
+  num?: string
+  name?: string
+  title: string
+  sub?: string
+  id?: string
+}
+
+const { num, name, title, sub, id } = Astro.props
+---
+
+<header class="section-head">
+  {
+    (num || name) && (
+      <span class="kicker kicker--accent section-label">
+        {num && <span class="section-num">{num}</span>}
+        <span class="section-name">{name}</span>
+      </span>
+    )
+  }
+  <h2 class="title section-title" id={id} set:html={title} />
+  {sub && <p class="section-sub">{sub}</p>}
+</header>

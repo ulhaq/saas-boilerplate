@@ -1,0 +1,50 @@
+---
+import Base from '../layouts/Base.astro'
+import ContactForm from '../components/ContactForm.astro'
+import PageHero from '../components/PageHero.astro'
+import { SITE } from '../config'
+import type { Locale } from '../i18n/routes'
+import { useMessages } from '../i18n/ui'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const t = useMessages(locale)
+const entity = SITE.legalEntity
+---
+
+<Base
+  locale={locale}
+  page="contact"
+  title={t.meta.contact.title}
+  description={t.meta.contact.description}
+>
+  <PageHero kicker={t.contact.kicker} title={t.contact.title} />
+
+  <section class="wrap">
+    <div class="contact-layout">
+      <aside class="contact-aside">
+        <dl>
+          <div>
+            <dt class="kicker">{t.contact.emailLabel}</dt>
+            <dd>
+              <a href={`mailto:${SITE.supportEmail}`}>{SITE.supportEmail}</a>
+              <span class="muted">{t.contact.responseTime}</span>
+            </dd>
+          </div>
+          <div>
+            <dt class="kicker">{t.contact.companyLabel}</dt>
+            <dd>
+              {entity.name}
+              <span class="muted">{`${entity.registrationLabel} ${entity.registrationNumber}`}</span>
+              <span class="muted">{entity.address}</span>
+            </dd>
+          </div>
+        </dl>
+      </aside>
+      <ContactForm locale={locale} />
+    </div>
+  </section>
+</Base>

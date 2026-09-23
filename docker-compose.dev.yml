@@ -114,6 +114,25 @@ services:
       backend:
         condition: service_healthy
 
+  site:
+    build:
+      context: ./site
+      dockerfile: Dockerfile.dev
+    restart: unless-stopped
+    environment:
+      API_TARGET: http://backend:8000
+      SITE_URL: http://localhost:${SITE_PORT:-4321}
+      PUBLIC_APP_URL: http://localhost:${FRONTEND_PORT:-5173}
+      PUBLIC_API_DOCS_URL: http://localhost:${BACKEND_PORT:-8000}/redoc
+    ports:
+      - "${SITE_PORT:-4321}:4321"
+    volumes:
+      - ./site:/app
+      - site_node_modules:/app/node_modules
+    depends_on:
+      backend:
+        condition: service_healthy
+
   alloy:
     image: grafana/alloy:v1.19.2
     profiles: [observability]
@@ -136,3 +155,4 @@ volumes:
   pgadmin_data:
   backend_venv:
   frontend_node_modules:
+  site_node_modules:

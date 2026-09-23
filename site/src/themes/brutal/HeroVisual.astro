@@ -1,0 +1,102 @@
+---
+/** A stack of hard-edged cards: the project list and a big crowd count. */
+import { useSample } from '../../content/sample'
+import type { Locale } from '../../i18n/routes'
+
+interface Props {
+  locale: Locale
+}
+
+const s = useSample(Astro.props.locale)
+---
+
+<div class="bv-stack" aria-hidden="true">
+  <div class="bv-box bv-list">
+    <h4>{s.title}</h4>
+    {
+      s.projects.slice(0, 3).map((project) => (
+        <div class="bv-item">
+          {project.name} <span>{project.status}</span>
+        </div>
+      ))
+    }
+  </div>
+  <div class="bv-box bv-crowd"><b>{s.crowd.value}</b>{s.crowd.label}</div>
+</div>
+
+<style>
+  .bv-stack {
+    display: grid;
+    gap: 20px;
+  }
+
+  .bv-box {
+    border: 3px solid var(--ink);
+    box-shadow: 6px 6px 0 var(--ink);
+    padding: 18px;
+    background: #fff;
+  }
+
+  .bv-list {
+    background: #3a86ff;
+    color: #fff;
+  }
+
+  .bv-list h4 {
+    margin: 0 0 12px;
+    font-size: 1.4rem;
+  }
+
+  .bv-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+    padding: 10px 12px;
+    border: 3px solid var(--ink);
+    background: #fff;
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  .bv-item span {
+    flex: none;
+    padding: 0 8px;
+    border: 2px solid var(--ink);
+    background: #ffd23f;
+    font-size: 0.8rem;
+  }
+
+  .bv-crowd {
+    justify-self: end;
+    width: min(240px, 80%);
+    background: #ff8c42;
+    font-weight: 700;
+    transform: rotate(4deg);
+  }
+
+  .bv-crowd b {
+    display: block;
+    font-family: var(--font-display);
+    font-size: 2.6rem;
+    line-height: 1;
+  }
+
+  @media (min-width: 980px) {
+    .bv-stack {
+      position: relative;
+      display: block;
+      min-height: 400px;
+    }
+    .bv-box {
+      position: absolute;
+    }
+    .bv-list {
+      inset: 0 40px auto 0;
+    }
+    .bv-crowd {
+      right: 0;
+      bottom: 0;
+    }
+  }
+</style>

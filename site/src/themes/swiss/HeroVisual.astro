@@ -1,0 +1,85 @@
+---
+/**
+ * An abstract figure in the Swiss poster tradition: a field of blue with a
+ * circle (people), a square (projects) and a rule (permissions).
+ */
+import type { Locale } from '../../i18n/routes'
+
+interface Props {
+  locale: Locale
+}
+
+const caption =
+  Astro.props.locale === 'da'
+    ? 'Fig. 1 - Projekter, personer, tilladelser'
+    : 'Fig. 1 - Projects, people, permissions'
+---
+
+<figure class="xv-block" aria-hidden="true">
+  <figcaption>{caption}</figcaption>
+  <span class="xv-bar"></span>
+  <span class="xv-circle"></span>
+  <span class="xv-square"></span>
+  <span class="xv-dot"></span>
+</figure>
+
+<style>
+  .xv-block {
+    position: relative;
+    margin: 0;
+    aspect-ratio: 16 / 7;
+    min-height: 220px;
+    overflow: hidden;
+    background: var(--accent);
+    color: #fff;
+  }
+
+  figcaption {
+    position: absolute;
+    left: 20px;
+    top: 16px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+
+  .xv-bar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 32%;
+    height: 2px;
+    background: #fff;
+  }
+
+  .xv-circle {
+    position: absolute;
+    right: 7%;
+    top: 50%;
+    width: 44%;
+    aspect-ratio: 1;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    transform: translateY(-50%);
+  }
+
+  .xv-square {
+    position: absolute;
+    left: 8%;
+    bottom: 12%;
+    width: 20%;
+    aspect-ratio: 1;
+    background: #fff;
+  }
+
+  .xv-dot {
+    position: absolute;
+    left: 38%;
+    top: calc(32% - 9px);
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--ink);
+  }
+</style>

@@ -1,0 +1,10 @@
+{
+  "extends": "astro/tsconfigs/strict",
+  "include": [".astro/types.d.ts", "**/*"],
+  "exclude": ["dist"],
+  "compilerOptions": {
+    // Type-check against one theme; every theme implements the same contract
+    // (src/themes/types.ts), and astro.config.mjs aliases the one being built.
+    "paths": { "@theme/*": ["./src/themes/editorial/*"] }
+  }
+}

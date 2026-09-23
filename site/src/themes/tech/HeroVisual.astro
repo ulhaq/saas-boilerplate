@@ -1,0 +1,83 @@
+---
+/** A terminal listing the team's projects through the REST API. */
+import { useSample } from '../../content/sample'
+import type { Locale } from '../../i18n/routes'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const s = useSample(locale)
+const rows = s.projects.slice(0, 3)
+const comment = locale === 'da' ? "# list dit teams projekter" : "# list your team's projects"
+---
+
+<div class="tv-term" aria-hidden="true">
+  <div class="tv-top"><i></i><i></i><i></i><span>~/acme · zsh</span></div>
+  <pre><span class="tv-c">{comment}</span>
+<span class="tv-k">$</span> curl -H <span class="tv-s">"Authorization: Bearer $TOKEN"</span> \
+    https://api.example.com/v1/projects
+
+{'{'}
+  <span class="tv-k">"items"</span>: [
+{rows.map((p, i) => <>    {'{'} <span class="tv-k">"name"</span>: <span class="tv-s">"{p.name}"</span>, <span class="tv-k">"members"</span>: <span class="tv-n">{p.people}</span> {'}'}{i < rows.length - 1 ? ',' : ''}
+</>)}  ],
+  <span class="tv-k">"total"</span>: <span class="tv-n">{rows.length}</span>
+{'}'}</pre>
+</div>
+
+<style>
+  .tv-term {
+    border: 1px solid var(--rule-strong);
+    background: #0d0f12;
+    box-shadow: 0 30px 80px -20px rgb(0 0 0 / 0.8);
+    font: 13px/1.7 var(--font-mono);
+  }
+
+  .tv-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--rule);
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  .tv-top i {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--rule-strong);
+  }
+
+  .tv-top span {
+    margin-left: auto;
+  }
+
+  pre {
+    margin: 0;
+    padding: 18px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: var(--ink-2);
+    font: inherit;
+  }
+
+  .tv-c {
+    color: var(--muted);
+  }
+
+  .tv-k {
+    color: #6aa8ff;
+  }
+
+  .tv-s {
+    color: var(--accent);
+  }
+
+  .tv-n {
+    color: #ffb86b;
+  }
+</style>

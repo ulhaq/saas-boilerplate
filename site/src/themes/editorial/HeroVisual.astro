@@ -1,0 +1,128 @@
+---
+/**
+ * A typeset project register, captioned like a figure in print. Decorative;
+ * replace with a real screenshot once the product has one worth showing.
+ */
+import { useSample } from '../../content/sample'
+import type { Locale } from '../../i18n/routes'
+
+interface Props {
+  locale: Locale
+}
+
+const s = useSample(Astro.props.locale)
+---
+
+<figure class="ev-figure" aria-hidden="true">
+  <div class="ev-sheet">
+    <div class="ev-sheet-head">
+      <span class="ev-sheet-title">{s.title}</span>
+      <span class="kicker">{String(s.projects.length).padStart(2, '0')}</span>
+    </div>
+    <div class="ev-grid ev-head">
+      <span>{s.columns.project}</span><span>{s.columns.people}</span><span>{s.columns.status}</span>
+    </div>
+    {
+      s.projects.map((project, i) => (
+        <div class="ev-grid ev-row">
+          <span class="ev-pname">{project.name}</span>
+          <span class="ev-people">
+            {Array.from({ length: Math.min(project.people, 4) }, (_, j) => (
+              <i style={`--h:${(i * 47 + j * 83) % 360}`} />
+            ))}
+          </span>
+          <span class:list={['ev-status', { 'ev-done': project.state === 'done' }]}>{project.status}</span>
+        </div>
+      ))
+    }
+  </div>
+  <figcaption>{s.caption}</figcaption>
+</figure>
+
+<style>
+  .ev-figure {
+    margin: 0;
+  }
+
+  .ev-sheet {
+    border: 1px solid var(--ink);
+    background: var(--bg);
+    box-shadow:
+      10px 10px 0 var(--surface-2),
+      10px 10px 0 1px var(--ink);
+    padding: 18px 20px 8px;
+    transform: rotate(-1.2deg);
+  }
+
+  .ev-sheet-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding-bottom: 12px;
+    border-bottom: 3px solid var(--ink);
+  }
+
+  .ev-sheet-title {
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    font-style: italic;
+  }
+
+  .ev-grid {
+    display: grid;
+    grid-template-columns: 1fr auto 88px;
+    gap: 12px;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .ev-grid:last-child {
+    border-bottom: 0;
+  }
+
+  .ev-head {
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .ev-pname {
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+  }
+
+  .ev-people {
+    display: flex;
+  }
+
+  .ev-people i {
+    width: 22px;
+    height: 22px;
+    margin-left: -6px;
+    border-radius: 50%;
+    border: 2px solid var(--bg);
+    background: hsl(var(--h) 32% 62%);
+  }
+
+  .ev-status {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--accent-text);
+  }
+
+  .ev-status.ev-done {
+    color: var(--muted);
+    text-decoration: line-through;
+  }
+
+  figcaption {
+    margin-top: 22px;
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 0.95rem;
+    color: var(--muted);
+  }
+</style>

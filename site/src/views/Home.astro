@@ -1,0 +1,105 @@
+---
+import theme from '@theme/config'
+import HeroVisual from '@theme/HeroVisual.astro'
+import Base from '../layouts/Base.astro'
+import CtaLink from '../components/CtaLink.astro'
+import Faq from '../components/Faq.astro'
+import Features from '../components/Features.astro'
+import Highlights from '../components/Highlights.astro'
+import Plans from '../components/Plans.astro'
+import SectionHead from '../components/SectionHead.astro'
+import Steps from '../components/Steps.astro'
+import WaitlistForm from '../components/WaitlistForm.astro'
+import { CTA_MODE } from '../config'
+import { TRIAL_DAYS } from '../content/plans'
+import { path, type Locale } from '../i18n/routes'
+import { useMessages } from '../i18n/ui'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const t = useMessages(locale)
+const waitlist = CTA_MODE === 'waitlist'
+const labels = t.home.labels
+---
+
+<Base locale={locale} page="home" title={t.meta.home.title} description={t.meta.home.description}>
+  <section class="hero wrap">
+    <div class="hero-copy">
+      <p class="kicker hero-kicker">{t.home.kicker}</p>
+      <h1 class="display hero-title" set:html={t.home.headline} />
+      <p class="lede hero-lede">{t.home.lede}</p>
+      {
+        !waitlist && (
+          <div class="hero-cta">
+            <div class="hero-actions">
+              <CtaLink locale={locale} size="trial" />
+              <a class="btn btn--ghost hero-secondary" href={path('pricing', locale)}>
+                {t.home.secondaryCta}
+              </a>
+            </div>
+            <ul class="hero-notes">
+              <li>{t.cta.noCard}</li>
+              <li>{t.cta.cancel}</li>
+            </ul>
+          </div>
+        )
+      }
+    </div>
+    <div class="hero-visual">
+      {waitlist ? <WaitlistForm locale={locale} /> : <HeroVisual locale={locale} />}
+    </div>
+  </section>
+
+  {
+    (theme.highlights === 'band' || theme.highlights === 'badges') && (
+      <Highlights locale={locale} variant={theme.highlights} />
+    )
+  }
+
+  <section class="section wrap" aria-labelledby="how">
+    <SectionHead id="how" num="01" name={labels.how} title={t.home.howTitle} />
+    <Steps locale={locale} items={t.home.steps} />
+  </section>
+
+  <section class="section wrap" aria-labelledby="inside">
+    <SectionHead
+      id="inside"
+      num="02"
+      name={labels.features}
+      title={t.home.featuresTitle}
+      sub={t.home.featuresSub}
+    />
+    <Features items={t.features.list} />
+    <p class="more"><a class="arrow-link" href={path('features', locale)}>{t.home.featuresLink}</a></p>
+  </section>
+
+  <section class="section wrap" aria-labelledby="plans">
+    <SectionHead
+      id="plans"
+      num="03"
+      name={labels.pricing}
+      title={t.home.pricingTitle}
+      sub={t.home.pricingSub}
+    />
+    <Plans locale={locale} />
+    <p class="more"><a class="arrow-link" href={path('pricing', locale)}>{t.home.pricingLink}</a></p>
+  </section>
+
+  <section class="section wrap" aria-labelledby="faq">
+    <SectionHead id="faq" num="04" name={labels.faq} title={t.home.faqTitle} />
+    <Faq items={t.faq} />
+  </section>
+
+  <section class="closing" aria-labelledby="closing">
+    <div class="wrap closing-inner">
+      <h2 id="closing" class="display closing-title" set:html={t.home.closingTitle} />
+      <div class="closing-cta">
+        <CtaLink locale={locale} size="trial" />
+        {!waitlist && TRIAL_DAYS > 0 && <p>{t.cta.noCard} · {t.cta.cancel}</p>}
+      </div>
+    </div>
+  </section>
+</Base>

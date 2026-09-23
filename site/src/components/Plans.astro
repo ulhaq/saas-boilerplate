@@ -1,0 +1,73 @@
+---
+/**
+ * The plans. One markup for every theme: cards by default, ledger rows in
+ * the editorial theme. Each plan lists its limits (`plan-stats`) and the
+ * features that set it apart from cheaper plans (`plan-features`).
+ */
+import { CTA_MODE, appUrl } from '../config'
+import { COMPARISON, PLANS, RECOMMENDED_PLAN, TRIAL_DAYS, formatPrice } from '../content/plans'
+import { path, type Locale } from '../i18n/routes'
+import { fmt, useMessages } from '../i18n/ui'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const t = useMessages(locale)
+const rows = COMPARISON[locale]
+const stats = rows.filter((row) => row.stat)
+// Features some plan lacks - "API tokens" - rather than ones every plan has.
+const extras = rows.filter(
+  (row) => !row.stat && PLANS.some((plan) => row.values[plan.name] === false),
+)
+const ctaHref = CTA_MODE === 'waitlist' ? `${path('home', locale)}#waitlist` : appUrl('/register')
+---
+
+<ol class="plans">
+  {
+    PLANS.map((plan) => {
+      const free = plan.amount === 0
+      const recommended = plan.name === RECOMMENDED_PLAN
+      const included = extras.filter((row) => row.values[plan.name] === true)
+      return (
+        <li class:list={['plan', { 'is-recommended': recommended, 'is-free': free }]}>
+          <div class="plan-head">
+            {recommended && <span class="plan-badge">{t.pricing.recommended}</span>}
+            <h3 class="plan-name">{plan.name}</h3>
+            <p class="plan-desc">{plan.description[locale]}</p>
+          </div>
+          <dl class="plan-stats">
+            {stats.map((row) => (
+              <div>
+                <dt>{row.label}</dt>
+                <dd>{row.values[plan.name]}</dd>
+              </div>
+            ))}
+          </dl>
+          <div class="plan-price">
+            <span class="plan-amount">{formatPrice(plan.amount, locale)}</span>
+            <span class="plan-per">
+              {free ? t.pricing.free : `${t.pricing.perMonth}, ${t.pricing.exclVat}`}
+            </span>
+          </div>
+          {included.length > 0 && (
+            <ul class="plan-features">
+              {included.map((row) => (
+                <li>{row.label}</li>
+              ))}
+            </ul>
+          )}
+          <a class:list={['btn', recommended ? '' : 'btn--ghost']} href={ctaHref}>
+            {CTA_MODE === 'waitlist'
+              ? t.nav.waitlist
+              : free || !TRIAL_DAYS
+                ? t.cta.free
+                : fmt(t.cta.trial, { days: TRIAL_DAYS })}
+            <span class="visually-hidden">({plan.name})</span>
+          </a>
+        </li>
+      )
+    })
+  }
+</ol>

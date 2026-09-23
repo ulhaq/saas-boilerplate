@@ -8,8 +8,9 @@
  * Values are interpolated into vue-i18n messages, so keep them free of the
  * message-syntax characters `{ } @ $ |`.
  *
- * The backend has its own copy of the product name (`APP_NAME`, used in
- * email) - keep the two in sync.
+ * The backend (`APP_NAME`, used in email) and the marketing site
+ * (`site/src/config.ts`) have their own copies of the product name - keep them
+ * in sync.
  */
 export const BRAND = {
   name: 'SaaS Boilerplate',

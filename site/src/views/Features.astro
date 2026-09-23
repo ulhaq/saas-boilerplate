@@ -1,0 +1,51 @@
+---
+import Base from '../layouts/Base.astro'
+import CtaLink from '../components/CtaLink.astro'
+import Features from '../components/Features.astro'
+import PageHero from '../components/PageHero.astro'
+import SectionHead from '../components/SectionHead.astro'
+import { path, type Locale } from '../i18n/routes'
+import { useMessages } from '../i18n/ui'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const t = useMessages(locale)
+---
+
+<Base
+  locale={locale}
+  page="features"
+  title={t.meta.features.title}
+  description={t.meta.features.description}
+>
+  <PageHero kicker={t.features.kicker} title={t.features.title} lede={t.features.lede} />
+
+  <section class="wrap" aria-label={t.features.kicker}>
+    <Features items={t.features.list} size="large" />
+  </section>
+
+  <section class="section wrap" aria-labelledby="trust">
+    <SectionHead id="trust" num="§" title={t.features.trustTitle} />
+    <div class="trust">
+      {
+        t.features.trust.map((item) => (
+          <div class="trust-item">
+            <h3>{item.title}</h3>
+            <p>{item.desc}</p>
+          </div>
+        ))
+      }
+    </div>
+    <p class="trust-link">
+      <a class="arrow-link" href={path('privacy', locale)}>{t.nav.privacy}</a>
+    </p>
+  </section>
+
+  <section class="wrap features-cta">
+    <CtaLink locale={locale} size="trial" />
+    <a class="arrow-link" href={path('pricing', locale)}>{t.home.pricingLink}</a>
+  </section>
+</Base>

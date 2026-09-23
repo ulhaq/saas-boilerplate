@@ -1,0 +1,183 @@
+---
+/** A friendly project card with a sticky note and a join notification. */
+import { useSample } from '../../content/sample'
+import type { Locale } from '../../i18n/routes'
+
+interface Props {
+  locale: Locale
+}
+
+const s = useSample(Astro.props.locale)
+const tints = ['lav', 'peach', 'sky', 'mint']
+---
+
+<div class="sv-scene" aria-hidden="true">
+  <div class="sv-card sv-main">
+    <div class="sv-head">{s.title} <small>{s.activeCount}</small></div>
+    {
+      s.projects.map((project, i) => (
+        <div class:list={['sv-row', `sv-${tints[i % tints.length]}`]}>
+          <span class="sv-sq" />
+          {project.name}
+          <span class="sv-bar">
+            <b style={`width:${project.progress}%`} />
+          </span>
+        </div>
+      ))
+    }
+  </div>
+  <div class="sv-card sv-note"><b>{s.note.title}</b><p>{s.note.body}</p></div>
+  <div class="sv-card sv-ping"><i>M</i>{s.ping}</div>
+</div>
+
+<style>
+  .sv-scene {
+    position: relative;
+    display: grid;
+    gap: 14px;
+  }
+
+  .sv-card {
+    background: var(--surface);
+    border-radius: 24px;
+    padding: 20px;
+    box-shadow: 0 24px 50px -24px rgb(42 35 66 / 0.35);
+  }
+
+  .sv-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+    font: 700 1.1rem var(--font-display);
+  }
+
+  .sv-head small {
+    font: 500 0.75rem var(--font-body);
+    color: var(--muted);
+    background: #fff2c7;
+    padding: 4px 10px;
+    border-radius: 999px;
+  }
+
+  .sv-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 16px;
+    margin-bottom: 8px;
+    font-weight: 500;
+    font-size: 0.95rem;
+  }
+
+  .sv-sq {
+    width: 32px;
+    height: 32px;
+    border-radius: 11px;
+    flex: none;
+  }
+
+  .sv-bar {
+    margin-left: auto;
+    width: 64px;
+    height: 8px;
+    flex: none;
+    border-radius: 99px;
+    background: #fff;
+    overflow: hidden;
+  }
+
+  .sv-bar b {
+    display: block;
+    height: 100%;
+    background: var(--accent);
+  }
+
+  .sv-lav {
+    background: #ece7ff;
+  }
+  .sv-lav .sv-sq {
+    background: #b9a8ff;
+  }
+  .sv-peach {
+    background: #ffe4d3;
+  }
+  .sv-peach .sv-sq {
+    background: #ffb38a;
+  }
+  .sv-sky {
+    background: #dcefff;
+  }
+  .sv-sky .sv-sq {
+    background: #8cc6ff;
+  }
+  .sv-mint {
+    background: #dcf5e8;
+  }
+  .sv-mint .sv-sq {
+    background: #9fe0bf;
+  }
+
+  .sv-note {
+    justify-self: end;
+    background: #dcf5e8;
+    transform: rotate(3deg);
+  }
+
+  .sv-note b {
+    font-family: var(--font-display);
+  }
+
+  .sv-note p {
+    margin-top: 4px;
+    font-size: 0.9rem;
+    color: #245c41;
+  }
+
+  .sv-ping {
+    justify-self: start;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px 10px 10px;
+    border-radius: 999px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transform: rotate(-2deg);
+  }
+
+  .sv-ping i {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #ffe4d3;
+    display: grid;
+    place-items: center;
+    font-style: normal;
+    font-weight: 700;
+    color: #c2542a;
+  }
+
+  @media (min-width: 980px) {
+    .sv-scene {
+      display: block;
+      min-height: 440px;
+    }
+    .sv-card {
+      position: absolute;
+    }
+    .sv-main {
+      inset: 0 36px auto 0;
+    }
+    .sv-note {
+      right: 0;
+      bottom: 0;
+      width: 230px;
+    }
+    .sv-ping {
+      left: -16px;
+      bottom: 36px;
+    }
+  }
+</style>

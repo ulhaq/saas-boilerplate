@@ -7,7 +7,7 @@ import { appConfig } from '@/platform/config'
 
 // The app has no page at `/`: it sends visitors to the home route, and the
 // guard below bounces anyone signed out to the login page from there. The
-// marketing site lives outside this repo, on its own domain.
+// marketing site is the separate `site/` package, on its own domain.
 const routes: RouteRecordRaw[] = [
   ...(fileRoutes as RouteRecordRaw[]),
   { path: '/', redirect: () => appConfig.homeRoute },

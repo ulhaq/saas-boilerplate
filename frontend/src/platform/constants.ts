@@ -29,12 +29,12 @@ export const ALLOW_MULTIPLE_ORGANIZATIONS =
 // the API regardless of this flag. Defaults to disabled.
 export const MFA_ENABLED = import.meta.env.VITE_MFA_ENABLED === 'true'
 
-// The marketing site (outside this repo), which hosts the legal pages.
+// The marketing site (`site/`), which hosts the legal pages.
 // Overridable per environment.
 export const MARKETING_ORIGIN: string =
   (import.meta.env.VITE_MARKETING_ORIGIN as string | undefined) || BRAND.marketingOrigin
 
-// Legal page paths on the marketing site - keep in sync with that site.
+// Legal page paths on the marketing site - keep in sync with `PAGES` in site/src/i18n/routes.ts.
 const LEGAL_PATHS = {
   terms: { da: '/da/handelsbetingelser', en: '/en/terms' },
   privacy: { da: '/da/privatlivspolitik', en: '/en/privacy-policy' },

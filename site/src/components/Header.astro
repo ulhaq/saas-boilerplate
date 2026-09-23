@@ -1,0 +1,59 @@
+---
+import CtaLink from './CtaLink.astro'
+import Wordmark from './Wordmark.astro'
+import { CTA_MODE, SITE, appUrl } from '../config'
+import { LOCALES, path, type Locale, type PageKey } from '../i18n/routes'
+import { useMessages } from '../i18n/ui'
+
+interface Props {
+  locale: Locale
+  page: PageKey | null
+}
+
+const { locale, page } = Astro.props
+const t = useMessages(locale)
+const other = LOCALES.find((l) => l !== locale)!
+const links = (['features', 'pricing', 'about', 'contact'] as const).map((key) => ({
+  key,
+  href: path(key, locale),
+  label: t.nav[key],
+}))
+---
+
+<header class="masthead">
+  <div class="wrap bar">
+    <a class="brand" href={path('home', locale)} aria-label={SITE.name}>
+      <Wordmark />
+    </a>
+
+    <nav class="primary" aria-label="Primary">
+      {
+        links.map((link) => (
+          <a href={link.href} aria-current={page === link.key ? 'page' : undefined}>
+            {link.label}
+          </a>
+        ))
+      }
+    </nav>
+
+    <div class="actions">
+      <a class="lang" href={path(page ?? 'home', other)} hreflang={other} lang={other}>
+        {t.switchLanguage}
+      </a>
+      {CTA_MODE === 'signup' && <a class="login" href={appUrl('/login')}>{t.nav.login}</a>}
+      <CtaLink locale={locale} size="small" />
+    </div>
+
+    <details class="mobile">
+      <summary>{t.nav.menu}</summary>
+      <div class="sheet">
+        {links.map((link) => <a href={link.href}>{link.label}</a>)}
+        {CTA_MODE === 'signup' && <a href={appUrl('/login')}>{t.nav.login}</a>}
+        <a href={path(page ?? 'home', other)} hreflang={other} lang={other}>
+          {t.switchLanguage}
+        </a>
+        <CtaLink locale={locale} />
+      </div>
+    </details>
+  </div>
+</header>

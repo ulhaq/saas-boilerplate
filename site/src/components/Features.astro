@@ -1,0 +1,28 @@
+---
+/**
+ * The feature list. Each item carries an index number and an icon; themes
+ * show one or the other (`.feature-num` / `.feature-icon`).
+ */
+import { featureIcon } from './icons'
+
+interface Props {
+  items: { key: string; title: string; desc: string }[]
+  /** `large` is the features page; the front page uses the compact form. */
+  size?: 'compact' | 'large'
+}
+
+const { items, size = 'compact' } = Astro.props
+---
+
+<ol class:list={['features', `features--${size}`]}>
+  {
+    items.map((item, i) => (
+      <li class="feature" data-key={item.key}>
+        <span class="feature-num">{String(i + 1).padStart(2, '0')}</span>
+        <span class="feature-icon" set:html={featureIcon(item.key)} />
+        <h3 class="feature-title">{item.title}</h3>
+        <p class="feature-desc">{item.desc}</p>
+      </li>
+    ))
+  }
+</ol>

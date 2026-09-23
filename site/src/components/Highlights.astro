@@ -1,0 +1,26 @@
+---
+/** The highlight items as a band of stats or a row of check badges, under the hero. */
+import type { Locale } from '../i18n/routes'
+import { useMessages } from '../i18n/ui'
+
+interface Props {
+  locale: Locale
+  variant: 'band' | 'badges'
+}
+
+const { locale, variant } = Astro.props
+const t = useMessages(locale)
+---
+
+<section class:list={['highlights', `highlights--${variant}`]}>
+  <ul class="wrap">
+    {
+      t.highlights.map((item) => (
+        <li>
+          <span class="kicker">{item.label}</span>
+          <b>{item.value}</b>
+        </li>
+      ))
+    }
+  </ul>
+</section>

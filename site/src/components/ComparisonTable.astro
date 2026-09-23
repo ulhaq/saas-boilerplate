@@ -1,0 +1,61 @@
+---
+import { COMPARISON, PLANS, RECOMMENDED_PLAN } from '../content/plans'
+import type { Locale } from '../i18n/routes'
+import { useMessages } from '../i18n/ui'
+
+interface Props {
+  locale: Locale
+}
+
+const { locale } = Astro.props
+const t = useMessages(locale)
+const rows = COMPARISON[locale]
+---
+
+<div class="compare" role="region" aria-label={t.pricing.compareTitle} tabindex="0">
+  <table>
+    <thead>
+      <tr>
+        <th scope="col">{t.pricing.feature}</th>
+        {
+          PLANS.map((plan) => (
+            <th scope="col" class:list={{ rec: plan.name === RECOMMENDED_PLAN }}>
+              {plan.name}
+            </th>
+          ))
+        }
+      </tr>
+    </thead>
+    <tbody>
+      {
+        rows.map((row) => (
+          <tr>
+            <th scope="row">
+              {row.label}
+              {row.note && <span class="compare-note">{row.note}</span>}
+            </th>
+            {PLANS.map((plan) => {
+              const value = row.values[plan.name]
+              return (
+                <td class:list={{ rec: plan.name === RECOMMENDED_PLAN }}>
+                  {value === true ? (
+                    <span class="yes" title={t.pricing.included}>
+                      <span class="visually-hidden">{t.pricing.included}</span>
+                    </span>
+                  ) : value === false ? (
+                    <span class="no" title={t.pricing.notIncluded}>
+                      <span aria-hidden="true">—</span>
+                      <span class="visually-hidden">{t.pricing.notIncluded}</span>
+                    </span>
+                  ) : (
+                    value
+                  )}
+                </td>
+              )
+            })}
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+</div>
