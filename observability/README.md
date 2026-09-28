@@ -8,7 +8,7 @@ APP HOST (docker-compose.yml, profile `observability`)       MONITORING HOST (do
 ┌──────────────────────────────────────────────┐             ┌───────────────────────────────────────────┐
 │ backend / worker ── OTLP traces+metrics ─┐   │             │ Prometheus :9090  metrics (OTLP receiver) │
 │ container stdout (JSON logs) ─ docker ───┼─▶ Alloy agent ──┼▶ Loki       :3100  logs                   │
-│ browser ── /collect (host nginx) ─ Faro ─┘   │             │ Tempo      :4318  traces                  │
+│ browser ── /collect (host Caddy) ─ Faro ─┘   │             │ Tempo      :4318  traces                  │
 └──────────────────────────────────────────────┘             │ Grafana    :3030  dashboards + alerts     │
                                                              └───────────────────────────────────────────┘
 ```
@@ -67,7 +67,7 @@ Processes run on the host (`uv run poe dev`) can't resolve `alloy`; leave
    The ingest ports (9090, 3100, 4318) accept **unauthenticated writes**: bind
    them to a private network address (e.g. a Hetzner private network) and allow
    only the app host in the firewall. Docker-published ports bypass `ufw`.
-   Grafana binds to `127.0.0.1:3030` by default; put it behind nginx with TLS,
+   Grafana binds to `127.0.0.1:3030` by default; put it behind Caddy with TLS,
    or reach it over an SSH tunnel.
 
    **Same server as the app:** let the deploy run it instead - put the contents
@@ -90,8 +90,8 @@ Processes run on the host (`uv run poe dev`) can't resolve `alloy`; leave
    the stack.
 
 3. **Browser telemetry** - add `VITE_FARO_URL=/collect` to the `FRONTEND_ENV`
-   secret and the `/collect` location from `etc.nginx.sites-available.example` to
-   the host nginx.
+   secret and the `/collect` handler from `Caddyfile.example` to the host
+   Caddyfile.
 
 ## Privacy
 

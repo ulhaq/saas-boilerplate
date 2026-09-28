@@ -1,0 +1,20 @@
+:80
+
+root * /srv
+encode gzip
+
+header {
+	X-Content-Type-Options "nosniff"
+	X-Frame-Options "DENY"
+	Referrer-Policy "strict-origin-when-cross-origin"
+	Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' {$ANALYTICS_ORIGIN} https://embed.tawk.to; style-src 'self' 'unsafe-inline' https://embed.tawk.to; font-src 'self' https://embed.tawk.to; img-src 'self' data: https:; connect-src 'self' {$ANALYTICS_ORIGIN} https://*.tawk.to wss://*.tawk.to; frame-src https://*.tawk.to; frame-ancestors 'none'"
+}
+
+handle /v1/* {
+	reverse_proxy {$API_TARGET}
+}
+
+handle {
+	try_files {path} /index.html
+	file_server
+}

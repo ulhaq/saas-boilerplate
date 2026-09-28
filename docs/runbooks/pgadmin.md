@@ -2,7 +2,7 @@
 
 pgAdmin runs on the server as part of `docker-compose.yml`, but its port is
 published on the server's loopback only (`127.0.0.1:5050`). It is not reachable
-from the internet and is not proxied by nginx - the only way in is an SSH tunnel.
+from the internet and is not proxied by Caddy - the only way in is an SSH tunnel.
 
 ## Setup
 

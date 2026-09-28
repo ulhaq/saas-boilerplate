@@ -1,5 +1,5 @@
 /**
- * Posts `form[data-api]` forms to the backend as JSON. The site's nginx (and
+ * Posts `form[data-api]` forms to the backend as JSON. The site's Caddy (and
  * the dev server) proxy `/v1` to the API, so requests are same-origin and need
  * no CORS. Status copy comes from the form's `data-*` attributes so the
  * script stays locale-agnostic.

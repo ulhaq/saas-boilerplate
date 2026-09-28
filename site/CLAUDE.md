@@ -33,6 +33,6 @@ npm run build    # static output in dist/
 ## Conventions
 
 - Adding a page: add it to `PAGES`, add `meta.<key>` and its copy to both locales, write the view, and add one wrapper per locale.
-- Forms (`form[data-api]`, `src/scripts/forms.ts`) post JSON to same-origin `/v1/...`. The dev server and the image's nginx (`nginx.conf.template`) proxy only `/v1/contact` and `/v1/waitlist` to the backend, so no CORS config is needed. A new endpoint must be added to the nginx allowlist.
+- Forms (`form[data-api]`, `src/scripts/forms.ts`) post JSON to same-origin `/v1/...`. The dev server and the image's Caddy (`Caddyfile`) proxy only `/v1/contact` and `/v1/waitlist` to the backend, so no CORS config is needed. A new endpoint must be added to the Caddy allowlist.
 - `PUBLIC_CTA_MODE=waitlist` swaps every call to action for the waitlist form on the front page and hides the login link. `CtaLink.astro` and `Plans.astro` handle the switch.
 - The site sets no cookies, so it has no consent banner. Keep it that way, or bring back consent handling.

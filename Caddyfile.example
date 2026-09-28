@@ -1,0 +1,55 @@
+# Host-level Caddy config for the Hetzner box. Caddy issues and renews
+# Let's Encrypt certs automatically for every domain listed below.
+#
+# Install: https://caddyserver.com/docs/install (apt repo, includes systemd
+# service). Copy this file to /etc/caddy/Caddyfile, fill in your domain, then
+# `systemctl reload caddy`.
+
+# www -> bare domain
+www.example.com {
+	redir https://example.com{uri} permanent
+}
+
+# Marketing site (static, site/)
+example.com {
+	reverse_proxy localhost:3002
+}
+
+# App (dashboard SPA, frontend/)
+app.example.com {
+	reverse_proxy localhost:3000
+
+	# Browser telemetry (VITE_FARO_URL=/collect) -> Alloy agent's Faro receiver
+	# (compose profile `observability`). Same-origin, so no CORS/CSP changes.
+	handle /collect {
+		@notPost not method POST
+		respond @notPost 405
+
+		request_body {
+			max_size 1MB
+		}
+
+		reverse_proxy 127.0.0.1:12347
+	}
+}
+
+# API
+api.example.com {
+	reverse_proxy localhost:8000
+}
+
+# Umami analytics
+analytics.example.com {
+	reverse_proxy localhost:3001
+}
+
+# Grafana
+grafana.example.com {
+	# Optional: restrict to known IPs (office / VPN)
+	# @blocked not remote_ip 203.0.113.10
+	# respond @blocked 403
+
+	# Grafana Live (websockets) works out of the box - reverse_proxy
+	# forwards Upgrade/Connection headers automatically.
+	reverse_proxy 127.0.0.1:3030
+}

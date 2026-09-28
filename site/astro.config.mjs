@@ -29,7 +29,7 @@ export default defineConfig({
   vite: {
     resolve: { alias: { '@theme': `${themesDir}${theme}` } },
     server: {
-      // Same-origin API in dev, as nginx does in production (nginx.conf.template).
+      // Same-origin API in dev, as Caddy does in production (Caddyfile).
       proxy: { '/v1': { target: env.API_TARGET || 'http://localhost:8000', changeOrigin: true } },
     },
   },
