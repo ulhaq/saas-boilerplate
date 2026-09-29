@@ -58,7 +58,14 @@ openapi = "python generate_openapi.py"
 exclude = ["src/platform/templates"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B", "C4", "ASYNC", "RUF"]
+select = ["E", "F", "I", "UP", "B", "C4", "ASYNC", "RUF", "ANN"]
+ignore = ["ANN401"]
+
+[tool.ruff.lint.flake8-annotations]
+mypy-init-return = true
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["ANN"]
 
 [tool.ty.src]
 exclude = ["src/platform/templates"]
