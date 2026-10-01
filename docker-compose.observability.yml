@@ -9,6 +9,8 @@
 # private network address (OBSERVABILITY_INGEST_BIND) and/or firewall them to the
 # app host. Docker-published ports bypass ufw.
 
+name: observability
+
 services:
   prometheus:
     image: prom/prometheus:v3.14.0
