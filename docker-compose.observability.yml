@@ -5,7 +5,8 @@
 #   docker compose -f docker-compose.observability.yml -p observability --env-file observability/.env up -d
 # (locally: `make obs-up`). Setup and production notes: observability/README.md
 #
-# Ingest ports (9090, 3100, 4318) take unauthenticated writes: bind them to a
+# Ingest ports (9090, 3100, 4318) take unauthenticated reads and writes (logs,
+# metrics, traces). They default to 127.0.0.1; bind them to a
 # private network address (OBSERVABILITY_INGEST_BIND) and/or firewall them to the
 # app host. Docker-published ports bypass ufw.
 
@@ -21,7 +22,7 @@ services:
       - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-15d}
       - --web.enable-otlp-receiver
     ports:
-      - "${OBSERVABILITY_INGEST_BIND:-0.0.0.0}:9090:9090"
+      - "${OBSERVABILITY_INGEST_BIND:-127.0.0.1}:9090:9090"
     volumes:
       - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
@@ -33,7 +34,7 @@ services:
     environment:
       LOKI_RETENTION: ${LOKI_RETENTION:-168h}
     ports:
-      - "${OBSERVABILITY_INGEST_BIND:-0.0.0.0}:3100:3100"
+      - "${OBSERVABILITY_INGEST_BIND:-127.0.0.1}:3100:3100"
     volumes:
       - ./observability/loki/loki.yaml:/etc/loki/loki.yaml:ro
       - loki_data:/loki
@@ -45,7 +46,7 @@ services:
     environment:
       TEMPO_RETENTION: ${TEMPO_RETENTION:-168h}
     ports:
-      - "${OBSERVABILITY_INGEST_BIND:-0.0.0.0}:4318:4318"
+      - "${OBSERVABILITY_INGEST_BIND:-127.0.0.1}:4318:4318"
     volumes:
       - ./observability/tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
       - tempo_data:/var/tempo
@@ -55,7 +56,7 @@ services:
     restart: unless-stopped
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD in observability/.env}
       GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost:3030}
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_ANALYTICS_REPORTING_ENABLED: "false"

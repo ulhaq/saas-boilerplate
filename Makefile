@@ -38,14 +38,14 @@ endif
 
 up:
 	$(COMPOSE) up -d
-	@echo "backend http://localhost:$(BACKEND_PORT)  app http://localhost:$(FRONTEND_PORT)  site http://localhost:$(SITE_PORT)  pgadmin http://localhost:$(PGADMIN_PORT)"
+	@echo "backend http://localhost:$(BACKEND_PORT)  frontend http://localhost:$(FRONTEND_PORT)  site http://localhost:$(SITE_PORT)  pgadmin http://localhost:$(PGADMIN_PORT)"
 
 up-local:
 	COMPOSE_PROFILES=local$(if $(ENV_PROFILES),$(comma)$(ENV_PROFILES)) $(COMPOSE) up -d
-	@echo "backend http://localhost:$(BACKEND_PORT)  app http://localhost:$(FRONTEND_PORT)  site http://localhost:$(SITE_PORT)  pgadmin http://localhost:$(PGADMIN_PORT)  mailpit http://localhost:$(MAILPIT_UI_PORT)  umami http://localhost:$(UMAMI_PORT) (profile analytics)"
+	@echo "backend http://localhost:$(BACKEND_PORT)  frontend http://localhost:$(FRONTEND_PORT)  site http://localhost:$(SITE_PORT)  pgadmin http://localhost:$(PGADMIN_PORT)  mailpit http://localhost:$(MAILPIT_UI_PORT)  umami http://localhost:$(UMAMI_PORT) (profile analytics)"
 
 down:
-	$(COMPOSE) --profile local --profile observability --profile analytics down --remove-orphans
+	$(COMPOSE) --profile local --profile observability down --remove-orphans
 
 build:
 	$(COMPOSE) build
@@ -68,7 +68,9 @@ shell-worker:
 # Local monitoring stack (Grafana/Prometheus/Loki/Tempo, shared by all worktree
 # stacks) plus this stack's Alloy agent. Set OTEL_EXPORTER_OTLP_ENDPOINT and
 # LOG_FORMAT=json in backend/.env for the API/worker to report. See observability/README.md.
-OBS := docker compose -f docker-compose.observability.yml -p observability
+OBS := OBSERVABILITY_INGEST_BIND=$${OBSERVABILITY_INGEST_BIND:-172.17.0.1} \
+	GRAFANA_ADMIN_PASSWORD=$${GRAFANA_ADMIN_PASSWORD:-admin} \
+	docker compose -f docker-compose.observability.yml -p observability
 
 obs-up:
 	$(OBS) up -d

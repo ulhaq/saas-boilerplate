@@ -48,7 +48,7 @@ services:
     environment:
       DB_CONNECTION: postgresql+psycopg://${DB_USER}:${DB_PASSWORD}@${DB_HOST:-postgres}:${DB_PORT:-5432}/${DB_NAME}
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     logging:
       driver: json-file
       options:
@@ -88,7 +88,7 @@ services:
       API_TARGET: http://backend:8000
       ANALYTICS_ORIGIN: ${ANALYTICS_ORIGIN:-}
     ports:
-      - "3000:80"
+      - "127.0.0.1:3000:80"
     depends_on:
       backend:
         condition: service_healthy
@@ -100,7 +100,7 @@ services:
       API_TARGET: http://backend:8000
       ANALYTICS_ORIGIN: ${ANALYTICS_ORIGIN:-}
     ports:
-      - "3002:80"
+      - "127.0.0.1:3002:80"
     depends_on:
       backend:
         condition: service_healthy
@@ -110,7 +110,7 @@ services:
     profiles: [analytics]
     restart: unless-stopped
     ports:
-      - "3001:3000"
+      - "127.0.0.1:3001:3000"
     environment:
       DATABASE_URL: postgresql://${DB_UMAMI_USER}:${DB_UMAMI_PASSWORD}@postgres:5432/umami
       APP_SECRET: ${UMAMI_APP_SECRET}
