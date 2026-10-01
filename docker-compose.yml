@@ -71,7 +71,7 @@ services:
     env_file: ./backend.env
     environment:
       DB_CONNECTION: postgresql+psycopg://${DB_USER}:${DB_PASSWORD}@${DB_HOST:-postgres}:${DB_PORT:-5432}/${DB_NAME}
-    command: uv run python worker.py
+    command: python worker.py
     logging:
       driver: json-file
       options:

@@ -204,7 +204,7 @@ jobs:
             # New code may map columns the live schema lacks, so the schema has
             # to be ahead of the containers, never behind. Fails the deploy if
             # the migration fails - old containers keep running, untouched.
-            docker compose run --rm backend uv run alembic upgrade head
+            docker compose run --rm backend alembic upgrade head
             docker compose up -d --remove-orphans
             # Same stale-mount issue for the agent config; restart only if the
             # observability profile is on (naming the service would start it).
