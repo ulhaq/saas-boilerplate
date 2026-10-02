@@ -40,7 +40,6 @@ class Settings(EnvSettings):
 
     allow_multiple_organizations: bool = True
 
-    auth_enabled: bool = True
     auth_access_token_expiry: int = 15 * 60
     auth_refresh_token_expiry: int = 15 * 24 * 60 * 60
     auth_password_reset_expiry: int = 10 * 60
@@ -150,12 +149,6 @@ class Settings(EnvSettings):
     def validate_app_secret(self) -> Self:
         if self.app_env != "local" and not self.app_secret.get_secret_value():
             raise ValueError("APP_SECRET must be set in non-local environments")
-        return self
-
-    @model_validator(mode="after")
-    def validate_production_auth(self) -> Self:
-        if self.auth_enabled is False and self.app_env == "production":
-            raise ValueError("AUTH_ENABLED must be True in production")
         return self
 
     @model_validator(mode="after")

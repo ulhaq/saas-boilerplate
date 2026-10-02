@@ -16,8 +16,6 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.platform.billing.dependencies import _current_period_start
-from src.platform.core.composition import ALL_PERMISSIONS
-from src.platform.core.config import settings
 from src.platform.core.context import auth_context_var
 from src.platform.core.database import DbSession
 from src.platform.core.exceptions import (
@@ -98,17 +96,6 @@ async def authenticate(
     db: DbSession,
     token: Annotated[str | None, Depends(oauth2_scheme)],
 ) -> Auth:
-    if not settings.auth_enabled:
-        # Local-only shim (config forbids auth_enabled=False in production).
-        return Auth(
-            id=0,
-            name="",
-            email="",
-            organization_id=0,
-            permissions=[p.value for p in ALL_PERMISSIONS],
-            roles=[],
-        )
-
     if not token:
         raise NotAuthenticatedException(headers=BEARER_HEADERS)
 
@@ -171,8 +158,6 @@ def require_plan_feature(feature: StrEnum) -> Callable:
         current_user: Annotated[Auth, Depends(authenticate)],
         repos: Annotated[RepositoryManager, Depends()],
     ) -> Auth:
-        if not settings.auth_enabled:
-            return current_user
         features = await repos.plan_feature.get_features_for_organization(
             current_user.organization_id
         )
@@ -187,7 +172,7 @@ def require_owner() -> Callable:
     async def _check(
         current_user: Annotated[Auth, Depends(authenticate)],
     ) -> Auth:
-        if not settings.auth_enabled or OWNER_ROLE_NAME in current_user.roles:
+        if OWNER_ROLE_NAME in current_user.roles:
             return current_user
         raise PermissionDeniedException
 
