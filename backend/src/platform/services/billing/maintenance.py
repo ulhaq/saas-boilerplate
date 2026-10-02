@@ -6,6 +6,7 @@ from typing import Annotated, Any
 from fastapi import Depends
 
 from src.platform.core.config import settings
+from src.platform.core.database import try_job_lock
 from src.platform.core.telemetry import track_worker_run
 from src.platform.repositories.repository_manager import RepositoryManager
 from src.platform.services.base import BaseService
@@ -93,9 +94,16 @@ async def run_trial_reminder_loop(session_factory: Any) -> None:
             with track_worker_run("trial_reminder", interval):
                 async with session_factory() as session:
                     async with session.begin():
-                        service = BillingMaintenanceService(RepositoryManager(session))
-                        count = await service.send_trial_reminders()
-                        log.info("Trial reminder: %d organization(s) emailed", count)
+                        if await try_job_lock(session, "trial_reminder"):
+                            service = BillingMaintenanceService(
+                                RepositoryManager(session)
+                            )
+                            count = await service.send_trial_reminders()
+                            log.info(
+                                "Trial reminder: %d organization(s) emailed", count
+                            )
+                        else:
+                            log.info("Trial reminder: running in another worker")
         except Exception as exc:
             log.error("Trial reminder loop error: %s", exc, exc_info=True)
         await asyncio.sleep(interval)
@@ -112,12 +120,19 @@ async def run_stale_checkout_cleanup_loop(session_factory: Any) -> None:
             with track_worker_run("stale_checkout_cleanup", interval):
                 async with session_factory() as session:
                     async with session.begin():
-                        service = BillingMaintenanceService(RepositoryManager(session))
-                        count = await service.cleanup_stale_checkouts()
-                        log.info(
-                            "Stale checkout cleanup: %d subscription(s) canceled",
-                            count,
-                        )
+                        if await try_job_lock(session, "stale_checkout_cleanup"):
+                            service = BillingMaintenanceService(
+                                RepositoryManager(session)
+                            )
+                            count = await service.cleanup_stale_checkouts()
+                            log.info(
+                                "Stale checkout cleanup: %d subscription(s) canceled",
+                                count,
+                            )
+                        else:
+                            log.info(
+                                "Stale checkout cleanup: running in another worker"
+                            )
         except Exception as exc:
             log.error("Stale checkout cleanup loop error: %s", exc, exc_info=True)
         await asyncio.sleep(interval)

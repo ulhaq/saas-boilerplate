@@ -1,9 +1,11 @@
-"""Standalone background worker - run as a single instance alongside the web process.
+"""Standalone background worker, run alongside the web process.
 
 Runs the product loop(s), the email outbox, GDPR retention, billing cleanup,
 and trial reminder loops. Keeping these out of the web process means
 horizontal scaling of the API does not cause duplicate job runs or duplicate
-emails.
+emails. Overlapping workers (a scale-up, a deploy) are safe too: each job's
+iteration takes a lock (`try_job_lock`), and the outbox claims emails with
+SKIP LOCKED.
 
 Usage:
     uv run python worker.py

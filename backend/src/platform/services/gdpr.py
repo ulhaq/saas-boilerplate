@@ -8,6 +8,7 @@ from sqlalchemy.engine import CursorResult
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.platform.core.config import settings
+from src.platform.core.database import try_job_lock
 from src.platform.core.telemetry import track_worker_run
 from src.platform.enums import AuditAction
 from src.platform.models.email_verification_token import EmailVerificationToken
@@ -105,15 +106,19 @@ async def run_gdpr_retention_loop(session_factory: Any) -> None:
             with track_worker_run("gdpr_retention", interval):
                 async with session_factory() as session:
                     async with session.begin():
-                        token_count = await purge_expired_tokens(session)
-                        user_count = await purge_soft_deleted_users(session)
-                        org_count = await purge_soft_deleted_orgs(session)
-                        log.info(
-                            "GDPR retention: purged %d token(s), %d user(s), %d org(s)",
-                            token_count,
-                            user_count,
-                            org_count,
-                        )
+                        if await try_job_lock(session, "gdpr_retention"):
+                            token_count = await purge_expired_tokens(session)
+                            user_count = await purge_soft_deleted_users(session)
+                            org_count = await purge_soft_deleted_orgs(session)
+                            log.info(
+                                "GDPR retention: purged %d token(s), %d user(s), "
+                                "%d org(s)",
+                                token_count,
+                                user_count,
+                                org_count,
+                            )
+                        else:
+                            log.info("GDPR retention: running in another worker")
         except Exception as exc:
             log.error("GDPR retention loop error: %s", exc, exc_info=True)
         await asyncio.sleep(interval)

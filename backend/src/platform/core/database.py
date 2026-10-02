@@ -2,6 +2,7 @@ from collections.abc import AsyncGenerator
 from typing import Annotated
 
 from fastapi import Depends
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
@@ -39,3 +40,19 @@ async def get_db() -> AsyncGenerator[AsyncSession]:
 # are sent. One alias also keeps every dependent on the same cached session -
 # FastAPI caches per scope, so mixed scopes would open two sessions.
 DbSession = Annotated[AsyncSession, Depends(get_db, scope="function")]
+
+# Namespaces the worker job locks among Postgres advisory locks ("jobs").
+_JOB_LOCK_NAMESPACE = 0x6A6F6273
+
+
+async def try_job_lock(session: AsyncSession, job: str) -> bool:
+    """Lock `job` for the rest of the session's transaction; False if another
+    worker holds it. Worker loops call this first so a job's iteration runs in
+    one worker at a time, even when several workers run (a scale-up, a deploy
+    overlap). The lock is released at commit or rollback - or if the worker
+    dies, with its connection."""
+    rs = await session.execute(
+        text("SELECT pg_try_advisory_xact_lock(:namespace, hashtext(:job))"),
+        {"namespace": _JOB_LOCK_NAMESPACE, "job": job},
+    )
+    return bool(rs.scalar_one())
