@@ -52,13 +52,14 @@ domain code; the two are wired together in exactly one place:
 Seeding code (Alembic initial migration, `src/init_db.py`, `tests/conftest.py`) must
 import the composed sets from `src.bootstrap`, never from `src.platform.enums` directly.
 
-The import-linter contract in `pyproject.toml` forbids `src.platform` from importing
-`src.example` - keep it pointed at your product package when you rename it.
+The import-linter contracts in `pyproject.toml` forbid `src.platform` from importing
+`src.example` and enforce the layering below in both packages - keep them pointed at
+your product package when you rename it.
 
 **Building a new product on this backend** - replace the domain and keep the core
 (full guide: `docs/adding-a-domain-module.md`):
 1. Replace `src/example/` with your package (enums, models, repositories, services, routers, hooks).
-2. Update `src/bootstrap.py`, the router includes in `src/main.py`, the model import in `alembic/env.py`, the loop registration in `worker.py`, and the import-linter contract.
+2. Update `src/bootstrap.py`, the router includes in `src/main.py`, the model import in `alembic/env.py`, the loop registration in `worker.py`, and the import-linter contracts.
 3. Replace the example migration and `tests/api/test_projects.py`; update the seeded Member role permissions in `src/init_db.py`.
 
 ### Layered Architecture: Routers > Services > Repositories > Models
@@ -69,6 +70,11 @@ The import-linter contract in `pyproject.toml` forbids `src.platform` from impor
 - `models/` - SQLAlchemy ORM entities
 - `schemas/` - Pydantic request/response models
 - `src/platform/core/` - Cross-cutting concerns: config, security (JWT/passwords), DI dependencies, error handling, rate limiting, hooks
+
+Enforced by import-linter (`uv run poe lint`), for `src/platform/` and `src/example/` alike:
+- Each layer imports only the layers below it: `routers > services > billing > repositories > models | schemas` (`billing` is the platform's payment-provider adapter; `models` and `schemas` must not import each other).
+- Routers never import repositories or models directly - always go through a service.
+- `core` imports none of these layers. A few known exceptions (auth/request glue such as `core/dependencies.py`) are listed in `ignore_imports`; remove an entry once it is fixed, never add one.
 
 ### Key patterns
 
@@ -106,7 +112,7 @@ The initial migration holds the platform schema and seeds (permissions, plans, s
 # Format code
 uv run poe format
 
-# Lint (ty + ruff + import-linter boundary contract)
+# Lint (ty + ruff + import-linter boundary/layer contracts)
 uv run poe lint
 
 # Run all tests

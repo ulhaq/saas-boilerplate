@@ -7,8 +7,7 @@ from fastapi import Request
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.platform.enums import ErrorCodeEnum
-from src.platform.repositories.utils import ComparisonOperator
+from src.platform.enums import ComparisonOperator, ErrorCodeEnum
 
 
 class ErrorResponse(BaseModel):

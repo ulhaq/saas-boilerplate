@@ -7,7 +7,6 @@ from sqlalchemy import delete, select
 from sqlalchemy.engine import CursorResult
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.platform.core.audit import write_audit_log
 from src.platform.core.config import settings
 from src.platform.core.telemetry import track_worker_run
 from src.platform.enums import AuditAction
@@ -17,6 +16,7 @@ from src.platform.models.organization import Organization
 from src.platform.models.password_reset_token import PasswordResetToken
 from src.platform.models.refresh_token import RefreshToken
 from src.platform.models.user import User
+from src.platform.services.audit_log import write_audit_log
 
 log = logging.getLogger(__name__)
 

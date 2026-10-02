@@ -92,3 +92,56 @@ name = "Platform must not import the product domain"
 type = "forbidden"
 source_modules = ["src.platform"]
 forbidden_modules = ["src.example"]
+
+# Each layer may import the layers below it, never the ones above. Applied to
+# both the platform and the product package; `billing` (the payment provider
+# adapter) only exists in the platform. Keep `src.example` pointed at your
+# product package when you rename it.
+[[tool.importlinter.contracts]]
+name = "Layers: routers > services > billing > repositories > models | schemas"
+type = "layers"
+containers = ["src.platform", "src.example"]
+layers = [
+    "routers",
+    "services",
+    "(billing)",
+    "repositories",
+    "models | schemas",
+]
+
+[[tool.importlinter.contracts]]
+name = "Routers reach data only through services"
+type = "forbidden"
+source_modules = ["src.platform.routers", "src.example.routers"]
+forbidden_modules = [
+    "src.platform.repositories",
+    "src.platform.models",
+    "src.example.repositories",
+    "src.example.models",
+]
+# Routers -> services -> repositories is the intended path; only direct
+# imports are forbidden.
+allow_indirect_imports = true
+
+# `core` is the foundation every layer builds on (config, database, errors,
+# logging, telemetry, hooks), so it must not import any of them.
+[[tool.importlinter.contracts]]
+name = "Core does not import the layers built on it"
+type = "forbidden"
+source_modules = ["src.platform.core"]
+forbidden_modules = [
+    "src.platform.routers",
+    "src.platform.services",
+    "src.platform.billing",
+    "src.platform.repositories",
+    "src.platform.models",
+    "src.platform.schemas",
+]
+# Known violations: request/auth glue that lives in core but needs the data
+# layer. Remove an entry once its import is gone - do not add new ones.
+ignore_imports = [
+    "src.platform.core.dependencies -> src.platform.repositories.**",
+    "src.platform.core.security -> src.platform.models.user",
+    "src.platform.core.mfa -> src.platform.models.user",
+    "src.platform.core.middlewares -> src.platform.schemas.common",
+]
