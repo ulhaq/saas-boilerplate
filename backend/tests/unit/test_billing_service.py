@@ -2650,7 +2650,7 @@ async def _run_trial_reminders() -> int:
 
 
 async def test_send_trial_reminders_emails_managers_once(mocker):
-    send = mocker.patch("src.platform.services.billing.common.send_email")
+    send = mocker.patch("src.platform.services.billing.common.queue_email")
     await _age_organization(1, days=settings.billing_trial_reminder_delay_days + 1)
 
     count = await _run_trial_reminders()
@@ -2672,7 +2672,7 @@ async def test_send_trial_reminders_emails_managers_once(mocker):
 
 
 async def test_send_trial_reminders_skips_recent_signups(mocker):
-    send = mocker.patch("src.platform.services.billing.common.send_email")
+    send = mocker.patch("src.platform.services.billing.common.queue_email")
 
     # Organizations are created "now" by the fixture, so none clear the delay.
     assert await _run_trial_reminders() == 0
@@ -2680,7 +2680,7 @@ async def test_send_trial_reminders_skips_recent_signups(mocker):
 
 
 async def test_send_trial_reminders_skips_used_trial(mocker):
-    send = mocker.patch("src.platform.services.billing.common.send_email")
+    send = mocker.patch("src.platform.services.billing.common.queue_email")
     await _age_organization(1, days=settings.billing_trial_reminder_delay_days + 1)
 
     async with TestSessionLocal() as session:
@@ -2696,7 +2696,7 @@ async def test_send_trial_reminders_skips_used_trial(mocker):
 
 
 async def test_send_trial_reminders_skips_trialing_subscription(mocker):
-    send = mocker.patch("src.platform.services.billing.common.send_email")
+    send = mocker.patch("src.platform.services.billing.common.queue_email")
     await _age_organization(1, days=settings.billing_trial_reminder_delay_days + 1)
 
     async with TestSessionLocal() as session:
@@ -2716,7 +2716,7 @@ async def test_send_trial_reminders_skips_trialing_subscription(mocker):
 
 
 async def test_send_trial_reminders_disabled_when_trials_off(mocker):
-    send = mocker.patch("src.platform.services.billing.common.send_email")
+    send = mocker.patch("src.platform.services.billing.common.queue_email")
     mocker.patch.object(settings, "billing_trial_period_days", 0)
     await _age_organization(1, days=30)
 
@@ -2857,7 +2857,7 @@ async def test_duplicate_subscription_is_refunded_and_canceled(
     price_id = plan_with_price["price"]["id"]
     await _org_with_paid_subscription(price_id)
     mock_billing_provider.cancel_duplicate_subscription.return_value = 9900
-    send_email = mocker.patch("src.platform.services.billing.common.send_email")
+    send_email = mocker.patch("src.platform.services.billing.common.queue_email")
 
     for event_type, obj in events:
         await _dispatch(mock_billing_provider, event_type, obj)

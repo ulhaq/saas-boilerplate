@@ -975,7 +975,7 @@ def test_webhook_subscription_trial_will_end_sends_email(
     mocker: MockerFixture,
 ) -> None:
     trial_end_ts = int(datetime(2026, 5, 1, tzinfo=UTC).timestamp())
-    mock_send = mocker.patch("src.platform.services.billing.common.send_email")
+    mock_send = mocker.patch("src.platform.services.billing.common.queue_email")
 
     mock_billing_provider.construct_webhook_event.return_value = WebhookPayload(
         external_event_id="evt_trial_will_end",
@@ -1122,7 +1122,7 @@ def test_webhook_subscription_paused_trial_end_downgrades_to_free(
     should be immediately downgraded to the free plan locally and the Stripe
     subscription cancelled.
     """
-    mock_send = mocker.patch("src.platform.services.billing.common.send_email")
+    mock_send = mocker.patch("src.platform.services.billing.common.queue_email")
 
     mock_billing_provider.construct_webhook_event.return_value = WebhookPayload(
         external_event_id="evt_sub_paused_trial_end",

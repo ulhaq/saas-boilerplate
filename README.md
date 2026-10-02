@@ -58,7 +58,7 @@ How the two halves connect without the platform knowing about the product:
 | Process | Entry point             | Role                                                            |
 | ------- | ----------------------- | --------------------------------------------------------------- |
 | API     | `src/main.py` (uvicorn) | HTTP requests                                                   |
-| Worker  | `worker.py`             | Product loops, GDPR retention, billing cleanup, trial reminders |
+| Worker  | `worker.py`             | Product loops, email outbox, GDPR retention, billing cleanup, trial reminders |
 
 Background loops live only in the worker so the API can scale horizontally without duplicate job runs or duplicate emails.
 

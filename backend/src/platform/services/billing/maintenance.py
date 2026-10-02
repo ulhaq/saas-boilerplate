@@ -60,6 +60,7 @@ class BillingMaintenanceService(BaseService):
         reminded = 0
         for organization in organizations:
             recipients = await notify_subscription_managers(
+                self.repos,
                 organization,
                 "trial-available",
                 {

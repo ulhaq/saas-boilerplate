@@ -2,7 +2,11 @@
 Unit tests for setup_new_organization (organization.py) and send_email (mailer.py).
 """
 
+import socket
+import time
 from unittest.mock import MagicMock
+
+import pytest
 
 from src.platform.repositories.repository_manager import RepositoryManager
 from src.platform.services.mailer import send_email
@@ -220,3 +224,23 @@ def test_send_email_with_smtp_credentials(mocker):
     )
 
     mock_smtp_instance.login.assert_called_once_with("smtp_user", "smtp_pass")
+
+
+def test_send_email_gives_up_on_a_stalled_mail_server(mocker):
+    """A server that accepts the connection but never greets must not hang the
+    caller - the SMTP timeout bounds it (conftest limits it to one attempt)."""
+    server = socket.socket()
+    server.bind(("127.0.0.1", 0))
+    server.listen()
+    host, port = server.getsockname()
+    mocker.patch("src.platform.services.mailer.settings.email_host", host)
+    mocker.patch("src.platform.services.mailer.settings.email_port", port)
+    mocker.patch("src.platform.services.mailer.settings.email_timeout_seconds", 0.3)
+
+    started = time.monotonic()
+    try:
+        with pytest.raises(OSError):
+            send_email(address="a@example.org", user_name="A", email_template="welcome")
+    finally:
+        server.close()
+    assert time.monotonic() - started < 2

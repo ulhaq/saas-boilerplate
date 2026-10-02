@@ -554,6 +554,26 @@ def upgrade() -> None:
     op.create_index("ix_worker_run_started_at", "worker_run", ["started_at"])
     op.create_index("ix_worker_run_worker_type", "worker_run", ["worker_type"])
 
+    # ── emails sent by the worker after the queuing transaction commits ────────
+    op.create_table(
+        "email_outbox",
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("address", sa.String(), nullable=False),
+        sa.Column("user_name", sa.String(), nullable=False),
+        sa.Column("email_template", sa.String(), nullable=False),
+        sa.Column("locale", sa.String(), nullable=True),
+        sa.Column("data", sa.JSON(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("next_attempt_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("attempts", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column("last_error", sa.String(), nullable=True),
+        sa.Column("sent_at", sa.DateTime(timezone=True), nullable=True),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        "ix_email_outbox_pending", "email_outbox", ["sent_at", "next_attempt_at"]
+    )
+
     # ── seed plans + prices ──────────────────────────────────────────
 
     op.bulk_insert(
@@ -695,6 +715,9 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    op.drop_index("ix_email_outbox_pending", table_name="email_outbox")
+    op.drop_table("email_outbox")
+
     op.drop_index("ix_worker_run_worker_type", table_name="worker_run")
     op.drop_index("ix_worker_run_started_at", table_name="worker_run")
     op.drop_table("worker_run")

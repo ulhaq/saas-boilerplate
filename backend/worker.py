@@ -1,8 +1,9 @@
 """Standalone background worker - run as a single instance alongside the web process.
 
-Runs the product loop(s), GDPR retention, billing cleanup, and trial reminder
-loops. Keeping these out of the web process means horizontal scaling of the API
-does not cause duplicate job runs or duplicate emails.
+Runs the product loop(s), the email outbox, GDPR retention, billing cleanup,
+and trial reminder loops. Keeping these out of the web process means
+horizontal scaling of the API does not cause duplicate job runs or duplicate
+emails.
 
 Usage:
     uv run python worker.py
@@ -21,6 +22,7 @@ from src.platform.services.billing import (
     run_stale_checkout_cleanup_loop,
     run_trial_reminder_loop,
 )
+from src.platform.services.email_outbox import run_email_outbox_loop
 from src.platform.services.gdpr import run_gdpr_retention_loop
 from src.products import PRODUCTS
 
@@ -40,6 +42,7 @@ async def main() -> None:
 
     worker_loops = [
         *(run for product in PRODUCTS for run in product.worker_loops),
+        run_email_outbox_loop,
         run_gdpr_retention_loop,
         run_stale_checkout_cleanup_loop,
         run_trial_reminder_loop,

@@ -52,7 +52,9 @@ class WebhookHandlerGroup(BaseService):
         organization = await self.repos.organization.get(organization_id)
         if not organization:
             return
-        await notify_subscription_managers(organization, email_template, data)
+        await notify_subscription_managers(
+            self.repos, organization, email_template, data
+        )
 
     async def _notify_payment_uncollectible(self, sub: Subscription) -> None:
         await self._notify_subscription_managers(

@@ -15,6 +15,7 @@ from src.platform.repositories.billing import (
     SubscriptionRepository,
     WebhookEventRepository,
 )
+from src.platform.repositories.email_outbox import EmailOutboxRepository
 from src.platform.repositories.email_verification_token import (
     EmailVerificationTokenRepository,
 )
@@ -55,6 +56,7 @@ class RepositoryManager:
         self._email_verification_token: EmailVerificationTokenRepository | None = None
         self._invitation: InvitationRepository | None = None
         self._waitlist_entry: WaitlistEntryRepository | None = None
+        self._email_outbox: EmailOutboxRepository | None = None
 
     @property
     def audit_log(self) -> AuditLogRepository:
@@ -186,6 +188,12 @@ class RepositoryManager:
         must not be used again.
         """
         await self.db.commit()
+
+    @property
+    def email_outbox(self) -> EmailOutboxRepository:
+        if self._email_outbox is None:
+            self._email_outbox = EmailOutboxRepository(self.db)
+        return self._email_outbox
 
     @asynccontextmanager
     async def savepoint(self) -> AsyncGenerator[None]:

@@ -9,6 +9,7 @@ from src.platform.models.billing import (
     Subscription,
     WebhookEvent,
 )
+from src.platform.models.email_outbox import EmailOutbox
 from src.platform.models.email_verification_token import EmailVerificationToken
 from src.platform.models.invitation import Invitation
 from src.platform.models.notification import Notification
@@ -25,6 +26,7 @@ from src.platform.models.worker_run import WorkerRun
 __all__ = [
     "ApiToken",
     "AuditLog",
+    "EmailOutbox",
     "EmailVerificationToken",
     "Invitation",
     "Notification",

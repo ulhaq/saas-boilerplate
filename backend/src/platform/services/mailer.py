@@ -90,7 +90,11 @@ def _render_email(email_template: str, locale: str, data: dict) -> str:
 def _smtp_send(msg: EmailMessage) -> None:
     for attempt in range(1, _MAX_EMAIL_ATTEMPTS + 1):
         try:
-            with SMTP(settings.email_host, settings.email_port) as smtp:
+            with SMTP(
+                settings.email_host,
+                settings.email_port,
+                timeout=settings.email_timeout_seconds,
+            ) as smtp:
                 if settings.email_tls:
                     smtp.ehlo()
                     if smtp.has_extn("STARTTLS"):

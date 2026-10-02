@@ -71,6 +71,8 @@ class Settings(EnvSettings):
     email_password: str = ""
     email_tls: bool = True
     email_port: int = 587
+    email_timeout_seconds: float = 10
+    email_outbox_interval_seconds: int = 10
     email_from_address: str = "noreply@example.org"
     email_from_name: str = "SaaS Boilerplate"
 

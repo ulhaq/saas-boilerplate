@@ -1,11 +1,11 @@
-import asyncio
 from datetime import UTC, date, datetime
 
 from src.platform.enums import Permission
 from src.platform.models.billing import Subscription
 from src.platform.models.organization import Organization
+from src.platform.repositories.repository_manager import RepositoryManager
 from src.platform.services.email_content import format_date
-from src.platform.services.mailer import send_email
+from src.platform.services.email_outbox import queue_email
 
 
 def _ts(ts: int | None) -> datetime | None:
@@ -33,11 +33,13 @@ def _is_active_free_sub(sub: Subscription | None) -> bool:
 
 
 async def notify_subscription_managers(
+    repos: RepositoryManager,
     organization: Organization,
     email_template: str,
     data: dict,
 ) -> int:
-    """Email every member of ``organization`` who can manage the subscription.
+    """Queue an email to every member of ``organization`` who can manage the
+    subscription; the worker sends them once the caller's transaction commits.
 
     Returns the number of recipients. Used both by webhook handlers and by the
     trial reminder loop, so it takes an Organization rather than reading one
@@ -52,13 +54,13 @@ async def notify_subscription_managers(
         ):
             continue
         # Render any date in the recipient's locale; everything else passes
-        # through. Subject is derived per recipient locale inside send_email.
+        # through. Subject is derived per recipient locale when it is sent.
         localized_data = {
             key: format_date(value, user.locale) if isinstance(value, date) else value
             for key, value in data.items()
         }
-        await asyncio.to_thread(
-            send_email,
+        await queue_email(
+            repos,
             address=user.email,
             user_name=user.name,
             email_template=email_template,
