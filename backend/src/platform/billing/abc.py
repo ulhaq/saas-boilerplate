@@ -79,6 +79,12 @@ class BillingProviderABC(ABC):
     async def delete_subscription(self, external_subscription_id: str) -> None: ...
 
     @abstractmethod
+    async def cancel_duplicate_subscription(self, external_subscription_id: str) -> int:
+        """Refund what the subscription's latest invoice collected and cancel it
+        immediately. Returns the refunded amount in minor units. Safe to call
+        again for the same subscription (webhook retries)."""
+
+    @abstractmethod
     async def resume_subscription(
         self, external_subscription_id: str
     ) -> ExternalSubscription: ...

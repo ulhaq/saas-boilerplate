@@ -884,3 +884,71 @@ async def test_get_or_create_customer_is_idempotent_per_organization() -> None:
 
     assert customer_id == "cus_new"
     assert create.call_args.kwargs["idempotency_key"] == "org-42-customer"
+
+
+# ---------------------------------------------------------------------------
+# cancel_duplicate_subscription
+# ---------------------------------------------------------------------------
+
+
+def _invoice_payment(payment_intent: str | None, charge: str | None) -> MagicMock:
+    return MagicMock(payment=MagicMock(payment_intent=payment_intent, charge=charge))
+
+
+async def _cancel_duplicate(status: str, payments: list[MagicMock]):
+    subscription = MagicMock(status=status, latest_invoice="in_1")
+    refund_amounts = iter([9900, 500])
+    with (
+        patch(
+            "stripe.Subscription.retrieve_async",
+            new=AsyncMock(return_value=subscription),
+        ),
+        patch(
+            "stripe.InvoicePayment.list_async",
+            new=AsyncMock(return_value=MagicMock(data=payments)),
+        ) as list_payments,
+        patch(
+            "stripe.Refund.create_async",
+            new=AsyncMock(
+                side_effect=lambda **_: MagicMock(amount=next(refund_amounts))
+            ),
+        ) as refund,
+        patch("stripe.Subscription.cancel_async", new=AsyncMock()) as cancel,
+    ):
+        refunded = await _provider().cancel_duplicate_subscription("sub_dup")
+    return refunded, list_payments, refund, cancel
+
+
+async def test_cancel_duplicate_refunds_each_paid_payment_and_cancels() -> None:
+    refunded, list_payments, refund, cancel = await _cancel_duplicate(
+        "active", [_invoice_payment("pi_1", None), _invoice_payment(None, "ch_2")]
+    )
+
+    assert refunded == 9900 + 500
+    assert list_payments.call_args.kwargs["invoice"] == "in_1"
+    assert list_payments.call_args.kwargs["status"] == "paid"
+    first, second = (c.kwargs for c in refund.call_args_list)
+    assert first["payment_intent"] == "pi_1"
+    assert first["reason"] == "duplicate"
+    assert first["idempotency_key"] == "refund-duplicate-pi_1"
+    assert second["charge"] == "ch_2"
+    assert second["idempotency_key"] == "refund-duplicate-ch_2"
+    cancel.assert_awaited_once()
+
+
+async def test_cancel_duplicate_does_not_cancel_an_already_canceled_subscription() -> (
+    None
+):
+    _, _, _, cancel = await _cancel_duplicate("canceled", [])
+    cancel.assert_not_awaited()
+
+
+async def test_cancel_duplicate_wraps_stripe_errors() -> None:
+    with (
+        patch(
+            "stripe.Subscription.retrieve_async",
+            new=AsyncMock(side_effect=stripe.APIConnectionError("down")),
+        ),
+        pytest.raises(BillingProviderException),
+    ):
+        await _provider().cancel_duplicate_subscription("sub_dup")

@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from src.platform.billing.abc import BillingProviderABC
 from src.platform.core.config import settings
 from src.platform.core.hooks import HookEvent, emit
+from src.platform.enums import AuditAction
 from src.platform.models.billing import PlanPrice, Subscription
 from src.platform.repositories.repository_manager import RepositoryManager
 from src.platform.services.base import BaseService
@@ -13,6 +14,11 @@ from src.platform.services.billing.common import notify_subscription_managers
 log = logging.getLogger(__name__)
 
 WebhookHandler = Callable[[dict], Awaitable[None]]
+
+
+# Statuses in which a local row follows a Stripe subscription that is still
+# live (billing, or able to resume billing).
+LIVE_SUBSCRIPTION_STATUSES = ("active", "trialing", "past_due", "paused")
 
 
 class WebhookHandlerGroup(BaseService):
@@ -112,3 +118,46 @@ class WebhookHandlerGroup(BaseService):
         await self._plan_changed(sub.organization_id)
 
         return free_price
+
+    @staticmethod
+    def _tracks_another_subscription(
+        sub: Subscription, external_subscription_id: str
+    ) -> bool:
+        """Whether the organization's row already follows a different live Stripe
+        subscription - making `external_subscription_id` a duplicate (e.g. the
+        checkout was paid in two browser tabs)."""
+        return (
+            sub.external_subscription_id is not None
+            and sub.external_subscription_id != external_subscription_id
+            and sub.status in LIVE_SUBSCRIPTION_STATUSES
+        )
+
+    async def _cancel_duplicate_subscription(
+        self, organization_id: int, external_subscription_id: str
+    ) -> None:
+        """Refund and cancel a duplicate subscription, leaving the organization on
+        the one it already has."""
+        refunded = await self.provider.cancel_duplicate_subscription(
+            external_subscription_id
+        )
+        log.warning(
+            "Duplicate subscription refunded and canceled "
+            "[organization_id=%s external_subscription_id=%s refunded=%s]",
+            organization_id,
+            external_subscription_id,
+            refunded,
+        )
+        await self.log_audit(
+            AuditAction.BILLING_DUPLICATE_SUBSCRIPTION_REFUNDED,
+            organization_id=organization_id,
+            resource_type="subscription",
+            details={
+                "external_subscription_id": external_subscription_id,
+                "refunded_amount": refunded,
+            },
+        )
+        await self._notify_subscription_managers(
+            organization_id,
+            "duplicate-subscription-refunded",
+            {"billing_url": f"{settings.frontend_url}/settings/billing"},
+        )

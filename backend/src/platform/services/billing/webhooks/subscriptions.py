@@ -47,6 +47,11 @@ class SubscriptionWebhookHandlers(WebhookHandlerGroup):
                     sub = await self.repos.subscription.get_active_for_organization_locked(  # noqa: E501
                         organization.id
                     )
+                    if sub and self._tracks_another_subscription(sub, sub_id):
+                        await self._cancel_duplicate_subscription(
+                            organization.id, sub_id
+                        )
+                        return
                     if not sub:
                         # Edge case: no active subscription exists (e.g. free plan
                         # seed failed at registration). Create one now so the

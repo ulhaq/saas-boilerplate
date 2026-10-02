@@ -72,6 +72,10 @@ class CheckoutWebhookHandlers(WebhookHandlerGroup):
         )
         if not sub:
             return
+        if self._tracks_another_subscription(sub, subscription_id):
+            # A duplicate: customer.subscription.created refunds and cancels it
+            # (whichever of the two events arrives first, the row is untouched).
+            return
 
         plan_price_id_str = metadata.get("plan_price_id")
         updates: dict = {

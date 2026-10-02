@@ -98,6 +98,9 @@ EMAIL_SUBJECTS: dict[str, dict[str, str]] = {
         "payment-action-required": "Your {app_name} payment needs authentication",
         "subscription-paused": "Your {app_name} subscription has been paused",
         "subscription-resumed": "Your {app_name} subscription has been resumed",
+        "duplicate-subscription-refunded": (
+            "We refunded a duplicate {app_name} subscription"
+        ),
         "account-deletion": "Your {app_name} account has been deleted",
         "contact-message": "Contact form: {message_subject}",
     },
@@ -120,6 +123,9 @@ EMAIL_SUBJECTS: dict[str, dict[str, str]] = {
         "payment-action-required": "Din {app_name}-betaling kræver godkendelse",
         "subscription-paused": "Dit {app_name}-abonnement er sat på pause",
         "subscription-resumed": "Dit {app_name}-abonnement er genoptaget",
+        "duplicate-subscription-refunded": (
+            "Vi har refunderet et dobbelt {app_name}-abonnement"
+        ),
         "account-deletion": "Din {app_name}-konto er blevet slettet",
         "contact-message": "Kontaktformular: {message_subject}",
     },

@@ -51,6 +51,13 @@ def configure_stripe(timeout_seconds: float, max_network_retries: int) -> None:
 configure_stripe(settings.stripe_timeout_seconds, settings.stripe_max_network_retries)
 
 
+def _stripe_id(
+    value: str | stripe.Invoice | stripe.PaymentIntent | stripe.Charge | None,
+) -> str | None:
+    """The id of a Stripe reference, which is an id or, if expanded, the object."""
+    return value if isinstance(value, str) or value is None else value.id
+
+
 class StripeProvider(BillingProviderABC):
     def __init__(self, api_key: str, webhook_secret: str) -> None:
         self._api_key = api_key
@@ -327,6 +334,48 @@ class StripeProvider(BillingProviderABC):
             )
         except stripe.StripeError as exc:
             raise BillingProviderException(str(exc)) from exc
+
+    async def cancel_duplicate_subscription(self, external_subscription_id: str) -> int:
+        try:
+            subscription = await stripe.Subscription.retrieve_async(
+                external_subscription_id, api_key=self._api_key
+            )
+            refunded = 0
+            invoice_id = _stripe_id(subscription.latest_invoice)
+            if invoice_id:
+                payments = await stripe.InvoicePayment.list_async(
+                    invoice=invoice_id, status="paid", api_key=self._api_key
+                )
+                for invoice_payment in payments.data:
+                    refunded += await self._refund_duplicate(invoice_payment.payment)
+            if subscription.status != "canceled":
+                await stripe.Subscription.cancel_async(
+                    external_subscription_id, api_key=self._api_key
+                )
+            return refunded
+        except stripe.StripeError as exc:
+            raise BillingProviderException(str(exc)) from exc
+
+    async def _refund_duplicate(self, payment: stripe.InvoicePayment.Payment) -> int:
+        # Keyed per payment, so a webhook retry gets the same refund back
+        # instead of failing on an already-refunded charge.
+        if payment_intent := _stripe_id(payment.payment_intent):
+            refund = await stripe.Refund.create_async(
+                payment_intent=payment_intent,
+                reason="duplicate",
+                api_key=self._api_key,
+                idempotency_key=f"refund-duplicate-{payment_intent}",
+            )
+        elif charge := _stripe_id(payment.charge):
+            refund = await stripe.Refund.create_async(
+                charge=charge,
+                reason="duplicate",
+                api_key=self._api_key,
+                idempotency_key=f"refund-duplicate-{charge}",
+            )
+        else:
+            return 0
+        return refund.amount
 
     async def resume_subscription(
         self, external_subscription_id: str

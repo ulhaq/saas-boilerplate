@@ -1151,6 +1151,7 @@ export interface components {
       | 'org.ownership_transfer'
       | 'billing.checkout_start'
       | 'billing.trial_start'
+      | 'billing.duplicate_subscription_refunded'
       | 'billing.subscription_cancel'
       | 'billing.subscription_resume'
       | 'billing.plan_switch'

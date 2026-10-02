@@ -8,7 +8,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
-from sqlalchemy import text
+from sqlalchemy import select, text
 
 from src.platform.core.config import settings
 from src.platform.core.exceptions import (
@@ -18,6 +18,7 @@ from src.platform.core.exceptions import (
     ValidationException,
 )
 from src.platform.core.security import Auth
+from src.platform.models.audit_log import AuditLog
 from src.platform.repositories.repository_manager import RepositoryManager
 from src.platform.schemas.billing import CheckoutIn, StartTrialIn, SwitchPlanIn
 from src.platform.services.billing import (
@@ -2782,3 +2783,126 @@ async def test_checkout_and_trial_do_not_wait_for_a_locked_subscription(
                 result = await service.start_trial(StartTrialIn(plan_price_id=price_id))
 
     assert result.checkout_url
+
+
+# ---------------------------------------------------------------------------
+# A second subscription for the same organization (e.g. checkout paid in two
+# tabs) is refunded and canceled - it must not replace the tracked one.
+# ---------------------------------------------------------------------------
+
+
+async def _org_with_paid_subscription(price_id: int) -> None:
+    async with TestSessionLocal() as session, session.begin():
+        repos = RepositoryManager(session)
+        org = await repos.organization.get(1)
+        assert org
+        await repos.organization.update(org, external_customer_id="cus_dup")
+        sub = await repos.subscription.get_active_for_organization(1)
+        assert sub
+        await repos.subscription.update(
+            sub,
+            plan_price_id=price_id,
+            status="active",
+            external_subscription_id="sub_original",
+        )
+
+
+async def _dispatch(mock_billing_provider, event_type: str, obj: dict) -> None:
+    async with TestSessionLocal() as session, session.begin():
+        service = WebhookService(RepositoryManager(session), mock_billing_provider)
+        await service._dispatch(event_type, {"data": {"object": obj}})
+
+
+async def _tracked_subscription() -> tuple[str | None, int | None]:
+    async with TestSessionLocal() as session:
+        sub = await RepositoryManager(session).subscription.get_active_for_organization(
+            1
+        )
+        assert sub
+        return sub.external_subscription_id, sub.plan_price_id
+
+
+DUPLICATE_CREATED = {
+    "id": "sub_duplicate",
+    "status": "active",
+    "customer": "cus_dup",
+    "cancel_at_period_end": False,
+    "items": {"data": []},
+}
+DUPLICATE_CHECKOUT = {
+    "subscription": "sub_duplicate",
+    "customer": "cus_dup",
+    "metadata": {"organization_id": "1"},
+}
+
+
+@pytest.mark.parametrize(
+    "events",
+    [
+        [("customer.subscription.created", DUPLICATE_CREATED)],
+        [
+            ("checkout.session.completed", DUPLICATE_CHECKOUT),
+            ("customer.subscription.created", DUPLICATE_CREATED),
+        ],
+        [
+            ("customer.subscription.created", DUPLICATE_CREATED),
+            ("checkout.session.completed", DUPLICATE_CHECKOUT),
+        ],
+    ],
+    ids=["created", "checkout-then-created", "created-then-checkout"],
+)
+async def test_duplicate_subscription_is_refunded_and_canceled(
+    events, mock_billing_provider, plan_with_price, mocker
+):
+    price_id = plan_with_price["price"]["id"]
+    await _org_with_paid_subscription(price_id)
+    mock_billing_provider.cancel_duplicate_subscription.return_value = 9900
+    send_email = mocker.patch("src.platform.services.billing.common.send_email")
+
+    for event_type, obj in events:
+        await _dispatch(mock_billing_provider, event_type, obj)
+
+    # The organization still follows its original subscription.
+    assert await _tracked_subscription() == ("sub_original", price_id)
+    mock_billing_provider.cancel_duplicate_subscription.assert_called_once_with(
+        "sub_duplicate"
+    )
+    assert send_email.call_args.kwargs["email_template"] == (
+        "duplicate-subscription-refunded"
+    )
+    async with TestSessionLocal() as session:
+        rs = await session.execute(
+            select(AuditLog).where(
+                AuditLog.action == "billing.duplicate_subscription_refunded"
+            )
+        )
+        [entry] = rs.scalars().all()
+    assert entry.organization_id == 1
+    assert entry.details == {
+        "external_subscription_id": "sub_duplicate",
+        "refunded_amount": 9900,
+    }
+
+
+async def test_first_paid_subscription_still_replaces_the_free_plan(
+    mock_billing_provider, plan_with_price
+):
+    """The free plan has no Stripe subscription, so a new one is not a duplicate."""
+    await _dispatch(
+        mock_billing_provider,
+        "customer.subscription.created",
+        {**DUPLICATE_CREATED, "id": "sub_first", "customer": "cus_first"},
+    )
+    async with TestSessionLocal() as session, session.begin():
+        repos = RepositoryManager(session)
+        org = await repos.organization.get(1)
+        assert org
+        await repos.organization.update(org, external_customer_id="cus_first")
+    await _dispatch(
+        mock_billing_provider,
+        "customer.subscription.created",
+        {**DUPLICATE_CREATED, "id": "sub_first", "customer": "cus_first"},
+    )
+
+    assert (await _tracked_subscription())[0] == "sub_first"
+    mock_billing_provider.cancel_duplicate_subscription.assert_not_called()

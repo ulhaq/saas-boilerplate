@@ -214,6 +214,7 @@ class AuditAction(StrEnum):
     ORG_OWNERSHIP_TRANSFER = "org.ownership_transfer"
     BILLING_CHECKOUT_START = "billing.checkout_start"
     BILLING_TRIAL_START = "billing.trial_start"
+    BILLING_DUPLICATE_SUBSCRIPTION_REFUNDED = "billing.duplicate_subscription_refunded"
     BILLING_SUBSCRIPTION_CANCEL = "billing.subscription_cancel"
     BILLING_SUBSCRIPTION_RESUME = "billing.subscription_resume"
     BILLING_PLAN_SWITCH = "billing.plan_switch"
