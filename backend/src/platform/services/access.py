@@ -19,7 +19,7 @@ from src.platform.billing.dependencies import _current_period_start
 from src.platform.core.composition import ALL_PERMISSIONS
 from src.platform.core.config import settings
 from src.platform.core.context import auth_context_var
-from src.platform.core.database import get_db
+from src.platform.core.database import DbSession
 from src.platform.core.exceptions import (
     LimitExceededException,
     NotAuthenticatedException,
@@ -95,7 +95,7 @@ async def _authenticate_api_token(token: str, db: AsyncSession) -> Auth:
 
 
 async def authenticate(
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: DbSession,
     token: Annotated[str | None, Depends(oauth2_scheme)],
 ) -> Auth:
     if not settings.auth_enabled:

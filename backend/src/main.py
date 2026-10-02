@@ -1,9 +1,9 @@
 import logging
 from collections.abc import AsyncGenerator, Callable
 from contextlib import asynccontextmanager
-from typing import Annotated, Any
+from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
+from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware import Middleware
@@ -16,12 +16,11 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.bootstrap import bootstrap
 from src.example.routers import projects
 from src.platform.core.config import settings
-from src.platform.core.database import get_db
+from src.platform.core.database import DbSession
 from src.platform.core.error_response import (
     ErrorResponse,
     ValidationDetail,
@@ -246,7 +245,7 @@ async def handle_value_error(request: Request, exc: ValueError) -> JSONResponse:
 
 
 @app.get("/health", tags=["Health"], include_in_schema=False)
-async def health_check(session: Annotated[AsyncSession, Depends(get_db)]) -> Response:
+async def health_check(session: DbSession) -> Response:
     try:
         await session.execute(text("SELECT 1"))
         return JSONResponse({"status": "ok"})

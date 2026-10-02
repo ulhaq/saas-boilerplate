@@ -1,11 +1,9 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import Annotated
 
-from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.platform.core.database import get_db
+from src.platform.core.database import DbSession
 from src.platform.repositories.api_token import ApiTokenRepository
 from src.platform.repositories.audit_log import AuditLogRepository
 from src.platform.repositories.billing import (
@@ -35,7 +33,7 @@ from src.platform.repositories.worker_run import WorkerRunRepository
 class RepositoryManager:
     db: AsyncSession
 
-    def __init__(self, db: Annotated[AsyncSession, Depends(get_db)]) -> None:
+    def __init__(self, db: DbSession) -> None:
         self.db = db
         self._audit_log: AuditLogRepository | None = None
         self._api_token: ApiTokenRepository | None = None
@@ -177,6 +175,17 @@ class RepositoryManager:
         if self._waitlist_entry is None:
             self._waitlist_entry = WaitlistEntryRepository(self.db)
         return self._waitlist_entry
+
+    async def commit_before_raise(self) -> None:
+        """Commit the request transaction now, ahead of an exception that
+        would otherwise roll it back.
+
+        Only for writes that must survive the failure they report - a
+        failed-attempt counter, a session revocation. Everything else commits
+        with the request (see `DbSession`). Raise right after: the session
+        must not be used again.
+        """
+        await self.db.commit()
 
     @asynccontextmanager
     async def savepoint(self) -> AsyncGenerator[None]:

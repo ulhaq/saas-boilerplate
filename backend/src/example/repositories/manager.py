@@ -6,18 +6,13 @@ Hook handlers that receive a platform manager can wrap its session via
 ``ExampleRepositoryManager(repos.db)`` to join the same transaction.
 """
 
-from typing import Annotated
-
-from fastapi import Depends
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from src.example.repositories.project import ProjectRepository
-from src.platform.core.database import get_db
+from src.platform.core.database import DbSession
 from src.platform.repositories.repository_manager import RepositoryManager
 
 
 class ExampleRepositoryManager(RepositoryManager):
-    def __init__(self, db: Annotated[AsyncSession, Depends(get_db)]) -> None:
+    def __init__(self, db: DbSession) -> None:
         super().__init__(db)
         self._project: ProjectRepository | None = None
 

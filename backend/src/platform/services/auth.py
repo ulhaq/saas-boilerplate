@@ -271,11 +271,7 @@ class AuthService(BaseService):
             data={"login_url": f"{settings.frontend_url}/login"},
         )
 
-        token = await self._issue_tokens(user, organization.id)
-
-        await self.repos.db.commit()
-
-        return token
+        return await self._issue_tokens(user, organization.id)
 
     async def invite_status(self, token: str) -> InviteStatusOut:
         invitation = await self._load_invitation(token)
@@ -393,11 +389,7 @@ class AuthService(BaseService):
 
         user = await self._add_to_organization(user, organization_id, role_ids)
 
-        token = await self._issue_tokens(user, organization_id)
-
-        await self.repos.db.commit()
-
-        return token
+        return await self._issue_tokens(user, organization_id)
 
     async def accept_invite(
         self,
@@ -456,11 +448,7 @@ class AuthService(BaseService):
                 session_jti, RefreshTokenRevokeReason.ROTATED
             )
 
-        token = await self._issue_tokens(user, organization_id)
-
-        await self.repos.db.commit()
-
-        return token
+        return await self._issue_tokens(user, organization_id)
 
     async def get_access_token(
         self, username: str, password: str
@@ -574,7 +562,8 @@ class AuthService(BaseService):
             )
             if locked:
                 log.warning("MFA verification locked [user_id=%s]", user.id)
-            await self.repos.db.commit()
+            # The attempt count must persist although the request fails.
+            await self.repos.commit_before_raise()
             raise NotAuthenticatedException(
                 "Invalid two-factor code", error_code=ErrorCode.MFA_CODE_INVALID
             )
@@ -621,9 +610,8 @@ class AuthService(BaseService):
                     jti,
                 )
                 await self.repos.refresh_token.delete_by_user(user)
-                # Commit now: raising 401 rolls back the request transaction,
-                # which would otherwise undo the revocation.
-                await self.repos.db.commit()
+                # The revocation must persist although the request fails.
+                await self.repos.commit_before_raise()
             # Post-logout retries are benign - reject without escalating.
             raise NotAuthenticatedException(headers=BEARER_HEADERS)
 
