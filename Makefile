@@ -68,7 +68,11 @@ shell-worker:
 # Local monitoring stack (Grafana/Prometheus/Loki/Tempo, shared by all worktree
 # stacks) plus this stack's Alloy agent. Set OTEL_EXPORTER_OTLP_ENDPOINT and
 # LOG_FORMAT=json in backend/.env for the API/worker to report. See observability/README.md.
-OBS := OBSERVABILITY_INGEST_BIND=$${OBSERVABILITY_INGEST_BIND:-172.17.0.1} \
+# Ingest ports bind to what the agent's host-gateway reaches: the default bridge's
+# gateway on Linux (looked up, not assumed 172.17.0.1), loopback on Docker Desktop.
+# Recursive `=` so docker is only queried when an obs-* target runs.
+OBS_INGEST_BIND = $(or $(shell [ "$$(uname -s)" = Linux ] && docker network inspect bridge -f '{{(index .IPAM.Config 0).Gateway}}' 2>/dev/null),127.0.0.1)
+OBS = OBSERVABILITY_INGEST_BIND=$${OBSERVABILITY_INGEST_BIND:-$(OBS_INGEST_BIND)} \
 	GRAFANA_ADMIN_PASSWORD=$${GRAFANA_ADMIN_PASSWORD:-admin} \
 	docker compose -f docker-compose.observability.yml -p observability
 

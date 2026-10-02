@@ -12,12 +12,12 @@ www.example.com {
 
 # Marketing site (static, site/)
 example.com {
-	reverse_proxy localhost:3002
+	reverse_proxy 127.0.0.1:3002
 }
 
 # App (dashboard SPA, frontend/)
 app.example.com {
-	reverse_proxy localhost:3000
+	reverse_proxy 127.0.0.1:3000
 
 	# Browser telemetry (VITE_FARO_URL=/collect) -> Alloy agent's Faro receiver
 	# (compose profile `observability`). Same-origin, so no CORS/CSP changes.
@@ -35,12 +35,12 @@ app.example.com {
 
 # API
 api.example.com {
-	reverse_proxy localhost:8000
+	reverse_proxy 127.0.0.1:8000
 }
 
 # Umami analytics
 analytics.example.com {
-	reverse_proxy localhost:3001
+	reverse_proxy 127.0.0.1:3001
 }
 
 # Grafana

@@ -36,7 +36,7 @@ jobs:
           python-version: "3.14"
 
       - name: Install dependencies
-        run: uv sync --frozen
+        run: uv sync --locked
 
       - name: Lint (ty + ruff)
         run: uv run poe lint
@@ -77,6 +77,9 @@ jobs:
 
       - name: Lint
         run: npm run lint
+
+      - name: Build
+        run: npm run build
 
   site:
     name: Site - check & build
@@ -136,7 +139,9 @@ jobs:
             ghcr.io/${{ github.repository }}/backend:${{ github.sha }}
 
       - name: Write frontend env
-        run: echo "${{ secrets.FRONTEND_ENV }}" > frontend/.env
+        env:
+          FRONTEND_ENV: ${{ secrets.FRONTEND_ENV }}
+        run: printf '%s\n' "$FRONTEND_ENV" > frontend/.env
 
       - name: Build and push frontend
         uses: docker/build-push-action@v7
@@ -148,7 +153,9 @@ jobs:
             ghcr.io/${{ github.repository }}/frontend:${{ github.sha }}
 
       - name: Write site env
-        run: echo "${{ secrets.SITE_ENV }}" > site/.env
+        env:
+          SITE_ENV: ${{ secrets.SITE_ENV }}
+        run: printf '%s\n' "$SITE_ENV" > site/.env
 
       - name: Build and push site
         uses: docker/build-push-action@v7
@@ -163,6 +170,11 @@ jobs:
     name: Deploy to Hetzner
     needs: [build-and-push]
     runs-on: ubuntu-latest
+    # Queue, never overlap: a slower older deploy finishing last would roll
+    # production back to its SHA.
+    concurrency:
+      group: deploy
+      cancel-in-progress: false
 
     steps:
       - uses: actions/checkout@v6
@@ -185,16 +197,16 @@ jobs:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
           OBSERVABILITY_ENV: ${{ secrets.OBSERVABILITY_ENV }}
+          BACKEND_ENV: ${{ secrets.BACKEND_ENV }}
         with:
           host: ${{ secrets.HETZNER_HOST }}
           username: ${{ secrets.HETZNER_USER }}
           key: ${{ secrets.HETZNER_SSH_KEY }}
-          envs: BACKEND_IMAGE,FRONTEND_IMAGE,SITE_IMAGE,GHCR_TOKEN,GITHUB_ACTOR,OBSERVABILITY_ENV
+          envs: BACKEND_IMAGE,FRONTEND_IMAGE,SITE_IMAGE,GHCR_TOKEN,GITHUB_ACTOR,OBSERVABILITY_ENV,BACKEND_ENV
           script: |
             set -e
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
-            echo "${{ secrets.BACKEND_ENV }}" > /opt/app/backend.env
-            echo "${{ secrets.BACKEND_ENV }}" > /opt/app/.env
+            printf '%s\n' "$BACKEND_ENV" > /opt/app/.env
             echo "BACKEND_IMAGE=$BACKEND_IMAGE" >> /opt/app/.env
             echo "FRONTEND_IMAGE=$FRONTEND_IMAGE" >> /opt/app/.env
             echo "SITE_IMAGE=$SITE_IMAGE" >> /opt/app/.env

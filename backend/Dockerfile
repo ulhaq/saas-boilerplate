@@ -2,12 +2,12 @@ FROM python:3.14-slim
 
 WORKDIR /app
 
-RUN pip install uv
+RUN pip install --no-cache-dir uv
 
-ENV UV_COMPILE_BYTECODE=1
+ENV UV_COMPILE_BYTECODE=1 UV_NO_CACHE=1
 
 COPY pyproject.toml uv.lock ./
-RUN uv sync --no-dev
+RUN uv sync --locked --no-dev
 
 ENV PATH="/app/.venv/bin:$PATH"
 

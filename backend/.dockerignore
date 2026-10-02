@@ -1,2 +1,8 @@
 .venv
 .env
+logs
+tests
+**/__pycache__
+.pytest_cache
+.ruff_cache
+.import_linter_cache

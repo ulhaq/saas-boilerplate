@@ -64,9 +64,11 @@ Processes run on the host (`uv run poe dev`) can't resolve `alloy`; leave
    cp observability/.env.example observability/.env   # admin password, SMTP, ALERT_EMAIL, OBSERVABILITY_INGEST_BIND
    docker compose -f docker-compose.observability.yml -p observability --env-file observability/.env up -d
    ```
-   The ingest ports (9090, 3100, 4318) accept **unauthenticated writes**: bind
-   them to a private network address (e.g. a Hetzner private network) and allow
-   only the app host in the firewall. Docker-published ports bypass `ufw`.
+   The ingest ports (9090, 3100, 4318) accept **unauthenticated reads and
+   writes**. They bind to `127.0.0.1` unless `OBSERVABILITY_INGEST_BIND` is set,
+   so the agent can't reach them until it is: bind them to a private network
+   address (e.g. a Hetzner private network) and allow only the app host in the
+   firewall. Docker-published ports bypass `ufw`.
    Grafana binds to `127.0.0.1:3030` by default; put it behind Caddy with TLS,
    or reach it over an SSH tunnel.
 

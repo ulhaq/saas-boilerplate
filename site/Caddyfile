@@ -1,3 +1,11 @@
+{
+	# The host Caddy reaches this one through docker-proxy (bridge gateway):
+	# keep its X-Forwarded-For so the backend sees the real client IP.
+	servers {
+		trusted_proxies static private_ranges
+	}
+}
+
 :80
 
 root * /srv

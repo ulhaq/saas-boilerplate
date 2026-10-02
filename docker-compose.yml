@@ -1,5 +1,12 @@
 name: app
 
+# json-file logs grow unbounded by default; every service gets a cap.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "5m"
+    max-file: "3"
+
 services:
   postgres:
     image: postgres:18-alpine
@@ -14,6 +21,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql
       - ./scripts/db-init.sh:/docker-entrypoint-initdb.d/db-init.sh
+    logging: *logging
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d $$POSTGRES_DB"]
       interval: 60s
@@ -23,7 +31,7 @@ services:
       start_interval: 5s
 
   pgadmin:
-    image: dpage/pgadmin4:latest
+    image: dpage/pgadmin4:9.18
     restart: unless-stopped
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:?set PGADMIN_EMAIL in BACKEND_ENV}
@@ -32,11 +40,7 @@ services:
       - "127.0.0.1:${PGADMIN_PORT:-5050}:80"
     volumes:
       - pgadmin_data:/var/lib/pgadmin
-    logging:
-      driver: json-file
-      options:
-        max-size: "5m"
-        max-file: "3"
+    logging: *logging
     depends_on:
       postgres:
         condition: service_healthy
@@ -44,7 +48,7 @@ services:
   backend:
     image: ${BACKEND_IMAGE}
     restart: unless-stopped
-    env_file: ./backend.env
+    env_file: ./.env
     environment:
       DB_CONNECTION: postgresql+psycopg://${DB_USER}:${DB_PASSWORD}@${DB_HOST:-postgres}:${DB_PORT:-5432}/${DB_NAME}
     ports:
@@ -68,7 +72,7 @@ services:
   worker:
     image: ${BACKEND_IMAGE}
     restart: unless-stopped
-    env_file: ./backend.env
+    env_file: ./.env
     environment:
       DB_CONNECTION: postgresql+psycopg://${DB_USER}:${DB_PASSWORD}@${DB_HOST:-postgres}:${DB_PORT:-5432}/${DB_NAME}
     command: python worker.py
@@ -89,6 +93,7 @@ services:
       ANALYTICS_ORIGIN: ${ANALYTICS_ORIGIN:-}
     ports:
       - "127.0.0.1:3000:80"
+    logging: *logging
     depends_on:
       backend:
         condition: service_healthy
@@ -101,16 +106,18 @@ services:
       ANALYTICS_ORIGIN: ${ANALYTICS_ORIGIN:-}
     ports:
       - "127.0.0.1:3002:80"
+    logging: *logging
     depends_on:
       backend:
         condition: service_healthy
 
   umami:
-    image: ghcr.io/umami-software/umami:postgresql-latest
+    image: ghcr.io/umami-software/umami:3.4.0
     profiles: [analytics]
     restart: unless-stopped
     ports:
       - "127.0.0.1:3001:3000"
+    logging: *logging
     environment:
       DATABASE_URL: postgresql://${DB_UMAMI_USER}:${DB_UMAMI_PASSWORD}@postgres:5432/umami
       APP_SECRET: ${UMAMI_APP_SECRET}
@@ -133,6 +140,7 @@ services:
       - ./observability/alloy/agent.alloy:/etc/alloy/config.alloy:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - alloy_data:/var/lib/alloy/data
+    logging: *logging
 
 volumes:
   alloy_data:
