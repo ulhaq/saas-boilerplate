@@ -697,6 +697,7 @@ export default {
       uuid_version: '{field} must be UUID version {expected_version}',
       value_error: '{field} is invalid: {msg}',
       login_failed: 'Invalid email or password',
+      login_locked: 'Too many failed sign-in attempts. Wait a few minutes and try again.',
       email_already_exists: 'An account with this email already exists',
       unauthorized: 'You are not authorized to perform this action',
       permission_denied: 'You do not have permission to perform this action',

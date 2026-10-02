@@ -166,6 +166,23 @@ class LimitExceededException(ClientException):
         )
 
 
+class LoginLockedException(ClientException):
+    def __init__(
+        self,
+        detail: Any = ErrorCode.LOGIN_LOCKED.description,
+        /,
+        *,
+        error_code: ErrorCodeEnum = ErrorCode.LOGIN_LOCKED,
+        headers: dict | None = None,
+    ) -> None:
+        super().__init__(
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            detail,
+            error_code=error_code,
+            headers=headers,
+        )
+
+
 class CapacityExceededException(ClientException):
     def __init__(
         self,

@@ -10,6 +10,7 @@ from src.platform.billing.dependencies import BillingProviderDep
 from src.platform.core.config import settings
 from src.platform.core.exceptions import (
     AlreadyExistsException,
+    LoginLockedException,
     NotAuthenticatedException,
     NotFoundException,
     PermissionDeniedException,
@@ -79,6 +80,11 @@ _MFA_RESET: dict = {
 
 def _filter_assignable_roles(roles: Sequence[Role]) -> list[Role]:
     return [r for r in roles if not (r.is_protected and r.name == OWNER_ROLE_NAME)]
+
+
+def _retry_after(until: datetime) -> dict[str, str]:
+    seconds = max(1, int((until - datetime.now(UTC)).total_seconds()))
+    return {"Retry-After": str(seconds)}
 
 
 class AuthService(BaseService):
@@ -453,15 +459,27 @@ class AuthService(BaseService):
     async def get_access_token(
         self, username: str, password: str
     ) -> Token | MfaChallengeOut:
-        user = authenticate_user(
-            password, await self.repos.user.get_by_email(username.lower())
-        )
+        email = username.lower()
+        # Checked before the password: a locked address is refused the same
+        # way whether or not an account exists for it.
+        if locked_until := await self.repos.login_throttle.locked_until(email):
+            raise LoginLockedException(headers=_retry_after(locked_until))
+
+        user = authenticate_user(password, await self.repos.user.get_by_email(email))
 
         if not user:
+            await self.repos.login_throttle.record_failure(
+                email,
+                max_attempts=settings.login_max_failed_attempts,
+                window=timedelta(seconds=settings.login_lockout_seconds),
+            )
+            # The failure must count although the request fails.
+            await self.repos.commit_before_raise()
             raise NotAuthenticatedException(
                 error_code=ErrorCode.LOGIN_FAILED,
                 headers=BEARER_HEADERS,
             )
+        await self.repos.login_throttle.clear(email)
 
         membership = (
             await self.repos.user_organization.get_active_organization_for_user(user.id)

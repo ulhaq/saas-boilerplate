@@ -49,6 +49,10 @@ class ErrorCode(ErrorCodeEnum):
     )
     UNAUTHORIZED = ("unauthorized", "You are not authenticated")
     LOGIN_FAILED = ("login_failed", "Invalid email or password")
+    LOGIN_LOCKED = (
+        "login_locked",
+        "Too many failed sign-in attempts; try again in a few minutes",
+    )
     PERMISSION_DENIED = (
         "permission_denied",
         "You are not authorized to perform this action",

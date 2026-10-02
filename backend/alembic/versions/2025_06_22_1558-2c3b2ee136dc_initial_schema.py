@@ -574,6 +574,19 @@ def upgrade() -> None:
         "ix_email_outbox_pending", "email_outbox", ["sent_at", "next_attempt_at"]
     )
 
+    # ── failed password sign-ins per email address (login lockout) ─────────────
+    op.create_table(
+        "login_throttle",
+        sa.Column("email", sa.String(), nullable=False),
+        sa.Column("failed_attempts", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column("last_failed_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("locked_until", sa.DateTime(timezone=True), nullable=True),
+        sa.PrimaryKeyConstraint("email"),
+    )
+    op.create_index(
+        "ix_login_throttle_last_failed_at", "login_throttle", ["last_failed_at"]
+    )
+
     # ── seed plans + prices ──────────────────────────────────────────
 
     op.bulk_insert(
@@ -715,6 +728,9 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    op.drop_index("ix_login_throttle_last_failed_at", table_name="login_throttle")
+    op.drop_table("login_throttle")
+
     op.drop_index("ix_email_outbox_pending", table_name="email_outbox")
     op.drop_table("email_outbox")
 

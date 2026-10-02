@@ -20,6 +20,7 @@ from src.platform.repositories.email_verification_token import (
     EmailVerificationTokenRepository,
 )
 from src.platform.repositories.invitation import InvitationRepository
+from src.platform.repositories.login_throttle import LoginThrottleRepository
 from src.platform.repositories.notification import NotificationRepository
 from src.platform.repositories.organization import OrganizationRepository
 from src.platform.repositories.permission import PermissionRepository
@@ -57,6 +58,7 @@ class RepositoryManager:
         self._invitation: InvitationRepository | None = None
         self._waitlist_entry: WaitlistEntryRepository | None = None
         self._email_outbox: EmailOutboxRepository | None = None
+        self._login_throttle: LoginThrottleRepository | None = None
 
     @property
     def audit_log(self) -> AuditLogRepository:
@@ -194,6 +196,12 @@ class RepositoryManager:
         if self._email_outbox is None:
             self._email_outbox = EmailOutboxRepository(self.db)
         return self._email_outbox
+
+    @property
+    def login_throttle(self) -> LoginThrottleRepository:
+        if self._login_throttle is None:
+            self._login_throttle = LoginThrottleRepository(self.db)
+        return self._login_throttle
 
     @asynccontextmanager
     async def savepoint(self) -> AsyncGenerator[None]:

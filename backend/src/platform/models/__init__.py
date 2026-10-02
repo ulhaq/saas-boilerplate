@@ -12,6 +12,7 @@ from src.platform.models.billing import (
 from src.platform.models.email_outbox import EmailOutbox
 from src.platform.models.email_verification_token import EmailVerificationToken
 from src.platform.models.invitation import Invitation
+from src.platform.models.login_throttle import LoginThrottle
 from src.platform.models.notification import Notification
 from src.platform.models.organization import Organization
 from src.platform.models.password_reset_token import PasswordResetToken
@@ -29,6 +30,7 @@ __all__ = [
     "EmailOutbox",
     "EmailVerificationToken",
     "Invitation",
+    "LoginThrottle",
     "Notification",
     "Organization",
     "PasswordResetToken",

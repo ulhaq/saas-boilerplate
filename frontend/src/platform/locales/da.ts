@@ -704,6 +704,7 @@ export default {
       uuid_version: '{field} skal være UUID version {expected_version}',
       value_error: '{field} er ugyldig: {msg}',
       login_failed: 'Ugyldig email eller adgangskode',
+      login_locked: 'For mange mislykkede loginforsøg. Vent et par minutter, og prøv igen.',
       email_already_exists: 'En konto med denne email eksisterer allerede',
       unauthorized: 'Du er ikke autoriseret til at udføre denne handling',
       permission_denied: 'Du har ikke tilladelse til at udføre denne handling',

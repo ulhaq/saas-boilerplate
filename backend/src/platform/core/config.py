@@ -54,6 +54,8 @@ class Settings(EnvSettings):
     mfa_recovery_code_count: int = 10
     mfa_max_failed_attempts: int = 5
     mfa_lockout_seconds: int = 15 * 60
+    login_max_failed_attempts: int = 5
+    login_lockout_seconds: int = 15 * 60
 
     raw_allow_origins: str = Field(
         default="http://localhost:5173", validation_alias="allow_origins"

@@ -17,6 +17,7 @@ from src.platform.models.organization import Organization
 from src.platform.models.password_reset_token import PasswordResetToken
 from src.platform.models.refresh_token import RefreshToken
 from src.platform.models.user import User
+from src.platform.repositories.login_throttle import LoginThrottleRepository
 from src.platform.services.audit_log import write_audit_log
 
 log = logging.getLogger(__name__)
@@ -56,6 +57,14 @@ async def purge_expired_tokens(db: AsyncSession) -> int:
         + cast(CursorResult[Any], r2).rowcount
         + cast(CursorResult[Any], r3).rowcount
         + cast(CursorResult[Any], r4).rowcount
+    )
+
+
+async def purge_expired_login_throttles(db: AsyncSession) -> int:
+    """Failed sign-in records past their lockout window (they hold email
+    addresses, which may belong to no account)."""
+    return await LoginThrottleRepository(db).purge_expired(
+        timedelta(seconds=settings.login_lockout_seconds)
     )
 
 
@@ -110,12 +119,16 @@ async def run_gdpr_retention_loop(session_factory: Any) -> None:
                             token_count = await purge_expired_tokens(session)
                             user_count = await purge_soft_deleted_users(session)
                             org_count = await purge_soft_deleted_orgs(session)
+                            throttle_count = await purge_expired_login_throttles(
+                                session
+                            )
                             log.info(
                                 "GDPR retention: purged %d token(s), %d user(s), "
-                                "%d org(s)",
+                                "%d org(s), %d login throttle(s)",
                                 token_count,
                                 user_count,
                                 org_count,
+                                throttle_count,
                             )
                         else:
                             log.info("GDPR retention: running in another worker")
