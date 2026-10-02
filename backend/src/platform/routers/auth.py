@@ -4,7 +4,6 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Request, Response, stat
 from fastapi.security import OAuth2PasswordRequestForm
 
 from src.platform.core.config import settings
-from src.platform.core.dependencies import authenticate, authenticate_user_session
 from src.platform.core.limiter import limiter
 from src.platform.core.security import Auth, Token
 from src.platform.schemas.mfa import MfaChallengeOut, MfaVerifyIn
@@ -23,6 +22,7 @@ from src.platform.schemas.user import (
     SwitchOrganizationIn,
     VerifyEmailIn,
 )
+from src.platform.services.access import authenticate, authenticate_user_session
 from src.platform.services.auth import AuthService
 
 router = APIRouter(prefix="/auth")

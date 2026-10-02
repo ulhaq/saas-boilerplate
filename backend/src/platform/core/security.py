@@ -1,5 +1,6 @@
+from collections.abc import Sequence
 from time import time
-from typing import Any, Literal, Self
+from typing import Any, Literal, Protocol, Self
 from uuid import uuid4
 
 from argon2 import PasswordHasher
@@ -14,9 +15,39 @@ from src.platform.core.exceptions import (
     PermissionDeniedException,
 )
 from src.platform.enums import ErrorCode
-from src.platform.models.user import User
 
 type TokenType = Literal["access", "refresh"]
+
+
+# The shape of a user that the auth primitives read. Declared here rather than
+# importing the ORM model so core stays below the data layer; the `User` model
+# satisfies it structurally.
+class PermissionLike(Protocol):
+    @property
+    def name(self) -> str: ...
+
+
+class RoleLike(Protocol):
+    @property
+    def name(self) -> str: ...
+    @property
+    def organization_id(self) -> int: ...
+    @property
+    def permissions(self) -> Sequence[PermissionLike]: ...
+
+
+class UserLike(Protocol):
+    @property
+    def id(self) -> int: ...
+    @property
+    def name(self) -> str: ...
+    @property
+    def email(self) -> str: ...
+    @property
+    def password(self) -> str: ...
+    @property
+    def roles(self) -> Sequence[RoleLike]: ...
+
 
 JWT_ALGORITHM = "HS256"
 
@@ -54,7 +85,7 @@ class Auth(BaseModel):
     permissions: list[str]
 
     @classmethod
-    def from_user_model(cls, user_model: User, active_organization_id: int) -> Self:
+    def from_user_model(cls, user_model: UserLike, active_organization_id: int) -> Self:
         organization_roles = [
             r for r in user_model.roles if r.organization_id == active_organization_id
         ]
@@ -170,7 +201,7 @@ def decode_token(token: str, *, expected_type: TokenType = "access") -> dict:
 
 
 def create_token(
-    user: User,
+    user: UserLike,
     expiry: int,
     *,
     include_user_claims: bool = True,
@@ -199,7 +230,7 @@ def create_token(
     )
 
 
-def authenticate_user(password: str, user: User | None) -> User | None:
+def authenticate_user[U: UserLike](password: str, user: U | None) -> U | None:
     if user and verify_secret(password, user.password):
         return user
     return None

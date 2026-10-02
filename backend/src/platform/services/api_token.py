@@ -4,7 +4,6 @@ from typing import Annotated
 
 from fastapi import Depends
 
-from src.platform.core.dependencies import authenticate
 from src.platform.core.exceptions import NotFoundException, ValidationException
 from src.platform.core.security import Auth
 from src.platform.enums import AuditAction, ErrorCode
@@ -14,6 +13,7 @@ from src.platform.schemas.api_token import (
     ApiTokenCreatedResponse,
     ApiTokenResponse,
 )
+from src.platform.services.access import authenticate
 from src.platform.services.base import BaseService
 
 

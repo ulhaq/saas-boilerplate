@@ -12,12 +12,12 @@ import hashlib
 import hmac
 import secrets
 import time
+from typing import Protocol
 
 import pyotp
 from cryptography.fernet import Fernet, InvalidToken
 
 from src.platform.core.config import settings
-from src.platform.models.user import User
 
 # Codes from the previous/next 30s step are accepted to absorb clock drift.
 _VALID_WINDOW = 1
@@ -34,7 +34,14 @@ def _fernet() -> Fernet:
     return Fernet(base64.urlsafe_b64encode(_key(b"mfa-secret:")))
 
 
-def mfa_required(user: User) -> bool:
+class MfaUser(Protocol):
+    """What `mfa_required` reads from a user; the `User` model satisfies it."""
+
+    @property
+    def mfa_active(self) -> bool: ...
+
+
+def mfa_required(user: MfaUser) -> bool:
     """Whether this user must present a second factor (feature on + enrolled)."""
     return settings.mfa_enabled and user.mfa_active
 

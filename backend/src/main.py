@@ -22,6 +22,11 @@ from src.bootstrap import bootstrap
 from src.example.routers import projects
 from src.platform.core.config import settings
 from src.platform.core.database import get_db
+from src.platform.core.error_response import (
+    ErrorResponse,
+    ValidationDetail,
+    ValidationErrorResponse,
+)
 from src.platform.core.exceptions import ClientException
 from src.platform.core.limiter import limiter
 from src.platform.core.logging import setup_logging
@@ -45,11 +50,6 @@ from src.platform.routers import (
     role,
     user,
     waitlist,
-)
-from src.platform.schemas.common import (
-    ErrorResponse,
-    ValidationDetail,
-    ValidationErrorResponse,
 )
 
 setup_logging("api")

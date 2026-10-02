@@ -2,7 +2,6 @@ from typing import Annotated
 
 from fastapi import Depends
 
-from src.platform.core.dependencies import authenticate
 from src.platform.core.exceptions import (
     AlreadyExistsException,
     PermissionDeniedException,
@@ -14,6 +13,7 @@ from src.platform.repositories.repository_manager import RepositoryManager
 from src.platform.repositories.role import RoleRepository
 from src.platform.schemas.common import PageQueryParams, PaginatedResponse
 from src.platform.schemas.role import RoleIn, RoleOut, RolePatch, RolePermissionIn
+from src.platform.services.access import authenticate
 from src.platform.services.base import ResourceService
 
 

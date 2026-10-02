@@ -11,10 +11,10 @@ You are an elite application security engineer specializing in Broken Access Con
 ## Repository Context
 
 This is a full-stack multi-tenant SaaS application:
-- **Backend**: `backend/src/` - FastAPI + Python, PostgreSQL, async SQLAlchemy. Routers in `backend/src/routers/`, auth dependencies in `backend/src/core/dependencies.py`. Refer to `backend/CLAUDE.md` for architecture and conventions.
+- **Backend**: `backend/src/` - FastAPI + Python, PostgreSQL, async SQLAlchemy. Routers in `backend/src/platform/routers/` and `backend/src/example/routers/`, auth dependencies in `backend/src/platform/services/access.py`. Refer to `backend/CLAUDE.md` for architecture and conventions.
 - **Frontend**: `frontend/src/` - Vue 3 + TypeScript, Vite, Pinia, file-based routing. Pages in `frontend/src/pages/`, router guard in `frontend/src/router/index.ts`. Refer to `frontend/CLAUDE.md` for architecture and conventions.
 
-The auth DI pattern is `Depends(authenticate())` for identity and `Depends(require_permission(Permission.X))` for authorization, both defined in `backend/src/core/dependencies.py`. Frontend route protection uses YAML frontmatter meta: `requiresAuth: true` and `permission: resource:action`.
+The auth DI pattern is `Depends(authenticate())` for identity and `Depends(require_permission(Permission.X))` for authorization, both defined in `backend/src/platform/services/access.py`. Frontend route protection uses YAML frontmatter meta: `requiresAuth: true` and `permission: resource:action`.
 
 Always read the relevant CLAUDE.md files first to understand the project's specific auth patterns, middleware conventions, and routing structure before scanning.
 

@@ -2,12 +2,12 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, status
 
-from src.platform.core.dependencies import require_permission
 from src.platform.core.security import Auth
 from src.platform.enums import AuditAction, Permission
 from src.platform.routers.query_options import PageNumberQuery, PageSizeQuery
 from src.platform.schemas.audit_log import AuditLogOut
 from src.platform.schemas.common import PaginatedResponse
+from src.platform.services.access import require_permission
 from src.platform.services.audit_log import AuditLogService
 
 router = APIRouter(prefix="/audit-logs")

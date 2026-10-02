@@ -13,8 +13,8 @@ from src.platform.core.context import (
     client_ip_var,
     request_id_var,
 )
+from src.platform.core.error_response import ErrorResponse
 from src.platform.enums import ErrorCode
-from src.platform.schemas.common import ErrorResponse
 
 log = logging.getLogger(__name__)
 

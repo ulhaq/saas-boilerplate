@@ -2,10 +2,10 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, status
 
-from src.platform.core.dependencies import require_permission
 from src.platform.core.security import Auth
 from src.platform.enums import Permission
 from src.platform.schemas.invitation import InvitationOut
+from src.platform.services.access import require_permission
 from src.platform.services.invitation import InvitationService
 
 router = APIRouter(prefix="/invitations")

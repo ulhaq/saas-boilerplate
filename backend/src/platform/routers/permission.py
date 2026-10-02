@@ -4,7 +4,6 @@ from fastapi import APIRouter, Depends, Path, Response, status
 
 from src.platform.core.cache import set_cache_control
 from src.platform.core.config import settings
-from src.platform.core.dependencies import require_permission
 from src.platform.core.security import Auth
 from src.platform.enums import Permission
 from src.platform.routers.query_options import (
@@ -16,6 +15,7 @@ from src.platform.routers.query_options import (
 )
 from src.platform.schemas.common import FilterItem, PageQueryParams, PaginatedResponse
 from src.platform.schemas.permission import PermissionOut
+from src.platform.services.access import require_permission
 from src.platform.services.permission import PermissionService
 
 router = APIRouter(prefix="/permissions")

@@ -4,7 +4,6 @@ from typing import Annotated
 from fastapi import Depends
 
 from src.platform.core.config import settings
-from src.platform.core.dependencies import authenticate
 from src.platform.core.exceptions import (
     AlreadyExistsException,
     NotAuthenticatedException,
@@ -31,6 +30,7 @@ from src.platform.schemas.mfa import (
     MfaRecoveryCodesOut,
     MfaSetupOut,
 )
+from src.platform.services.access import authenticate
 from src.platform.services.base import BaseService
 
 

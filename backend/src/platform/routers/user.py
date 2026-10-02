@@ -2,7 +2,6 @@ from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Path, Request, status
 
-from src.platform.core.dependencies import require_permission
 from src.platform.core.limiter import limiter
 from src.platform.core.security import Auth
 from src.platform.enums import Permission
@@ -30,6 +29,7 @@ from src.platform.schemas.user import (
     UserPatch,
     UserRoleIn,
 )
+from src.platform.services.access import require_permission
 from src.platform.services.mfa import MfaService
 from src.platform.services.user import UserService
 

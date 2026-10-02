@@ -2,12 +2,12 @@ from typing import Annotated
 
 from fastapi import Depends
 
-from src.platform.core.dependencies import authenticate
 from src.platform.core.exceptions import NotFoundException
 from src.platform.core.security import Auth
 from src.platform.enums import AuditAction
 from src.platform.repositories.repository_manager import RepositoryManager
 from src.platform.schemas.invitation import InvitationOut, InvitationRoleOut
+from src.platform.services.access import authenticate
 from src.platform.services.base import BaseService
 
 

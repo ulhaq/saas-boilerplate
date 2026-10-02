@@ -3,10 +3,10 @@ from typing import Annotated
 
 from fastapi import Depends
 
-from src.platform.core.dependencies import authenticate
 from src.platform.core.security import Auth
 from src.platform.repositories.repository_manager import RepositoryManager
 from src.platform.schemas.billing import UsageItemOut, UsageOut
+from src.platform.services.access import authenticate
 from src.platform.services.base import BaseService
 
 

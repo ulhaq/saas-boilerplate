@@ -1,4 +1,4 @@
-"""Tests for billing repositories and billing/dependencies.py."""
+"""Tests for billing repositories, billing/dependencies.py and require_limit."""
 
 from datetime import UTC, date, datetime, timedelta
 from enum import StrEnum
@@ -60,7 +60,7 @@ def test_current_period_start_is_first_of_month():
 
 async def test_require_limit_no_limit_defined_passes():
     """When no limit is configured, the check passes without raising."""
-    from src.platform.billing.dependencies import require_limit
+    from src.platform.services.access import require_limit
 
     repos = MagicMock()
     repos.plan_setting.get_for_organization = AsyncMock(return_value=None)
@@ -74,7 +74,7 @@ async def test_require_limit_no_limit_defined_passes():
 
 
 async def test_require_limit_within_limit_passes():
-    from src.platform.billing.dependencies import require_limit
+    from src.platform.services.access import require_limit
 
     limit = MagicMock()
     limit.value = 100
@@ -89,7 +89,7 @@ async def test_require_limit_within_limit_passes():
 
 async def test_require_limit_unlimited_passes():
     """limit.value = None means unlimited."""
-    from src.platform.billing.dependencies import require_limit
+    from src.platform.services.access import require_limit
 
     limit = MagicMock()
     limit.value = None
@@ -102,7 +102,7 @@ async def test_require_limit_unlimited_passes():
 
 
 async def test_require_limit_exceeded_raises():
-    from src.platform.billing.dependencies import require_limit
+    from src.platform.services.access import require_limit
 
     limit = MagicMock()
     limit.value = 10

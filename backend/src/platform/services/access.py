@@ -1,3 +1,11 @@
+"""Request access control: the FastAPI dependencies that resolve who is
+calling and gate what they may do (permissions, plan features, plan limits,
+ownership).
+
+Login, registration and token issuing live in `services/auth.py`; this module
+only answers "who is this request from, and is it allowed?".
+"""
+
 import hashlib
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
@@ -7,11 +15,13 @@ from typing import Annotated
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.platform.billing.dependencies import _current_period_start
 from src.platform.core.composition import ALL_PERMISSIONS
 from src.platform.core.config import settings
 from src.platform.core.context import auth_context_var
 from src.platform.core.database import get_db
 from src.platform.core.exceptions import (
+    LimitExceededException,
     NotAuthenticatedException,
     PermissionDeniedException,
     PlanFeatureUnavailableException,
@@ -180,5 +190,35 @@ def require_owner() -> Callable:
         if not settings.auth_enabled or OWNER_ROLE_NAME in current_user.roles:
             return current_user
         raise PermissionDeniedException
+
+    return _check
+
+
+def require_limit(metric: StrEnum) -> Callable:
+    """
+    FastAPI dependency factory that blocks the request with LIMIT_EXCEEDED when
+    the organisation has consumed its plan allocation for `metric` this period.
+    Use as a default-value dependency on the route parameter list:
+
+        async def my_endpoint(
+            _: Annotated[None, Depends(require_limit(UsageMetric.SEATS))],
+            ...
+        ): ...
+    """
+
+    async def _check(
+        repos: Annotated[RepositoryManager, Depends()],
+        current_user: Annotated[Auth, Depends(authenticate)],
+    ) -> None:
+        limit = await repos.plan_setting.get_for_organization(
+            current_user.organization_id, metric
+        )
+        if limit is None or limit.value is None:
+            return
+        count = await repos.plan_usage.get_count(
+            current_user.organization_id, metric, _current_period_start()
+        )
+        if count >= limit.value:
+            raise LimitExceededException()
 
     return _check

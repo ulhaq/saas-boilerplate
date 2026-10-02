@@ -2,11 +2,11 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
 
-from src.platform.core.dependencies import authenticate
 from src.platform.core.security import Auth
 from src.platform.repositories.repository_manager import RepositoryManager
 from src.platform.schemas.common import PaginatedResponse
 from src.platform.schemas.notification import NotificationOut, UnreadCountOut
+from src.platform.services.access import authenticate
 
 
 class NotificationService:

@@ -74,19 +74,19 @@ your product package when you rename it.
 Enforced by import-linter (`uv run poe lint`), for `src/platform/` and `src/example/` alike:
 - Each layer imports only the layers below it: `routers > services > billing > repositories > models | schemas` (`billing` is the platform's payment-provider adapter; `models` and `schemas` must not import each other).
 - Routers never import repositories or models directly - always go through a service.
-- `core` imports none of these layers. A few known exceptions (auth/request glue such as `core/dependencies.py`) are listed in `ignore_imports`; remove an entry once it is fixed, never add one.
+- `core` imports none of these layers - no exceptions. Where a core helper needs a model's data, it declares the shape it reads as a `Protocol` (e.g. `UserLike` in `core/security.py`) instead of importing the model.
 
 ### Key patterns
 
 **Generic base classes** - `ResourceService[T]` and `SQLResourceRepository[T]` provide standard CRUD behavior. Domain-specific classes extend these; avoid duplicating CRUD logic.
 
-**Dependency injection** - `src/platform/core/dependencies.py` provides `authenticate()` and `require_permission(Permission.X)` FastAPI dependencies for auth/authz. `RepositoryManager` in `src/platform/repositories/repository_manager.py` is the DI container for platform repositories; product code depends on `ExampleRepositoryManager` (`src/example/repositories/manager.py`) instead.
+**Dependency injection** - `src/platform/services/access.py` provides the auth/authz FastAPI dependencies: `authenticate()`, `require_permission(Permission.X)`, `require_plan_feature()`, `require_limit()` and `require_owner()`. `RepositoryManager` in `src/platform/repositories/repository_manager.py` is the DI container for platform repositories; product code depends on `ExampleRepositoryManager` (`src/example/repositories/manager.py`) instead.
 
 **Error handling** - Raise `ClientException(ErrorCode.X)` from services; the middleware in `src/platform/core/middlewares.py` converts these to consistent JSON error responses. Error codes are defined in `src/platform/enums.py` (platform) and `src/example/enums.py` (product).
 
 **Multi-tenancy** - Users and resources belong to an `Organization`. Organization isolation is enforced at the repository level via `organization_id` foreign keys. Repositories extending `OrganizationScopedRepository` are **loud by default**: generic queries raise `UnscopedQueryError` unless `set_organization_scope()` was called; intentional cross-tenant access (auth identity lookups, workers, webhook handlers) must use the explicit `.unscoped` accessor.
 
-**Plan limits** - Plan settings (`billing_plan_setting`) hold per-plan limits keyed by metric (`seats`, `projects`, ...). Use `BaseService._require_capacity(metric, org_id, current_count)` for "how many can exist" limits and `require_limit(metric)` / `track_usage()` for per-period usage counters.
+**Plan limits** - Plan settings (`billing_plan_setting`) hold per-plan limits keyed by metric (`seats`, `projects`, ...). Use `BaseService._require_capacity(metric, org_id, current_count)` for "how many can exist" limits and `require_limit(metric)` (`services/access.py`) / `track_usage()` (`billing/dependencies.py`) for per-period usage counters.
 
 **Permissions** - Fine-grained RBAC using the `Permission` enum (`src/platform/enums.py`) plus `ExamplePermission` (`src/example/enums.py`). Users have roles; roles have permissions. Use `require_permission()` on routes to enforce access.
 

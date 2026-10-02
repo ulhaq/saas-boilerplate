@@ -6,7 +6,6 @@ from typing import Annotated
 from fastapi import Depends
 
 from src.platform.core.config import settings
-from src.platform.core.dependencies import authenticate
 from src.platform.core.exceptions import (
     AlreadyExistsException,
     NotAuthenticatedException,
@@ -39,6 +38,7 @@ from src.platform.schemas.user import (
     UserPatch,
     UserRoleIn,
 )
+from src.platform.services.access import authenticate
 from src.platform.services.base import ResourceService
 from src.platform.services.mailer import send_email
 from src.platform.services.mfa import verify_user_mfa_code

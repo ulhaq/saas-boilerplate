@@ -2,7 +2,6 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, status
 
-from src.platform.core.dependencies import require_owner, require_permission
 from src.platform.core.security import Auth
 from src.platform.enums import Permission
 from src.platform.routers.query_options import (
@@ -21,6 +20,7 @@ from src.platform.schemas.organization import (
     TransferOwnershipIn,
 )
 from src.platform.schemas.user import UserOut
+from src.platform.services.access import require_owner, require_permission
 from src.platform.services.organization import OrganizationService
 
 router = APIRouter(prefix="/organizations")

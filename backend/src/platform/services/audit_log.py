@@ -3,13 +3,13 @@ from typing import Annotated, Any
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.platform.core.dependencies import authenticate
 from src.platform.core.security import Auth
 from src.platform.enums import AuditAction
 from src.platform.repositories.audit_log import AuditLogRepository
 from src.platform.repositories.repository_manager import RepositoryManager
 from src.platform.schemas.audit_log import AuditLogOut
 from src.platform.schemas.common import PaginatedResponse
+from src.platform.services.access import authenticate
 
 
 class AuditLogService:

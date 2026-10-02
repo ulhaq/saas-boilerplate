@@ -5,7 +5,6 @@ from fastapi import APIRouter, Depends, Path, status
 from src.example.enums import ExamplePermission
 from src.example.schemas.project import ProjectIn, ProjectOut, ProjectPatch
 from src.example.services.project import ProjectService
-from src.platform.core.dependencies import require_permission
 from src.platform.core.security import Auth
 from src.platform.routers.query_options import (
     PageNumberQuery,
@@ -15,6 +14,7 @@ from src.platform.routers.query_options import (
     sort_query,
 )
 from src.platform.schemas.common import FilterItem, PageQueryParams, PaginatedResponse
+from src.platform.services.access import require_permission
 
 router = APIRouter(prefix="/projects")
 

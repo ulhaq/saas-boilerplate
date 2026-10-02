@@ -4,7 +4,6 @@ from fastapi import APIRouter, Depends, Path, Request, Response, status
 
 from src.platform.core.cache import set_cache_control
 from src.platform.core.config import settings
-from src.platform.core.dependencies import authenticate, require_permission
 from src.platform.core.exceptions import BillingWebhookException
 from src.platform.core.limiter import limiter
 from src.platform.core.security import Auth
@@ -20,6 +19,7 @@ from src.platform.schemas.billing import (
     UpdateBillingEmailIn,
     UsageOut,
 )
+from src.platform.services.access import authenticate, require_permission
 from src.platform.services.billing import (
     PlanService,
     SubscriptionService,

@@ -2,7 +2,6 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, status
 
-from src.platform.core.dependencies import require_permission
 from src.platform.core.security import Auth
 from src.platform.enums import Permission
 from src.platform.routers.query_options import (
@@ -14,6 +13,7 @@ from src.platform.routers.query_options import (
 )
 from src.platform.schemas.common import FilterItem, PageQueryParams, PaginatedResponse
 from src.platform.schemas.role import RoleIn, RoleOut, RolePatch, RolePermissionIn
+from src.platform.services.access import require_permission
 from src.platform.services.role import RoleService
 
 router = APIRouter(prefix="/roles")

@@ -7,9 +7,9 @@ from src.example.models.project import Project
 from src.example.repositories.manager import ExampleRepositoryManager
 from src.example.repositories.project import ProjectRepository
 from src.example.schemas.project import ProjectIn, ProjectOut, ProjectPatch
-from src.platform.core.dependencies import authenticate
 from src.platform.core.exceptions import AlreadyExistsException
 from src.platform.core.security import Auth
+from src.platform.services.access import authenticate
 from src.platform.services.base import ResourceService
 
 

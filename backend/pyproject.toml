@@ -137,11 +137,3 @@ forbidden_modules = [
     "src.platform.models",
     "src.platform.schemas",
 ]
-# Known violations: request/auth glue that lives in core but needs the data
-# layer. Remove an entry once its import is gone - do not add new ones.
-ignore_imports = [
-    "src.platform.core.dependencies -> src.platform.repositories.**",
-    "src.platform.core.security -> src.platform.models.user",
-    "src.platform.core.mfa -> src.platform.models.user",
-    "src.platform.core.middlewares -> src.platform.schemas.common",
-]

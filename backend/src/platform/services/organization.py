@@ -7,7 +7,6 @@ from fastapi import Depends
 from src.platform.billing.dependencies import BillingProviderDep
 from src.platform.core.composition import DEFAULT_ROLES
 from src.platform.core.config import settings
-from src.platform.core.dependencies import authenticate
 from src.platform.core.exceptions import (
     AlreadyExistsException,
     NotFoundException,
@@ -29,6 +28,7 @@ from src.platform.schemas.organization import (
     TransferOwnershipIn,
 )
 from src.platform.schemas.user import UserOut
+from src.platform.services.access import authenticate
 from src.platform.services.base import ResourceService
 
 log = logging.getLogger(__name__)

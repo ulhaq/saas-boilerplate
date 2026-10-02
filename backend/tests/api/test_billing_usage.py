@@ -6,8 +6,8 @@ from fastapi import APIRouter, Depends
 from fastapi.testclient import TestClient
 
 from src.main import app
-from src.platform.billing.dependencies import require_limit
 from src.platform.models.billing import PlanSetting, PlanUsage
+from src.platform.services.access import require_limit
 from tests.conftest import TestSessionLocal
 
 
