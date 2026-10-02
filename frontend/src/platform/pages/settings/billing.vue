@@ -54,17 +54,7 @@ meta:
           </p>
         </div>
 
-        <div v-if="subscription.plan_price" class="text-xl font-semibold">
-          {{ formatPrice(subscription.plan_price) }}
-          <span class="text-sm font-normal text-muted-foreground"
-            >/ {{ subscription.plan_price.interval }}</span
-          >
-          <span
-            v-if="subscription.plan_price.amount > 0"
-            class="block text-xs font-normal text-muted-foreground"
-            >{{ $t('common.exclVat') }}</span
-          >
-        </div>
+        <CurrentPrice v-if="subscription.plan_price" :price="subscription.plan_price" />
 
         <template v-if="subscription.plan_price_id">
           <Button :disabled="isCheckingOut" @click="handleCheckout(subscription.plan_price_id!)">
@@ -93,12 +83,7 @@ meta:
           </Badge>
         </div>
 
-        <div v-if="subscription.plan_price" class="text-xl font-semibold">
-          {{ formatPrice(subscription.plan_price) }}
-          <span class="text-sm font-normal text-muted-foreground"
-            >/ {{ subscription.plan_price.interval }}</span
-          >
-        </div>
+        <CurrentPrice v-if="subscription.plan_price" :price="subscription.plan_price" />
 
         <template v-if="subscription.trial_end">
           <TooltipProvider>
@@ -154,14 +139,8 @@ meta:
       <div v-else-if="paidPlans.length > 0" class="space-y-3">
         <h3 class="font-semibold">{{ $t('subscription.availablePlans') }}</h3>
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <div v-for="plan in paidPlans" :key="plan.id" class="rounded-lg border p-4 space-y-3">
-            <div class="flex items-start justify-between gap-2">
-              <div>
-                <h4 class="font-semibold">{{ plan.name }}</h4>
-                <p class="text-xs text-muted-foreground mt-0.5">
-                  {{ planDescription(plan) }}
-                </p>
-              </div>
+          <PlanCard v-for="plan in paidPlans" :key="plan.id" :plan="plan" :rows="comparisonRows">
+            <template #badge>
               <span
                 v-if="
                   plan.prices.some((p) => p.amount > 0 && p.is_active && p.trial_period_days) &&
@@ -172,68 +151,14 @@ meta:
                 <ShieldCheck class="w-3 h-3 shrink-0" />
                 {{ $t('subscription.noCardRequired') }}
               </span>
-            </div>
-            <ul v-if="comparisonRows.length" class="space-y-1.5">
-              <li
-                v-for="row in comparisonRows"
-                :key="row.label"
-                class="flex items-center gap-1.5 text-xs"
-                :class="row[plan.name] === false ? 'opacity-40' : ''"
-              >
-                <Check v-if="row[plan.name] !== false" class="w-3 h-3 shrink-0 text-success" />
-                <Minus v-else class="w-3 h-3 shrink-0" />
-                <span class="text-muted-foreground inline-flex items-center gap-1">
-                  <span
-                    v-if="typeof row[plan.name] === 'string'"
-                    class="font-medium text-foreground"
-                    >{{ row[plan.name] }}</span
-                  >
-                  <template v-if="!row.stat">{{ row.label }}</template>
-                  <Popover v-if="row.details?.length">
-                    <PopoverTrigger as-child>
-                      <button
-                        class="text-muted-foreground/50 hover:text-muted-foreground transition-colors"
-                      >
-                        <Info class="w-3 h-3" />
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent class="w-56 p-3" align="start">
-                      <p
-                        class="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2"
-                      >
-                        {{ row.label }}
-                      </p>
-                      <ul v-if="row.details?.length" class="space-y-1">
-                        <li
-                          v-for="detail in row.details"
-                          :key="detail"
-                          class="text-xs text-muted-foreground"
-                        >
-                          {{ detail }}
-                        </li>
-                      </ul>
-                    </PopoverContent>
-                  </Popover>
-                </span>
-              </li>
-            </ul>
+            </template>
             <div class="space-y-2">
               <div
                 v-for="price in plan.prices.filter((p) => p.is_active)"
                 :key="price.id"
                 class="flex items-center justify-between gap-2"
               >
-                <div>
-                  <span class="text-sm font-medium">{{
-                    price.amount === 0 ? $t('subscription.free') : formatPrice(price)
-                  }}</span>
-                  <span v-if="price.amount > 0" class="text-xs text-muted-foreground">
-                    / {{ price.interval }}</span
-                  >
-                  <span v-if="price.amount > 0" class="block text-xs text-muted-foreground">{{
-                    $t('common.exclVat')
-                  }}</span>
-                </div>
+                <PriceLabel :price="price" free-as-text />
                 <Button v-if="price.amount === 0" size="sm" disabled>
                   {{ $t('subscription.currentPlan') }}
                 </Button>
@@ -257,7 +182,7 @@ meta:
                 </Button>
               </div>
             </div>
-          </div>
+          </PlanCard>
         </div>
       </div>
     </template>
@@ -275,17 +200,7 @@ meta:
           </p>
         </div>
 
-        <div v-if="subscription.plan_price" class="text-xl font-semibold">
-          {{ formatPrice(subscription.plan_price) }}
-          <span class="text-sm font-normal text-muted-foreground"
-            >/ {{ subscription.plan_price.interval }}</span
-          >
-          <span
-            v-if="subscription.plan_price.amount > 0"
-            class="block text-xs font-normal text-muted-foreground"
-            >{{ $t('common.exclVat') }}</span
-          >
-        </div>
+        <CurrentPrice v-if="subscription.plan_price" :price="subscription.plan_price" />
 
         <Button :disabled="isPortalLoading" @click="handlePortal">
           <Loader2 v-if="isPortalLoading" class="w-4 h-4 mr-2 animate-spin" />
@@ -298,70 +213,14 @@ meta:
       <div v-if="paidPlans.length > 0" class="space-y-3">
         <h3 class="font-semibold">{{ $t('subscription.availablePlans') }}</h3>
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <div v-for="plan in paidPlans" :key="plan.id" class="rounded-lg border p-4 space-y-3">
-            <div>
-              <h4 class="font-semibold">{{ plan.name }}</h4>
-              <p v-if="plan.description" class="text-xs text-muted-foreground mt-0.5">
-                {{ planDescription(plan) }}
-              </p>
-            </div>
-            <ul v-if="comparisonRows.length" class="space-y-1.5">
-              <li
-                v-for="row in comparisonRows"
-                :key="row.label"
-                class="flex items-center gap-1.5 text-xs"
-                :class="row[plan.name] === false ? 'opacity-40' : ''"
-              >
-                <Check v-if="row[plan.name] !== false" class="w-3 h-3 shrink-0 text-success" />
-                <Minus v-else class="w-3 h-3 shrink-0" />
-                <span class="text-muted-foreground inline-flex items-center gap-1">
-                  <span
-                    v-if="typeof row[plan.name] === 'string'"
-                    class="font-medium text-foreground"
-                    >{{ row[plan.name] }}</span
-                  >
-                  <template v-if="!row.stat">{{ row.label }}</template>
-                  <Popover v-if="row.details?.length">
-                    <PopoverTrigger as-child>
-                      <button
-                        class="text-muted-foreground/50 hover:text-muted-foreground transition-colors"
-                      >
-                        <Info class="w-3 h-3" />
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent class="w-56 p-3" align="start">
-                      <p
-                        class="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2"
-                      >
-                        {{ row.label }}
-                      </p>
-                      <ul v-if="row.details?.length" class="space-y-1">
-                        <li
-                          v-for="detail in row.details"
-                          :key="detail"
-                          class="text-xs text-muted-foreground"
-                        >
-                          {{ detail }}
-                        </li>
-                      </ul>
-                    </PopoverContent>
-                  </Popover>
-                </span>
-              </li>
-            </ul>
+          <PlanCard v-for="plan in paidPlans" :key="plan.id" :plan="plan" :rows="comparisonRows">
             <div class="space-y-2">
               <div
                 v-for="price in plan.prices.filter((p) => p.is_active && p.amount > 0)"
                 :key="price.id"
                 class="flex items-center justify-between gap-2"
               >
-                <div>
-                  <span class="text-sm font-medium">{{ formatPrice(price) }}</span>
-                  <span class="text-xs text-muted-foreground"> / {{ price.interval }}</span>
-                  <span v-if="price.amount > 0" class="block text-xs text-muted-foreground">{{
-                    $t('common.exclVat')
-                  }}</span>
-                </div>
+                <PriceLabel :price="price" />
                 <Button
                   size="sm"
                   :disabled="switchId === price.id || price.id === subscription?.plan_price_id"
@@ -376,7 +235,7 @@ meta:
                 </Button>
               </div>
             </div>
-          </div>
+          </PlanCard>
         </div>
       </div>
     </template>
@@ -453,17 +312,7 @@ meta:
           </button>
         </div>
 
-        <div v-if="subscription.plan_price" class="text-xl font-semibold">
-          {{ formatPrice(subscription.plan_price) }}
-          <span class="text-sm font-normal text-muted-foreground"
-            >/ {{ subscription.plan_price.interval }}</span
-          >
-          <span
-            v-if="subscription.plan_price.amount > 0"
-            class="block text-xs font-normal text-muted-foreground"
-            >{{ $t('common.exclVat') }}</span
-          >
-        </div>
+        <CurrentPrice v-if="subscription.plan_price" :price="subscription.plan_price" />
 
         <p
           v-if="subscription.current_period_end && !subscription.cancel_at_period_end"
@@ -505,70 +354,14 @@ meta:
       <div v-if="paidPlans.length > 0" class="space-y-3">
         <h3 class="font-semibold">{{ $t('subscription.availablePlans') }}</h3>
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <div v-for="plan in paidPlans" :key="plan.id" class="rounded-lg border p-4 space-y-3">
-            <div>
-              <h4 class="font-semibold">{{ plan.name }}</h4>
-              <p v-if="plan.description" class="text-xs text-muted-foreground mt-0.5">
-                {{ planDescription(plan) }}
-              </p>
-            </div>
-            <ul v-if="comparisonRows.length" class="space-y-1.5">
-              <li
-                v-for="row in comparisonRows"
-                :key="row.label"
-                class="flex items-center gap-1.5 text-xs"
-                :class="row[plan.name] === false ? 'opacity-40' : ''"
-              >
-                <Check v-if="row[plan.name] !== false" class="w-3 h-3 shrink-0 text-success" />
-                <Minus v-else class="w-3 h-3 shrink-0" />
-                <span class="text-muted-foreground inline-flex items-center gap-1">
-                  <span
-                    v-if="typeof row[plan.name] === 'string'"
-                    class="font-medium text-foreground"
-                    >{{ row[plan.name] }}</span
-                  >
-                  <template v-if="!row.stat">{{ row.label }}</template>
-                  <Popover v-if="row.details?.length">
-                    <PopoverTrigger as-child>
-                      <button
-                        class="text-muted-foreground/50 hover:text-muted-foreground transition-colors"
-                      >
-                        <Info class="w-3 h-3" />
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent class="w-56 p-3" align="start">
-                      <p
-                        class="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2"
-                      >
-                        {{ row.label }}
-                      </p>
-                      <ul v-if="row.details?.length" class="space-y-1">
-                        <li
-                          v-for="detail in row.details"
-                          :key="detail"
-                          class="text-xs text-muted-foreground"
-                        >
-                          {{ detail }}
-                        </li>
-                      </ul>
-                    </PopoverContent>
-                  </Popover>
-                </span>
-              </li>
-            </ul>
+          <PlanCard v-for="plan in paidPlans" :key="plan.id" :plan="plan" :rows="comparisonRows">
             <div class="space-y-2">
               <div
                 v-for="price in plan.prices.filter((p) => p.is_active && p.amount > 0)"
                 :key="price.id"
                 class="flex items-center justify-between gap-2"
               >
-                <div>
-                  <span class="text-sm font-medium">{{ formatPrice(price) }}</span>
-                  <span class="text-xs text-muted-foreground"> / {{ price.interval }}</span>
-                  <span v-if="price.amount > 0" class="block text-xs text-muted-foreground">{{
-                    $t('common.exclVat')
-                  }}</span>
-                </div>
+                <PriceLabel :price="price" />
                 <Button
                   size="sm"
                   :disabled="switchId === price.id || price.id === subscription?.plan_price_id"
@@ -586,7 +379,7 @@ meta:
                 </Button>
               </div>
             </div>
-          </div>
+          </PlanCard>
         </div>
       </div>
     </template>
@@ -606,61 +399,12 @@ meta:
           {{ $t('subscription.noPlansAvailable') }}
         </p>
         <div v-else class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <div
+          <PlanCard
             v-for="plan in availablePlans"
             :key="plan.id"
-            class="rounded-lg border p-4 space-y-3"
+            :plan="plan"
+            :rows="comparisonRows"
           >
-            <div>
-              <h4 class="font-semibold">{{ plan.name }}</h4>
-              <p v-if="plan.description" class="text-xs text-muted-foreground mt-0.5">
-                {{ planDescription(plan) }}
-              </p>
-            </div>
-            <ul v-if="comparisonRows.length" class="space-y-1.5">
-              <li
-                v-for="row in comparisonRows"
-                :key="row.label"
-                class="flex items-center gap-1.5 text-xs"
-                :class="row[plan.name] === false ? 'opacity-40' : ''"
-              >
-                <Check v-if="row[plan.name] !== false" class="w-3 h-3 shrink-0 text-success" />
-                <Minus v-else class="w-3 h-3 shrink-0" />
-                <span class="text-muted-foreground inline-flex items-center gap-1">
-                  <span
-                    v-if="typeof row[plan.name] === 'string'"
-                    class="font-medium text-foreground"
-                    >{{ row[plan.name] }}</span
-                  >
-                  <template v-if="!row.stat">{{ row.label }}</template>
-                  <Popover v-if="row.details?.length">
-                    <PopoverTrigger as-child>
-                      <button
-                        class="text-muted-foreground/50 hover:text-muted-foreground transition-colors"
-                      >
-                        <Info class="w-3 h-3" />
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent class="w-56 p-3" align="start">
-                      <p
-                        class="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2"
-                      >
-                        {{ row.label }}
-                      </p>
-                      <ul v-if="row.details?.length" class="space-y-1">
-                        <li
-                          v-for="detail in row.details"
-                          :key="detail"
-                          class="text-xs text-muted-foreground"
-                        >
-                          {{ detail }}
-                        </li>
-                      </ul>
-                    </PopoverContent>
-                  </Popover>
-                </span>
-              </li>
-            </ul>
             <p
               v-if="plan.prices.filter((p) => p.is_active).length === 0"
               class="text-xs text-muted-foreground"
@@ -673,13 +417,7 @@ meta:
                 :key="price.id"
                 class="flex items-center justify-between gap-2"
               >
-                <div>
-                  <span class="text-sm font-medium">{{ formatPrice(price) }}</span>
-                  <span class="text-xs text-muted-foreground"> / {{ price.interval }}</span>
-                  <span v-if="price.amount > 0" class="block text-xs text-muted-foreground">{{
-                    $t('common.exclVat')
-                  }}</span>
-                </div>
+                <PriceLabel :price="price" />
                 <Button
                   size="sm"
                   :disabled="checkoutId === price.id || isCheckingOut"
@@ -690,7 +428,7 @@ meta:
                 </Button>
               </div>
             </div>
-          </div>
+          </PlanCard>
         </div>
       </div>
     </template>
@@ -700,9 +438,7 @@ meta:
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useI18n } from 'vue-i18n'
-import { Loader2, ExternalLink, ShieldCheck, CreditCard, Check, Minus, Info } from 'lucide-vue-next'
+import { Loader2, ExternalLink, ShieldCheck, CreditCard } from 'lucide-vue-next'
 import { Button } from '@/platform/components/ui/button'
 import { Badge } from '@/platform/components/ui/badge'
 import { Input } from '@/platform/components/ui/input'
@@ -713,258 +449,42 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/platform/components/ui/tooltip'
-import { Popover, PopoverContent, PopoverTrigger } from '@/platform/components/ui/popover'
 import PageHeader from '@/platform/components/common/PageHeader.vue'
-import { useSubscriptionStore } from '@/platform/stores/subscription'
-import { useConfirm } from '@/platform/composables/useConfirm'
-import { useToast } from '@/platform/composables/useToast'
-import { useErrorHandler } from '@/platform/composables/useErrorHandler'
+import CurrentPrice from '@/platform/components/billing/CurrentPrice.vue'
+import PlanCard from '@/platform/components/billing/PlanCard.vue'
+import PriceLabel from '@/platform/components/billing/PriceLabel.vue'
+import { useBillingFormat } from '@/platform/composables/useBillingFormat'
+import { useBillingPage } from '@/platform/composables/useBillingPage'
 import { useFormatDate } from '@/platform/composables/useFormatDate'
-import { useSaveFeedback } from '@/platform/composables/useSaveFeedback'
-import type { SubscriptionOut, PlanOut, PlanPriceOut } from '@/platform/types'
 
-const subscriptionStore = useSubscriptionStore()
-const { t, tm, locale } = useI18n()
 const { formatDate, formatDateTime } = useFormatDate()
-const { toast } = useToast()
-const { confirm } = useConfirm()
-const { resolveError } = useErrorHandler()
-
-const isLoading = ref(false)
-const plansLoading = ref(false)
-const isActing = ref(false)
-const isPortalLoading = ref(false)
-const checkoutId = ref<number | undefined>(undefined)
-const isCheckingOut = ref(false)
-const isTrialing = ref(false)
-const trialId = ref<number | undefined>(undefined)
-const switchId = ref<number | undefined>(undefined)
-const { saving: emailSaving, saved: emailSaved, save: saveEmail } = useSaveFeedback()
-const billingEmail = ref('')
-const subscription = ref<SubscriptionOut | null>(null)
-const availablePlans = ref<PlanOut[]>([])
-
-const trialPrice = computed<PlanPriceOut | undefined>(() => {
-  const last = availablePlans.value[availablePlans.value.length - 1]
-  if (!last) return undefined
-  for (const price of last.prices) {
-    if (price.is_active && price.amount > 0 && price.trial_period_days) {
-      return price
-    }
-  }
-  return undefined
-})
-
-// Product locales may describe each plan; otherwise show the plan's own text.
-function planDescription(plan: PlanOut): string {
-  const key = `planDescriptions.${plan.name}`
-  return plan.description ? t(key, plan.description) : t(key)
-}
-
-const paidPlans = computed(() =>
-  availablePlans.value.filter((p) => p.prices.some((pr) => pr.is_active && pr.amount > 0)),
-)
-const errorMessage = ref('')
-
-type ComparisonRow = {
-  label: string
-  stat?: boolean
-  details?: string[]
-  [planName: string]: string | boolean | string[] | undefined
-}
-
-const comparisonRows = computed(() => (tm('planComparisonRows') as ComparisonRow[]) ?? [])
-
-async function loadSubscription() {
-  isLoading.value = true
-  try {
-    const data = await subscriptionStore.getCurrentSubscription()
-    subscription.value = data
-    billingEmail.value = data.billing_email ?? ''
-    subscriptionStore.subscriptionStatus = data.status
-    subscriptionStore.subscriptionTrialEnd = data.trial_end
-  } catch (err: unknown) {
-    const status = (err as { response?: { status?: number } })?.response?.status
-    if (status !== 404) {
-      errorMessage.value = resolveError(err)
-    }
-  } finally {
-    isLoading.value = false
-  }
-}
-
-function onVisibilityChange() {
-  if (document.visibilityState === 'visible') {
-    loadSubscription()
-  }
-}
-
-onMounted(async () => {
-  await loadSubscription()
-
-  plansLoading.value = true
-  try {
-    const data = await subscriptionStore.listPlans()
-    availablePlans.value = data
-      .filter((p) => p.is_active)
-      .sort((a, b) => {
-        const minPrice = (plan: typeof a) =>
-          Math.min(...plan.prices.filter((p) => p.is_active).map((p) => p.amount), Infinity)
-        return minPrice(a) - minPrice(b)
-      })
-  } catch {
-    // Non-critical - plan list is optional context
-  } finally {
-    plansLoading.value = false
-  }
-
-  document.addEventListener('visibilitychange', onVisibilityChange)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('visibilitychange', onVisibilityChange)
-})
-
-function formatPrice(price: PlanPriceOut): string {
-  const amount = price.amount / 100
-  try {
-    return new Intl.NumberFormat(locale.value, {
-      style: 'currency',
-      currency: price.currency,
-    }).format(amount)
-  } catch {
-    return `${price.currency.toUpperCase()} ${amount.toFixed(2)}`
-  }
-}
-
-function planName(price: PlanPriceOut | null): string {
-  if (!price) return ''
-  const plan = availablePlans.value.find((p) => p.prices.some((pr) => pr.id === price.id))
-  return plan?.name ?? ''
-}
-
-function monthlyEquivalent(price: PlanPriceOut): number {
-  const count = price.interval_count ?? 1
-  return price.interval === 'year' ? price.amount / (12 * count) : price.amount / count
-}
-
-function statusBadgeVariant(
-  status: string,
-): 'success' | 'info' | 'warning' | 'secondary' | 'error' | 'outline' {
-  const map: Record<string, 'success' | 'info' | 'warning' | 'secondary' | 'error'> = {
-    active: 'success',
-    trialing: 'info',
-    past_due: 'warning',
-    paused: 'warning',
-    canceled: 'secondary',
-    incomplete: 'error',
-  }
-  return map[status] ?? 'outline'
-}
-
-async function handleCancel() {
-  const ok = await confirm(
-    t('subscription.cancelTitle'),
-    t('subscription.cancelDescription'),
-    t('subscription.cancelConfirm'),
-  )
-  if (!ok) return
-  isActing.value = true
-  try {
-    const data = await subscriptionStore.cancelSubscription()
-    subscription.value = data
-    toast({ title: t('subscription.cancelScheduledSuccess') })
-  } catch (err: unknown) {
-    toast({ title: resolveError(err), variant: 'destructive' })
-  } finally {
-    isActing.value = false
-  }
-}
-
-async function handleResume() {
-  isActing.value = true
-  try {
-    const data = await subscriptionStore.resumeSubscription()
-    subscription.value = data
-    toast({ title: t('subscription.resumed') })
-  } catch (err: unknown) {
-    toast({ title: resolveError(err), variant: 'destructive' })
-  } finally {
-    isActing.value = false
-  }
-}
-
-async function handlePortal() {
-  isPortalLoading.value = true
-  try {
-    const data = await subscriptionStore.getPortalUrl()
-    const parsed = new URL(data.portal_url)
-    if (!['https:', 'http:'].includes(parsed.protocol)) throw new Error('Invalid URL protocol')
-    window.open(data.portal_url, '_blank', 'noopener,noreferrer')
-  } catch (err: unknown) {
-    toast({ title: resolveError(err), variant: 'destructive' })
-  } finally {
-    isPortalLoading.value = false
-  }
-}
-
-async function handleSwitchPlan(priceId: number, priceAmount: number) {
-  const currentAmount = subscription.value?.plan_price?.amount ?? 0
-  const isUpgrade = priceAmount > currentAmount
-  const ok = await confirm(
-    t('subscription.switchPlanTitle'),
-    t('subscription.switchPlanDescription'),
-    t(isUpgrade ? 'subscription.upgrade' : 'subscription.downgrade'),
-    isUpgrade ? 'default' : 'destructive',
-  )
-  if (!ok) return
-  switchId.value = priceId
-  try {
-    const data = await subscriptionStore.switchPlan(priceId)
-    subscription.value = data
-    subscriptionStore.subscriptionStatus = data.status
-    subscriptionStore.subscriptionTrialEnd = data.trial_end
-    toast({ title: t('subscription.switchPlanSuccess') })
-    switchId.value = undefined
-  } catch (err: unknown) {
-    toast({ title: resolveError(err), variant: 'destructive' })
-    switchId.value = undefined
-  }
-}
-
-async function handleTrial(priceId: number) {
-  trialId.value = priceId
-  isTrialing.value = true
-  try {
-    const data = await subscriptionStore.startTrial(priceId)
-    window.location.href = data.checkout_url
-  } catch (err: unknown) {
-    toast({ title: resolveError(err), variant: 'destructive' })
-    trialId.value = undefined
-    isTrialing.value = false
-  }
-}
-
-async function handleSaveEmail() {
-  try {
-    const data = await saveEmail(() => subscriptionStore.updateBillingEmail(billingEmail.value))
-    subscription.value = data
-    billingEmail.value = data.billing_email ?? ''
-  } catch (err: unknown) {
-    toast({ title: resolveError(err), variant: 'destructive' })
-  }
-}
-
-async function handleCheckout(priceId: number) {
-  checkoutId.value = priceId
-  isCheckingOut.value = true
-  try {
-    const data = await subscriptionStore.checkout(priceId)
-    window.location.href = data.checkout_url
-  } catch (err: unknown) {
-    toast({ title: resolveError(err), variant: 'destructive' })
-    checkoutId.value = undefined
-    isCheckingOut.value = false
-  }
-}
+const { formatPrice, monthlyEquivalent, statusBadgeVariant } = useBillingFormat()
+const {
+  isLoading,
+  plansLoading,
+  isActing,
+  isPortalLoading,
+  checkoutId,
+  isCheckingOut,
+  isTrialing,
+  trialId,
+  switchId,
+  emailSaving,
+  emailSaved,
+  billingEmail,
+  subscription,
+  availablePlans,
+  errorMessage,
+  trialPrice,
+  paidPlans,
+  comparisonRows,
+  planName,
+  handleCancel,
+  handleResume,
+  handlePortal,
+  handleSwitchPlan,
+  handleTrial,
+  handleSaveEmail,
+  handleCheckout,
+} = useBillingPage()
 </script>
