@@ -5213,3 +5213,57 @@ export interface operations {
     }
   }
 }
+type FlattenedDeepRequired<T> = {
+  [K in keyof T]-?: FlattenedDeepRequired<
+    T[K] extends unknown[] | undefined | null ? Extract<T[K], unknown[]>[number] : T[K]
+  >
+}
+type ReadonlyArray<T> = [Exclude<T, undefined>] extends [unknown[]]
+  ? Readonly<Exclude<T, undefined>>
+  : Readonly<Exclude<T, undefined>[]>
+export const auditActionValues: ReadonlyArray<
+  FlattenedDeepRequired<components>['schemas']['AuditAction']
+> = [
+  'auth.login',
+  'auth.register',
+  'auth.password_reset',
+  'auth.mfa_recovery_code_used',
+  'user.invite',
+  'user.invite_revoke',
+  'user.update',
+  'user.delete',
+  'user.role_assign',
+  'user.password_change',
+  'user.profile_update',
+  'user.email_change_request',
+  'user.email_change',
+  'user.consent',
+  'user.export',
+  'user.self_delete',
+  'user.anonymize',
+  'user.mfa_enable',
+  'user.mfa_disable',
+  'user.mfa_recovery_codes_regenerate',
+  'role.create',
+  'role.update',
+  'role.delete',
+  'role.permission_assign',
+  'api_token.create',
+  'api_token.delete',
+  'billing.webhook',
+  'org.create',
+  'org.update',
+  'org.delete',
+  'org.ownership_transfer',
+  'billing.checkout_start',
+  'billing.trial_start',
+  'billing.duplicate_subscription_refunded',
+  'billing.subscription_cancel',
+  'billing.subscription_resume',
+  'billing.plan_switch',
+  'billing.email_update',
+]
+export const localeValues: ReadonlyArray<FlattenedDeepRequired<components>['schemas']['Locale']> = [
+  'da',
+  'en',
+]

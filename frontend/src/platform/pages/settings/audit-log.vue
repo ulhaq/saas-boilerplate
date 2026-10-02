@@ -114,31 +114,26 @@ import DataTable from '@/platform/components/common/DataTable.vue'
 import { useAuditLogsStore } from '@/platform/stores/auditLogs'
 import { useDataTable } from '@/platform/composables/useDataTable'
 import { useFormatDate } from '@/platform/composables/useFormatDate'
-import type { AuditLogOut } from '@/platform/types/auditLog'
+import type { AuditAction, AuditLogOut } from '@/platform/types/auditLog'
+import { auditActionValues } from '@/api-schema'
 
 const { t } = useI18n()
 const auditLogsStore = useAuditLogsStore()
 const { formatDateTime } = useFormatDate()
 
-const auditActions = [
-  'auth.login',
-  'auth.register',
+// Recorded without an organization (user-level or unattributed), so they never
+// appear in an organization's audit log.
+const ORGANIZATION_LESS_ACTIONS: AuditAction[] = [
   'auth.password_reset',
-  'user.invite',
-  'user.update',
-  'user.delete',
-  'user.role_assign',
-  'user.consent',
-  'user.export',
-  'user.self_delete',
-  'role.create',
-  'role.update',
-  'role.delete',
-  'role.permission_assign',
-  'api_token.create',
-  'api_token.delete',
-  'org.update',
+  'user.email_change',
+  'billing.webhook',
 ]
+
+// Every action the backend records (from the generated API schema) that can
+// appear here.
+const auditActions = auditActionValues
+  .filter((action) => !ORGANIZATION_LESS_ACTIONS.includes(action))
+  .sort()
 
 const columns = [
   { key: 'action', label: t('auditLog.columns.action') },
