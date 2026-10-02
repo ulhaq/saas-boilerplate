@@ -22,7 +22,7 @@ const STATUS_BADGES: Record<string, BadgeVariant> = {
 
 /** Formatting shared by the billing page and its components. */
 export function useBillingFormat() {
-  const { t, locale } = useI18n()
+  const { t, te, locale } = useI18n()
 
   function formatPrice(price: PlanPriceOut): string {
     const amount = price.amount / 100
@@ -36,10 +36,10 @@ export function useBillingFormat() {
     }
   }
 
-  // Product locales may describe each plan; otherwise show the plan's own text.
-  function planDescription(plan: PlanOut): string {
+  /** The product locale's text for the plan, else the plan's own description. */
+  function planDescription(plan: PlanOut): string | null {
     const key = `planDescriptions.${plan.name}`
-    return plan.description ? t(key, plan.description) : t(key)
+    return te(key) ? t(key) : plan.description
   }
 
   function monthlyEquivalent(price: PlanPriceOut): number {

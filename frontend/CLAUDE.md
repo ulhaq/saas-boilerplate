@@ -9,6 +9,8 @@ npm run dev       # dev server on :5173 (proxies /v1 → localhost:8000)
 npm run build     # production build
 npm run typecheck # vue-tsc -b (checks the app and the config files)
 npm run gen:api   # regenerate src/api-schema.ts from ../backend/openapi.internal.json
+npm test          # component tests (vitest); npm run test:watch to iterate
+npm run test:e2e  # end-to-end (playwright; needs the dev stack running)
 ```
 
 ## Project Structure
@@ -212,6 +214,12 @@ Permission names follow `resource:action` convention (e.g., `users:read`, `roles
 All user-facing strings go through `vue-i18n`. Use `const { t } = useI18n()` in script, `$t('key')` in templates. Platform strings live in `src/platform/locales/{en,da}.ts`; product strings in `src/example/locales/{en,da}.ts`. Each product's manifest hands its trees over, and they are deep-merged in `src/plugins/i18n.ts`, so product files can extend shared namespaces (e.g. `nav.*`, `errors.fields.*`). Add keys to both locales of the owning package.
 
 Key namespaces: `auth.*`, `nav.*`, `common.*`, `settings.*`, `errors.api.*`, `errors.fields.*`
+
+## Testing
+
+Component tests sit next to the code as `*.test.ts` and run with Vitest in a simulated DOM (`happy-dom`, `@vue/test-utils`); `vitest.config.ts` reuses the Vite config. `src/platform/pages/settings/billing.test.ts` is the model: mount the page per state with a real Pinia store whose API-calling actions are replaced by `vi.fn()`, mock `useConfirm`/`useToast` with `vi.mock`, then assert what the user sees and which store action a click calls. Look up visible text through i18n keys (`i18n.global.t(...)`), not hard-coded copy. Fixtures use the generated API types, so `npm run typecheck` flags fixtures that drift from the backend. CI runs `npm test`.
+
+Platform tests must not depend on product content - the product's locale strings are merged in at runtime, so assert platform keys only.
 
 ## Styling
 

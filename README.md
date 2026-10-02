@@ -144,6 +144,7 @@ npm run typecheck   # vue-tsc -b
 npm run lint        # eslint --fix (includes the platform/product boundary rule)
 npm run gen:api     # regenerate the API types from ../backend/openapi.internal.json
 npm run build       # production build (SPA)
+npm test            # component tests (vitest)
 npm run test:e2e    # playwright (needs the dev stack running)
 ```
 

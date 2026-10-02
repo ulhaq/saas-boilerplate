@@ -86,6 +86,9 @@ jobs:
       - name: Lint
         run: npx eslint .
 
+      - name: Component tests
+        run: npm test
+
       - name: Build
         run: npm run build
 

@@ -49,13 +49,16 @@ function umamiScript(): Plugin {
   }
 }
 
+// The plugins regenerate these typing files for the editor; a test run must not.
+const writeTypes = !process.env.VITEST
+
 export default defineConfig({
   plugins: [
     brandAssets(),
     umamiScript(),
     VueRouter({
       routesFolder: ['src/platform/pages', ...productPackages.map((pkg) => `src/${pkg}/pages`)],
-      dts: 'src/typed-router.d.ts',
+      dts: writeTypes && 'src/typed-router.d.ts',
     }),
     vue(),
     AutoImport({
@@ -65,12 +68,12 @@ export default defineConfig({
         { pinia: ['defineStore', 'storeToRefs'] },
         { '@vueuse/core': ['useDark', 'useToggle', 'useLocalStorage', 'useMediaQuery'] },
       ],
-      dts: 'src/auto-imports.d.ts',
+      dts: writeTypes && 'src/auto-imports.d.ts',
       vueTemplate: true,
     }),
     Components({
       dirs: ['src/platform/components', ...productPackages.map((pkg) => `src/${pkg}/components`)],
-      dts: 'src/components.d.ts',
+      dts: writeTypes && 'src/components.d.ts',
     }),
   ],
   resolve: {

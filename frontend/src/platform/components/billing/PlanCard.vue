@@ -3,16 +3,16 @@
     <div v-if="$slots.badge" class="flex items-start justify-between gap-2">
       <div>
         <h4 class="font-semibold">{{ plan.name }}</h4>
-        <p class="text-xs text-muted-foreground mt-0.5">
-          {{ planDescription(plan) }}
+        <p v-if="description" class="text-xs text-muted-foreground mt-0.5">
+          {{ description }}
         </p>
       </div>
       <slot name="badge" />
     </div>
     <div v-else>
       <h4 class="font-semibold">{{ plan.name }}</h4>
-      <p v-if="plan.description" class="text-xs text-muted-foreground mt-0.5">
-        {{ planDescription(plan) }}
+      <p v-if="description" class="text-xs text-muted-foreground mt-0.5">
+        {{ description }}
       </p>
     </div>
     <PlanFeatures :plan-name="plan.name" :rows="rows" />
@@ -21,11 +21,13 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import PlanFeatures from './PlanFeatures.vue'
 import { useBillingFormat, type ComparisonRow } from '@/platform/composables/useBillingFormat'
 import type { PlanOut } from '@/platform/types'
 
-defineProps<{ plan: PlanOut; rows: ComparisonRow[] }>()
+const props = defineProps<{ plan: PlanOut; rows: ComparisonRow[] }>()
 
 const { planDescription } = useBillingFormat()
+const description = computed(() => planDescription(props.plan))
 </script>

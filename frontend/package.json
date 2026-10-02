@@ -11,6 +11,8 @@
     "gen:api": "openapi-typescript ../backend/openapi.internal.json --default-non-nullable false -o src/api-schema.ts && prettier --write src/api-schema.ts",
     "lint": "eslint . --fix",
     "format": "prettier --write .",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed"
@@ -47,12 +49,14 @@
     "@typescript-eslint/eslint-plugin": "^8.59.1",
     "@typescript-eslint/parser": "^8.59.1",
     "@vitejs/plugin-vue": "^5.2.1",
+    "@vue/test-utils": "^2.5.1",
     "autoprefixer": "^10.4.20",
     "eslint": "^10.2.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",
     "eslint-plugin-vue": "^10.9.0",
     "globals": "^17.5.0",
+    "happy-dom": "^17.6.3",
     "openapi-typescript": "^7.13.0",
     "postcss": "^8.5.1",
     "prettier": "^3.8.3",
@@ -62,6 +66,7 @@
     "unplugin-vue-components": "^0.27.5",
     "unplugin-vue-router": "^0.10.9",
     "vite": "^6.1.0",
+    "vitest": "^3.2.7",
     "vue-eslint-parser": "^10.4.0",
     "vue-tsc": "^2.2.0"
   }
