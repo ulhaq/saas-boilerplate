@@ -5,6 +5,7 @@ import tsPlugin from '@typescript-eslint/eslint-plugin'
 import vueParser from 'vue-eslint-parser'
 import prettier from 'eslint-config-prettier'
 import globals from 'globals'
+import { productPackages } from './products.config.js'
 
 const autoImportedGlobals = {
   EffectScope: 'readonly',
@@ -151,9 +152,13 @@ export default [
         'error',
         {
           patterns: [
+            ...productPackages.map((pkg) => ({
+              group: [`@/${pkg}`, `@/${pkg}/**`, `**/${pkg}/**`],
+              message: `Platform code must not import from the product domain (src/${pkg}).`,
+            })),
             {
-              group: ['@/example', '@/example/**', '**/example/**'],
-              message: 'Platform code must not import from the product domain (src/example).',
+              group: ['@/products'],
+              message: 'Platform code must not import the product list (src/products.ts).',
             },
           ],
         },

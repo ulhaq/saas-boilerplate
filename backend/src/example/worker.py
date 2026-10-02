@@ -1,4 +1,5 @@
-"""Example background loop, registered in `worker.py`.
+"""Example background loop, listed in `src.example.product` and started by
+`worker.py`.
 
 Records a `worker_run` row per iteration so the pattern for long-running jobs
 (run record committed first, final status written after the work) is in place

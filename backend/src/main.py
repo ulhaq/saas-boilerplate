@@ -18,7 +18,6 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
 from src.bootstrap import bootstrap
-from src.example.routers import projects
 from src.platform.core.config import settings
 from src.platform.core.database import DbSession
 from src.platform.core.error_response import (
@@ -50,6 +49,7 @@ from src.platform.routers import (
     user,
     waitlist,
 )
+from src.products import PRODUCTS
 
 setup_logging("api")
 setup_telemetry("api")
@@ -258,7 +258,14 @@ async def health_check(session: DbSession) -> Response:
 
 # Public API - visible in schema for external consumers
 app.include_router(auth.router, tags=["Authentication"], prefix="/v1")
-app.include_router(projects.router, tags=["Projects"], prefix="/v1")
+for product in PRODUCTS:
+    for product_router in product.routers:
+        app.include_router(
+            product_router.router,
+            tags=list(product_router.tags),
+            prefix="/v1",
+            include_in_schema=product_router.public,
+        )
 
 # Internal - dashboard/auth flows, not useful to API token consumers
 app.include_router(

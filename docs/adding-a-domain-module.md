@@ -14,7 +14,7 @@ src/acme/
 ├── enums.py          # AcmePermission, AcmeAuditAction, AcmeErrorCode, AcmePlanFeature,
 │                     # AcmeUsageMetric + ACME_PERMISSION_DESCRIPTIONS,
 │                     # ACME_DEFAULT_ROLE_PERMISSIONS, ACME_DEFAULT_ROLE_DESCRIPTIONS
-├── hooks.py          # async handlers for platform HookEvents + register_acme_hooks()
+├── hooks.py          # async handlers for platform HookEvents (listed in product.py)
 ├── models/           # SQLAlchemy models (import platform mixins/Base); __init__.py imports all
 ├── repositories/     # repos extending the platform base classes
 │   └── manager.py    # AcmeRepositoryManager(RepositoryManager) adding your repos
@@ -22,7 +22,8 @@ src/acme/
 ├── routers/          # FastAPI routers, guarded with require_permission(AcmePermission.X)
 ├── schemas/          # Pydantic request/response models
 ├── templates/        # optional: emails/<locale>/<name>.html
-└── email.py          # optional: ACME_EMAIL_SUBJECTS dict for register_email_subjects()
+├── email.py          # optional: ACME_EMAIL_SUBJECTS dict (manifest `email_subjects`)
+└── product.py        # the ProductModule manifest (see step 2)
 ```
 
 Conventions that carry over from `example`:
@@ -31,32 +32,33 @@ Conventions that carry over from `example`:
 - Services raise `ClientException(AcmeErrorCode.X)`; the platform middleware renders the JSON error.
 - Routers/services depend on `AcmeRepositoryManager` (FastAPI instantiates it via `Depends()` exactly like the platform one). Hook handlers receive the *platform* manager and wrap its session: `repos = AcmeRepositoryManager(repos.db)` - same transaction.
 
-### 2. Wire it in `src/bootstrap.py` (the composition root)
+### 2. Declare its manifest (`src/acme/product.py`)
+
+Everything the package plugs into the platform goes in one `ProductModule` (`src/platform/core/product.py`) - see `src/example/product.py`:
 
 ```python
-ALL_PERMISSIONS = [*core_enums.Permission, *ExamplePermission, *AcmePermission]
-PERMISSION_DESCRIPTIONS = {**core_enums.PERMISSION_DESCRIPTIONS,
-                           **EXAMPLE_PERMISSION_DESCRIPTIONS,
-                           **ACME_PERMISSION_DESCRIPTIONS}
-# merge ACME_DEFAULT_ROLE_PERMISSIONS into DEFAULT_ROLES the same way example does
-
-def bootstrap() -> None:
-    ...
-    register_acme_hooks()
-    register_email_subjects(ACME_EMAIL_SUBJECTS)        # if you send email
-    add_template_directory("./src/acme/templates")      # if you ship templates
+ACME = ProductModule(
+    name="acme",
+    models=models,                                   # registers your tables for Alembic
+    permissions=list(AcmePermission),
+    permission_descriptions={**ACME_PERMISSION_DESCRIPTIONS},
+    default_role_permissions=ACME_DEFAULT_ROLE_PERMISSIONS,
+    routers=[ProductRouter(router=widgets.router, tags=["Widgets"])],  # public=False hides it from the API schema
+    hooks={HookEvent.MEMBER_ADDED: [on_member_added]},
+    worker_loops=[run_acme_loop],                    # wrap each iteration in track_worker_run("acme", interval)
+    email_subjects=ACME_EMAIL_SUBJECTS,              # if you send email
+    template_directory=Path(__file__).resolve().parent / "templates",
+)
 ```
 
-`bootstrap()` already runs at startup of both the API and the worker; the composed sets flow into `src/platform/core/composition.py` automatically.
-
-### 3. Register the remaining assembly points
+### 3. Install it
 
 | Where | What |
 |-------|------|
-| `src/main.py` | `from src.acme.routers import ...` + `app.include_router(...)` |
-| `alembic/env.py` | `from src.acme import models  # noqa: F401` (metadata registration - without this, autogenerate will try to drop your tables) |
-| `worker.py` | `asyncio.create_task(run_acme_loop(ASYNC_SESSION_LOCAL))` if you need a background loop (never start loops in `main.py`); wrap each iteration in `track_worker_run("acme", interval)` (`src/platform/core/telemetry.py`) so it gets metrics and the overdue/failing alerts |
-| `pyproject.toml` | in the import-linter contracts, replace `src.example` with `src.acme`: the platform contract's `forbidden_modules` (so the platform can't import it), the layers contract's `containers`, and the routers contract's module lists |
+| `src/products.py` | add `ACME` to `PRODUCTS` - `bootstrap()`, the API router includes, the worker loops and Alembic's model registration all iterate this list |
+| `pyproject.toml` | in the import-linter contracts, add `src.acme` next to (or instead of) `src.example`: the platform contract's `forbidden_modules` (so the platform can't import it), the layers contract's `containers`, and the routers contract's module lists |
+
+Never start loops in `main.py` - `worker.py` runs them in a single process.
 
 ### 4. Migrate and test
 
@@ -74,7 +76,7 @@ Add tests under `backend/tests/` (API tests get the seeded multi-tenant fixtures
 
 ```
 src/acme/
-├── index.ts          # module entry: registrations only (see step 2)
+├── index.ts          # manifest: messages, homeRoute, setup() (see step 2)
 ├── pages/            # file-based routes, merged into the app's route tree
 ├── components/       # auto-registered, same as platform components
 ├── stores/ + api/    # Pinia store is the data gateway; api module used only by the store
@@ -83,25 +85,29 @@ src/acme/
 └── notifications/    # optional: notification presenter registrations
 ```
 
-### 2. Register in the module entry (`src/acme/index.ts`)
+### 2. Declare its manifest (`src/acme/index.ts`)
+
+The module entry default-exports a `ProductModule` (`src/platform/product.ts`) - see `src/example/index.ts`:
 
 ```ts
-import { registerNavItems } from '@/platform/navigation'
-import '@/acme/notifications/...'   // side-effect: registerNotificationPresenter(...)
-
-registerNavItems('main', [{ to: '/acme', labelKey: 'nav.acme', icon: ..., order: 25 }])
+const acme: ProductModule = {
+  name: 'acme',
+  messages: { da, en },          // deep-merged over the platform locales
+  homeRoute: '/acme',            // optional: where signed-in users land
+  setup() {                      // runs once at startup
+    registerNavItems('main', [{ to: '/acme', labelKey: 'nav.acme', icon: ..., order: 25 }])
+    // registerNotificationPresenter(...)
+  },
+}
+export default acme
 ```
 
-If your module owns the authenticated home page, set it from `main.ts` via `configureApp({ homeRoute: '/acme' })`.
-
-### 3. Register the assembly points
+### 3. Install it
 
 | Where | What |
 |-------|------|
-| `vite.config.ts` | add `'src/acme/pages'` to `routesFolder` and `'src/acme/components'` to the Components plugin `dirs` |
-| `src/plugins/i18n.ts` | import your locale files and add them to the `mergeMessages` chain |
-| `src/main.ts` | `import '@/acme'` |
-| `eslint.config.js` | add `'@/acme'`/`'@/acme/**'` to the platform `no-restricted-imports` patterns |
+| `src/products.ts` | import the manifest and add it to `products` - `main.ts` runs its `setup()` and home route, `plugins/i18n.ts` merges its messages |
+| `products.config.js` | add `'acme'` to `productPackages` - Vite reads it for `src/acme/pages` and `src/acme/components`, ESLint for the platform boundary rule |
 
 ### 4. Verify
 
@@ -113,4 +119,4 @@ The build regenerates `typed-router.d.ts` / `components.d.ts`; check the route d
 
 ## Replacing the product instead of adding one
 
-Same steps - but first delete `src/example/` on both sides and strip its assembly references: `bootstrap.py`, `main.py` router includes, `alembic/env.py`, `worker.py` (backend); `main.ts`, `vite.config.ts`, `plugins/i18n.ts`, the ESLint pattern (frontend). The platform packages need no changes at all. Also drop the example migration (`alembic/versions/*_example_project_table.py`) and the `projects` plan limits it seeds, and update `src/brand.ts`, `planComparisonRows` and `planDescriptions` for the new product.
+Same steps - but delete `src/example/` on both sides and drop it from the installed lists: `src/products.py` and the import-linter contracts (backend); `src/products.ts` and `products.config.js` (frontend). The platform packages need no changes at all. Also drop the example migration (`alembic/versions/*_example_project_table.py`) and the `projects` plan limits it seeds, and update `src/brand.ts`, `planComparisonRows` and `planDescriptions` for the new product.

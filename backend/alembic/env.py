@@ -2,10 +2,10 @@ from logging.config import fileConfig
 
 from alembic import context
 from sqlalchemy import create_engine, pool
-from src.example import models as example_models  # noqa: F401  (registers product tables)
 from src.platform import models  # noqa: F401  (registers platform tables)
 from src.platform.core.config import settings
 from src.platform.core.database import Base
+from src.products import PRODUCTS  # noqa: F401  (each manifest imports its models)
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

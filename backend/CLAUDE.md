@@ -28,6 +28,7 @@ This file provides comprehensive guidance for working with this FastAPI multi-te
 | `src/example/hooks.py` | `PLAN_CHANGED` handler (reports orgs above their project limit) |
 | `src/example/worker.py` | `run_example_loop` - heartbeat loop recording `worker_run` rows |
 | `src/example/config.py` | `ExampleSettings` (`env_prefix="example_"`) |
+| `src/example/product.py` | `EXAMPLE` manifest (`ProductModule`): permissions, role grants, routers, hooks, worker loops, models |
 
 ---
 
@@ -46,9 +47,13 @@ domain code; the two are wired together in exactly one place:
 | Domain enums | `src/example/enums.py` | Product permissions, audit actions, error codes, usage metrics, plus per-role grant/description contributions |
 | Domain hooks | `src/example/hooks.py` | Handlers for platform lifecycle events |
 | Domain settings | `src/example/config.py` | Independent settings namespace extending the shared `EnvSettings` base |
-| Composition root | `src/bootstrap.py` | Merges core+domain permissions/roles (`ALL_PERMISSIONS`, `PERMISSION_DESCRIPTIONS`, `DEFAULT_ROLES`) and registers domain hooks, email subjects, and template directories via `bootstrap()` |
+| Product manifest | `src/platform/core/product.py` | `ProductModule`: everything a product contributes (permissions, role grants, routers, hooks, worker loops, models, emails) |
+| Installed products | `src/products.py` | `PRODUCTS` list - the only assembly file that names a product package |
+| Composition root | `src/bootstrap.py` | Merges core + every product's permissions/roles (`ALL_PERMISSIONS`, `PERMISSION_DESCRIPTIONS`, `DEFAULT_ROLES`) and registers their hooks, email subjects, and template directories via `bootstrap()` |
 
 `bootstrap()` is called at startup by `src/main.py` (API) and `worker.py` (worker).
+`src/main.py` includes each product's routers, `worker.py` starts its loops, and
+`alembic/env.py` registers its models - all by iterating `PRODUCTS`.
 Seeding code (Alembic initial migration, `src/init_db.py`, `tests/conftest.py`) must
 import the composed sets from `src.bootstrap`, never from `src.platform.enums` directly.
 
@@ -59,7 +64,7 @@ your product package when you rename it.
 **Building a new product on this backend** - replace the domain and keep the core
 (full guide: `docs/adding-a-domain-module.md`):
 1. Replace `src/example/` with your package (enums, models, repositories, services, routers, hooks).
-2. Update `src/bootstrap.py`, the router includes in `src/main.py`, the model import in `alembic/env.py`, the loop registration in `worker.py`, and the import-linter contracts.
+2. Declare its `ProductModule` (like `src/example/product.py`), list it in `src/products.py`, and update the import-linter contracts.
 3. Replace the example migration and `tests/api/test_projects.py`; update the seeded Member role permissions in `src/init_db.py`.
 
 ### Layered Architecture: Routers > Services > Repositories > Models

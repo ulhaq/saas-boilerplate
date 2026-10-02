@@ -14,7 +14,6 @@ import logging
 import signal
 
 from src.bootstrap import bootstrap
-from src.example.worker import run_example_loop
 from src.platform.core.database import ASYNC_SESSION_LOCAL
 from src.platform.core.logging import setup_logging
 from src.platform.core.telemetry import setup_telemetry
@@ -23,6 +22,7 @@ from src.platform.services.billing import (
     run_trial_reminder_loop,
 )
 from src.platform.services.gdpr import run_gdpr_retention_loop
+from src.products import PRODUCTS
 
 setup_logging("worker")
 setup_telemetry("worker")
@@ -38,12 +38,13 @@ async def main() -> None:
     for sig in (signal.SIGTERM, signal.SIGINT):
         loop.add_signal_handler(sig, stop.set)
 
-    tasks = [
-        asyncio.create_task(run_example_loop(ASYNC_SESSION_LOCAL)),
-        asyncio.create_task(run_gdpr_retention_loop(ASYNC_SESSION_LOCAL)),
-        asyncio.create_task(run_stale_checkout_cleanup_loop(ASYNC_SESSION_LOCAL)),
-        asyncio.create_task(run_trial_reminder_loop(ASYNC_SESSION_LOCAL)),
+    worker_loops = [
+        *(run for product in PRODUCTS for run in product.worker_loops),
+        run_gdpr_retention_loop,
+        run_stale_checkout_cleanup_loop,
+        run_trial_reminder_loop,
     ]
+    tasks = [asyncio.create_task(run(ASYNC_SESSION_LOCAL)) for run in worker_loops]
 
     await stop.wait()
     log.info("Worker shutting down")

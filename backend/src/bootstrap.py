@@ -1,59 +1,77 @@
-"""Composition root - wires the product domain module into the generic SaaS core.
+"""Composition root - wires the installed product modules into the generic
+SaaS core.
 
-This is the only place (besides the product package itself) that may import
-from `src.example`. The core never imports domain code; it emits hooks and
-consumes the composed permission/role sets defined here.
-
-For a new product built on this boilerplate:
-1. Replace the `src.example` imports below with your own domain module (or
-   remove them entirely to start from the bare platform).
-2. Adjust ALL_PERMISSIONS / PERMISSION_DESCRIPTIONS / DEFAULT_ROLES composition.
-3. Register your domain's hook handlers, email subjects, and template
-   directories in `bootstrap()`.
+The products are listed in `src.products`; each declares what it contributes
+in a `ProductModule` manifest. The core never imports domain code: it emits
+hooks and consumes the composed permission/role sets defined here.
 """
 
+from collections.abc import Sequence
 from enum import StrEnum
 
-from src.example.enums import (
-    EXAMPLE_DEFAULT_ROLE_DESCRIPTIONS,
-    EXAMPLE_DEFAULT_ROLE_PERMISSIONS,
-    EXAMPLE_PERMISSION_DESCRIPTIONS,
-    ExamplePermission,
-)
-from src.example.hooks import register_example_hooks
 from src.platform import enums as core_enums
-from src.platform.core import composition
+from src.platform.core import composition, hooks
+from src.platform.core.product import ProductModule
+from src.platform.core.template import add_template_directory
+from src.platform.services.email_content import register_email_subjects
+from src.products import PRODUCTS
 
-ALL_PERMISSIONS: list[StrEnum] = [*core_enums.Permission, *ExamplePermission]
+ALL_PERMISSIONS: list[StrEnum] = [
+    *core_enums.Permission,
+    *(permission for product in PRODUCTS for permission in product.permissions),
+]
 
 PERMISSION_DESCRIPTIONS: dict[StrEnum, str] = {
     **core_enums.PERMISSION_DESCRIPTIONS,
-    **EXAMPLE_PERMISSION_DESCRIPTIONS,
+    **{
+        permission: description
+        for product in PRODUCTS
+        for permission, description in product.permission_descriptions.items()
+    },
 }
 
-DEFAULT_ROLES: list[tuple[str, str, list[StrEnum]]] = [
-    (
-        name,
-        EXAMPLE_DEFAULT_ROLE_DESCRIPTIONS.get(name, description),
-        [*permissions, *EXAMPLE_DEFAULT_ROLE_PERMISSIONS.get(name, [])],
-    )
-    for name, description, permissions in core_enums.DEFAULT_ROLES
-]
+
+type RoleSpec = tuple[str, str, list[StrEnum]]
+
+
+def compose_default_roles(
+    roles: Sequence[RoleSpec], products: Sequence[ProductModule]
+) -> list[RoleSpec]:
+    """Add each product's grants to the platform default roles, and apply its
+    description overrides (a later product wins)."""
+    composed = []
+    for name, description, permissions in roles:
+        grants = [*permissions]
+        for product in products:
+            description = product.default_role_descriptions.get(name, description)
+            grants.extend(product.default_role_permissions.get(name, []))
+        composed.append((name, description, grants))
+    return composed
+
+
+DEFAULT_ROLES: list[RoleSpec] = compose_default_roles(
+    core_enums.DEFAULT_ROLES, PRODUCTS
+)
 
 _bootstrapped = False
 
 
 def bootstrap() -> None:
-    """Register domain hook handlers. Idempotent; called at process startup
-    by both the API (`src.main`) and the worker (`worker.py`)."""
+    """Install the composed sets and register each product's hooks and
+    emails. Idempotent; called at process startup by both the API
+    (`src.main`) and the worker (`worker.py`)."""
     global _bootstrapped
     if _bootstrapped:
         return
     composition.configure(ALL_PERMISSIONS, PERMISSION_DESCRIPTIONS, DEFAULT_ROLES)
-    register_example_hooks()
-    # A product that sends its own email also registers subjects and templates:
-    #   register_email_subjects(EXAMPLE_EMAIL_SUBJECTS)
-    #   add_template_directory(
-    #       Path(__file__).resolve().parent / "example" / "templates"
-    #   )
+    for product in PRODUCTS:
+        for event, handlers in product.hooks.items():
+            for handler in handlers:
+                hooks.register(event, handler)
+        if product.email_subjects:
+            register_email_subjects(
+                {locale: dict(s) for locale, s in product.email_subjects.items()}
+            )
+        if product.template_directory:
+            add_template_directory(product.template_directory)
     _bootstrapped = True

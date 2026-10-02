@@ -1,11 +1,23 @@
 /**
- * Example product module entry - registers everything the platform shell needs
- * to know about the product. Imported once from `src/main.ts`.
+ * Example product module entry - the manifest of everything the platform shell
+ * needs to know about the product. Listed in `src/products.ts`.
  */
 import { FolderOpen, LayoutDashboard } from 'lucide-vue-next'
+import da from '@/example/locales/da'
+import en from '@/example/locales/en'
 import { registerNavItems } from '@/platform/navigation'
+import type { ProductModule } from '@/platform/product'
 
-registerNavItems('main', [
-  { to: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard, order: 10 },
-  { to: '/projects', labelKey: 'nav.projects', icon: FolderOpen, order: 20 },
-])
+const example: ProductModule = {
+  name: 'example',
+  messages: { da, en },
+  homeRoute: '/dashboard',
+  setup() {
+    registerNavItems('main', [
+      { to: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard, order: 10 },
+      { to: '/projects', labelKey: 'nav.projects', icon: FolderOpen, order: 20 },
+    ])
+  },
+}
+
+export default example

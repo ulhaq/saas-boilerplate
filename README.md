@@ -38,17 +38,20 @@ backend/src/                          frontend/src/
 ├── example/    the product           ├── example/    the product
 │   ├── models/ repositories/         │   ├── pages/ components/ stores/
 │   ├── services/ routers/ schemas/   │   ├── api/ locales/ types/
-│   ├── hooks.py enums.py worker.py   │   └── index.ts  (module entry)
-├── bootstrap.py  composition root    ├── brand.ts      product identity
-├── main.py       API assembly        ├── main.ts       assembly
+│   ├── hooks.py enums.py worker.py   │   └── index.ts  (manifest)
+│   └── product.py  (manifest)        ├── products.ts   installed products
+├── products.py   installed products  ├── brand.ts      product identity
+├── bootstrap.py  composition root    ├── main.ts       assembly
+├── main.py       API assembly        │
 └── init_db.py    seeding             └── router/ plugins/ App.vue
 ```
 
 How the two halves connect without the platform knowing about the product:
 
-- **Hooks** (backend): the platform emits lifecycle events (`MEMBER_ADDED`, `MEMBER_REMOVED`, `PLAN_CHANGED`); the product registers async handlers in `bootstrap()`.
+- **Product manifest**: each product declares everything it plugs in - one `ProductModule` per side (`src/example/product.py`, `src/example/index.ts`). The assembly layer reads the installed list (`src/products.py`, `src/products.ts`), so swapping the product is a one-line change on each side.
+- **Hooks** (backend): the platform emits lifecycle events (`MEMBER_ADDED`, `MEMBER_REMOVED`, `PLAN_CHANGED`); the product lists async handlers in its manifest.
 - **Composition registry** (backend): `bootstrap.py` merges platform + product permissions, roles, email subjects, and template directories at startup.
-- **Registries** (frontend): the product registers sidebar nav items, notification presenters, and the authenticated home route from `src/example/index.ts` / `main.ts`; locale trees are deep-merged in the i18n plugin.
+- **Registries** (frontend): the product's manifest registers sidebar nav items and notification presenters, and sets the authenticated home route; its locale trees are deep-merged in the i18n plugin.
 
 ### Two-process backend
 

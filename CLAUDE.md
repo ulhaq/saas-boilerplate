@@ -23,7 +23,8 @@ Full-stack multi-tenant SaaS:
 
 The backend and frontend are each split into a generic SaaS **platform** package and the
 **product** package (`src/platform/` + `src/example/`), wired together by a thin
-assembly layer (`bootstrap.py` / `main.ts`). The platform never imports product
+assembly layer driven by a product manifest list (`src/products.py` /
+`src/products.ts`). The platform never imports product
 code - enforced by import-linter (backend) and ESLint (frontend).
 
 ## Running Locally
@@ -67,7 +68,7 @@ The backend runs as **two separate processes**:
 | **API** | `src/main.py` (uvicorn) | Handles HTTP requests |
 | **Worker** | `worker.py` | Runs product loops (the example heartbeat), GDPR retention, billing cleanup, and trial reminder loops as concurrent asyncio tasks |
 
-Adding a new background loop: implement a `run_X_loop(session_factory)` coroutine and register it as a task in `worker.py`. Wrap each iteration in `track_worker_run("x", interval)` (`backend/src/platform/core/telemetry.py`) so it shows up on the dashboard and in the overdue/failing alerts. Never start background tasks inside `main.py`'s lifespan - horizontal API scaling would cause duplicate runs.
+Adding a new background loop: implement a `run_X_loop(session_factory)` coroutine and add it to `worker_loops` in the product's manifest (`src/example/product.py`); `worker.py` starts every listed loop. Wrap each iteration in `track_worker_run("x", interval)` (`backend/src/platform/core/telemetry.py`) so it shows up on the dashboard and in the overdue/failing alerts. Never start background tasks inside `main.py`'s lifespan - horizontal API scaling would cause duplicate runs.
 
 ## Permission Flow (Backend → Frontend)
 
@@ -83,4 +84,4 @@ When adding a new permission-gated feature:
 ## Email / Notifications
 
 Outbound email uses SMTP (mailpit in local dev).
-Templates live in `backend/src/platform/templates/` (platform emails) and an optional product `templates/` directory (product emails, registered in `bootstrap()`). The worker sends emails via `asyncio.to_thread(send_email, ...)` so SMTP calls don't block the event loop. In-app notifications are written to the `notification` table alongside each email dispatch.
+Templates live in `backend/src/platform/templates/` (platform emails) and an optional product `templates/` directory (product emails, declared in the product manifest and registered by `bootstrap()`). The worker sends emails via `asyncio.to_thread(send_email, ...)` so SMTP calls don't block the event loop. In-app notifications are written to the `notification` table alongside each email dispatch.
