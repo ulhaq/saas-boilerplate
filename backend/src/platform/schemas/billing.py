@@ -3,6 +3,7 @@ from datetime import date, datetime
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 from src.platform.core.config import settings
+from src.platform.core.schema import ResponseSchema
 from src.platform.schemas.types import ConstrainedEmail
 
 
@@ -62,7 +63,7 @@ class PlanOut(BaseModel):
     updated_at: datetime
 
 
-class SubscriptionOut(BaseModel):
+class SubscriptionOut(ResponseSchema):
     model_config = ConfigDict(from_attributes=True)
 
     id: int

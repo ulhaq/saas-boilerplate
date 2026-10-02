@@ -22,9 +22,11 @@ repos:
         files: ^backend/.*\.py$
         pass_filenames: false
 
+      # Schemas and the frontend's API types, regenerated together so a commit
+      # that changes the API carries everything CI checks.
       - id: generate-openapi
-        name: generate openapi
-        entry: bash -c 'cd backend && uv run python generate_openapi.py && git add ./openapi.json'
+        name: generate openapi + API types
+        entry: bash -c 'cd backend && uv run python generate_openapi.py && cd ../frontend && npm run gen:api --silent && cd .. && git add backend/openapi.json backend/openapi.internal.json frontend/src/api-schema.ts'
         language: system
         files: ^backend/.*\.py$
         pass_filenames: false

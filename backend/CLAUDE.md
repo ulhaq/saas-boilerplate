@@ -73,7 +73,7 @@ your product package when you rename it.
 - `services/` - Business logic; coordinate repositories, raise `ClientException` on failures
 - `repositories/` - SQLAlchemy data access; handle filtering, pagination, soft deletes
 - `models/` - SQLAlchemy ORM entities
-- `schemas/` - Pydantic request/response models
+- `schemas/` - Pydantic request/response models. Response models extend `ResponseSchema` (`src/platform/core/schema.py`) so defaulted fields are required in the OpenAPI schema - the frontend's generated types depend on it.
 - `src/platform/core/` - Cross-cutting concerns: config, security (JWT/passwords), DI dependencies, error handling, rate limiting, hooks
 
 Enforced by import-linter (`uv run poe lint`), for `src/platform/` and `src/example/` alike:
@@ -100,6 +100,12 @@ Enforced by import-linter (`uv run poe lint`), for `src/platform/` and `src/exam
 **Observability** - `src/platform/core/telemetry.py`: OpenTelemetry traces/metrics, enabled only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set (tests force it off). Wrap each worker-loop iteration in `with track_worker_run("name", interval):` so it gets run/failure/duration metrics and the overdue/failing alerts; log lines carry `trace_id`. Setup and dashboards: `observability/README.md`.
 
 **Query features** - Repositories support dynamic filtering via `ComparisonOperator` (eq, lt, gte, contains, in, between, etc.), pagination (`page_number`, `page_size`), and sorting.
+
+### API schema and the frontend's types
+
+`src/main.py` mounts every router from one ordered `ROUTERS` list of `RouterMount`s (product routers come from the manifests). `public=False` keeps a router out of the served OpenAPI schema (`/docs`, for API-token consumers); never hide individual routes with `include_in_schema=False` - visibility is decided per mount. `internal_openapi()` builds the full schema (every route) that the frontend's API types are generated from.
+
+`uv run poe openapi` writes both: `openapi.json` (public) and `openapi.internal.json` (every route), from code defaults only (no `.env`). Run it after changing a request/response schema or a route, then `npm run gen:api` in `frontend/`, and commit the results - CI fails when either is stale. The pre-commit hook does all of this when backend code changes.
 
 ### Database migrations
 Add columns/tables in models, then `alembic revision --autogenerate`.

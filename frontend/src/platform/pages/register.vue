@@ -122,6 +122,7 @@ import { Input } from '@/platform/components/ui/input'
 import { Label } from '@/platform/components/ui/label'
 import { Button } from '@/platform/components/ui/button'
 import { useAuthStore } from '@/platform/stores/auth'
+import type { SupportedLocale } from '@/plugins/i18n'
 import { useErrorHandler } from '@/platform/composables/useErrorHandler'
 import { useValidation } from '@/platform/composables/useValidation'
 import { useRules } from '@/platform/composables/useRules'
@@ -160,7 +161,7 @@ async function onSubmit() {
     await authStore.register({
       email: form.email,
       terms_accepted: true,
-      locale: locale.value,
+      locale: locale.value as SupportedLocale,
     })
     responseMessage.value = t('auth.verifyEmailSent')
     awaitingVerification.value = true

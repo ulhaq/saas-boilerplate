@@ -26,6 +26,9 @@ from src.platform.services.access import authenticate, authenticate_user_session
 from src.platform.services.auth import AuthService
 
 router = APIRouter(prefix="/auth")
+# Sign-up, invite and password flows driven by the app's own pages - mounted
+# outside the public API schema (see ROUTERS in src/main.py).
+internal_router = APIRouter(prefix="/auth")
 
 
 def _set_refresh_token_cookie(response: Response, refresh_token: str) -> None:
@@ -49,7 +52,7 @@ def _delete_refresh_token_cookie(response: Response) -> None:
     )
 
 
-@router.post("/register", status_code=status.HTTP_202_ACCEPTED, include_in_schema=False)
+@internal_router.post("/register", status_code=status.HTTP_202_ACCEPTED)
 @limiter.limit("5/minute")
 async def create_an_account(
     request: Request,
@@ -60,7 +63,7 @@ async def create_an_account(
     return await service.register_organization(register_in, bg_tasks.add_task)
 
 
-@router.post("/verify-email", status_code=status.HTTP_200_OK, include_in_schema=False)
+@internal_router.post("/verify-email", status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")
 async def verify_email(
     request: Request,
@@ -70,10 +73,9 @@ async def verify_email(
     return await service.verify_email(schema_in)
 
 
-@router.post(
+@internal_router.post(
     "/complete-registration",
     status_code=status.HTTP_201_CREATED,
-    include_in_schema=False,
 )
 @limiter.limit("5/minute")
 async def complete_registration(
@@ -138,10 +140,9 @@ async def logout(
     _delete_refresh_token_cookie(response)
 
 
-@router.post(
+@internal_router.post(
     "/reset-password/request",
     status_code=status.HTTP_202_ACCEPTED,
-    include_in_schema=False,
 )
 @limiter.limit("5/minute")
 async def request_password_reset(
@@ -153,9 +154,7 @@ async def request_password_reset(
     return await service.request_password_reset(email_in, bg_tasks.add_task)
 
 
-@router.post(
-    "/reset-password", status_code=status.HTTP_204_NO_CONTENT, include_in_schema=False
-)
+@internal_router.post("/reset-password", status_code=status.HTTP_204_NO_CONTENT)
 @limiter.limit("5/minute")
 async def reset_password(
     request: Request,
@@ -165,7 +164,7 @@ async def reset_password(
     await service.reset_password(reset_password_in)
 
 
-@router.post("/invite-status", status_code=status.HTTP_200_OK, include_in_schema=False)
+@internal_router.post("/invite-status", status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")
 async def get_invite_status(
     request: Request,
@@ -175,9 +174,7 @@ async def get_invite_status(
     return await service.invite_status(schema_in.token)
 
 
-@router.post(
-    "/complete-invite", status_code=status.HTTP_201_CREATED, include_in_schema=False
-)
+@internal_router.post("/complete-invite", status_code=status.HTTP_201_CREATED)
 @limiter.limit("5/minute")
 async def complete_invite(
     request: Request,
@@ -193,9 +190,7 @@ async def complete_invite(
     return token
 
 
-@router.post(
-    "/accept-invite", status_code=status.HTTP_201_CREATED, include_in_schema=False
-)
+@internal_router.post("/accept-invite", status_code=status.HTTP_201_CREATED)
 @limiter.limit("5/minute")
 async def accept_invite(
     request: Request,
@@ -217,10 +212,9 @@ async def accept_invite(
     return token
 
 
-@router.post(
+@internal_router.post(
     "/confirm-email-change",
     status_code=status.HTTP_204_NO_CONTENT,
-    include_in_schema=False,
 )
 @limiter.limit("10/minute")
 async def confirm_email_change(

@@ -1,6 +1,8 @@
 from datetime import UTC, datetime
 
-from pydantic import BaseModel, ConfigDict, computed_field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
+
+from src.platform.core.schema import ResponseSchema
 
 
 class InvitationInviterOut(BaseModel):
@@ -18,13 +20,13 @@ class InvitationRoleOut(BaseModel):
     name: str
 
 
-class InvitationOut(BaseModel):
+class InvitationOut(ResponseSchema):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
     email: str
     role_ids: list[int]
-    roles: list[InvitationRoleOut] = []
+    roles: list[InvitationRoleOut] = Field(default_factory=list)
     invited_by: InvitationInviterOut | None
     created_at: datetime
     expires_at: datetime

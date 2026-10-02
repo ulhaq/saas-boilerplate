@@ -1,5 +1,6 @@
 from pydantic import BaseModel, ConfigDict
 
+from src.platform.core.schema import ResponseSchema
 from src.platform.schemas.common import Timestamp
 
 
@@ -10,7 +11,7 @@ class PermissionBase(BaseModel):
     description: str | None = None
 
 
-class PermissionOut(PermissionBase, Timestamp):
+class PermissionOut(PermissionBase, Timestamp, ResponseSchema):
     id: int
 
 

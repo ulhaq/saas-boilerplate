@@ -4,6 +4,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
+from src.platform.core.schema import ResponseSchema
 from src.platform.enums import ComparisonOperator
 
 
@@ -12,7 +13,7 @@ class Timestamp(BaseModel):
     updated_at: datetime | None
 
 
-class NameDescriptionOut(BaseModel):
+class NameDescriptionOut(ResponseSchema):
     model_config = ConfigDict(from_attributes=True)
 
     id: int

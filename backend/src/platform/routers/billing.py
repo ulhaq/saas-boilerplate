@@ -160,9 +160,7 @@ async def get_current_usage(
 # ---------------------------------------------------------------------------
 
 
-@webhook_router.post(
-    "/webhook", status_code=status.HTTP_200_OK, include_in_schema=False
-)
+@webhook_router.post("/webhook", status_code=status.HTTP_200_OK)
 async def billing_webhook(
     request: Request, service: Annotated[WebhookService, Depends()]
 ) -> dict:

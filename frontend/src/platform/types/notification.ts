@@ -1,13 +1,4 @@
-export interface NotificationOut {
-  id: number
-  user_id: number
-  organization_id: number
-  type: string
-  payload: unknown
-  read_at: string | null
-  created_at: string
-}
+import type { Schema } from './api'
 
-export interface UnreadCountOut {
-  count: number
-}
+export type NotificationOut = Schema<'NotificationOut'>
+export type UnreadCountOut = Schema<'UnreadCountOut'>

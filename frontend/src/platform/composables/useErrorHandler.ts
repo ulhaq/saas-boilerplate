@@ -12,9 +12,9 @@ export function useErrorHandler() {
   const { t, te } = useI18n()
   const { toast } = useToast()
 
-  function resolveField(field: string[]): string {
+  function resolveField(field: FieldError['field']): string {
     const key = `errors.fields.${field.join('__')}`
-    return te(key) ? t(key) : (field[field.length - 1] ?? 'field')
+    return te(key) ? t(key) : String(field[field.length - 1] ?? 'field')
   }
 
   function resolveFieldError(fe: FieldError): string {

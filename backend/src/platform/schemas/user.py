@@ -11,6 +11,7 @@ from pydantic import (
 )
 
 from src.platform.core.exceptions import ValidationException
+from src.platform.core.schema import ResponseSchema
 from src.platform.enums import Locale
 from src.platform.schemas.common import Timestamp
 from src.platform.schemas.role import RoleOut
@@ -25,7 +26,7 @@ class UserBase(BaseModel):
     email: ConstrainedEmail
 
 
-class UserOut(UserBase, Timestamp):
+class UserOut(UserBase, Timestamp, ResponseSchema):
     id: int
     locale: str = "da"
     theme: str = "system"

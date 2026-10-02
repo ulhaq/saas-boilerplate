@@ -3,10 +3,10 @@
     <DialogContent class="sm:max-w-md">
       <DialogHeader>
         <DialogTitle>{{
-          readonly ? $t('roles.viewPermissions') : $t('roles.permissionDialog.title')
+          props.readonly ? $t('roles.viewPermissions') : $t('roles.permissionDialog.title')
         }}</DialogTitle>
         <DialogDescription>{{
-          readonly
+          props.readonly
             ? $t('roles.permissionDialog.viewDescription', { name: role?.name })
             : $t('roles.permissionDialog.description', { name: role?.name })
         }}</DialogDescription>
@@ -27,14 +27,14 @@
             :key="perm.id"
             :class="[
               'flex items-center gap-3 px-2 py-1.5 rounded-md',
-              readonly ? '' : 'hover:bg-muted cursor-pointer',
+              props.readonly ? '' : 'hover:bg-muted cursor-pointer',
             ]"
-            @click="!readonly && togglePerm(perm.id)"
+            @click="!props.readonly && togglePerm(perm.id)"
           >
             <Checkbox
               :model-value="selectedIds.includes(perm.id)"
-              :disabled="readonly"
-              @click.stop="!readonly && togglePerm(perm.id)"
+              :disabled="props.readonly"
+              @click.stop="!props.readonly && togglePerm(perm.id)"
             />
             <div>
               <p class="text-sm font-medium">{{ perm.name }}</p>
@@ -47,7 +47,7 @@
       </div>
 
       <DialogFooter>
-        <Button v-if="readonly" @click="$emit('update:open', false)">{{
+        <Button v-if="props.readonly" @click="$emit('update:open', false)">{{
           $t('common.close')
         }}</Button>
         <template v-else>

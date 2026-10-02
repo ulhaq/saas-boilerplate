@@ -140,7 +140,7 @@ import DataTablePagination from './DataTablePagination.vue'
 
 useI18n()
 
-export interface ColumnDef {
+interface ColumnDef {
   key: string
   label: string
   sortable?: boolean
@@ -167,6 +167,9 @@ const props = withDefaults(
     selected?: (string | number)[]
   }>(),
   {
+    page: 1,
+    pageSize: 20,
+    totalPages: 1,
     rowKey: 'id',
     showPagination: true,
     selectable: false,

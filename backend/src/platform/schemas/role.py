@@ -2,6 +2,7 @@ from typing import Annotated
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field
 
+from src.platform.core.schema import ResponseSchema
 from src.platform.schemas.common import NameDescriptionOut, Timestamp
 from src.platform.schemas.utils import sort_by_id
 
@@ -13,7 +14,7 @@ class RoleBase(BaseModel):
     description: str | None = None
 
 
-class RoleOut(RoleBase, Timestamp):
+class RoleOut(RoleBase, Timestamp, ResponseSchema):
     id: int
     organization_id: int
     is_protected: bool = False

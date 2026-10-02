@@ -2,10 +2,11 @@ from typing import Literal
 
 from pydantic import BaseModel
 
+from src.platform.core.schema import ResponseSchema
 from src.platform.schemas.types import NonEmptyStr
 
 
-class MfaChallengeOut(BaseModel):
+class MfaChallengeOut(ResponseSchema):
     """Returned instead of a Token when the password was correct but a second
     factor is required. Exchange it at POST /auth/mfa/verify."""
 

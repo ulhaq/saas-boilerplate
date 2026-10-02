@@ -1,26 +1,7 @@
-import type { PermissionOut } from './permission'
+import type { Schema } from './api'
 
-export interface RoleBase {
-  name: string
-  description?: string | null
-}
-
-export type RoleIn = RoleBase
-
-export interface RolePatch {
-  name?: string
-  description?: string | null
-}
-
-export interface RolePermissionIn {
-  permission_ids: number[]
-}
-
-export interface RoleOut extends RoleBase {
-  id: number
-  organization_id: number
-  is_protected: boolean
-  permissions: PermissionOut[]
-  created_at: string
-  updated_at: string
-}
+export type RoleIn = Schema<'RoleIn'>
+export type RolePatch = Schema<'RolePatch'>
+export type RolePermissionIn = Schema<'RolePermissionIn'>
+export type RoleOut = Schema<'RoleOut'>
+export type RoleBase = Pick<RoleOut, 'name' | 'description'>

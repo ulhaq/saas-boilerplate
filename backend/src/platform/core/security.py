@@ -14,6 +14,7 @@ from src.platform.core.exceptions import (
     NotAuthenticatedException,
     PermissionDeniedException,
 )
+from src.platform.core.schema import ResponseSchema
 from src.platform.enums import ErrorCode
 
 type TokenType = Literal["access", "refresh"]
@@ -111,7 +112,7 @@ class Auth(BaseModel):
         raise PermissionDeniedException
 
 
-class Token(BaseModel):
+class Token(ResponseSchema):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"

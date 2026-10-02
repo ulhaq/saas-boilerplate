@@ -1,14 +1,5 @@
-export interface OrganizationBase {
-  name: string
-}
+import type { Schema } from './api'
 
-export interface OrganizationPatch {
-  name?: string
-}
-
-export interface OrganizationOut extends OrganizationBase {
-  id: number
-  is_owner?: boolean
-  created_at: string
-  updated_at: string
-}
+export type OrganizationBase = Schema<'OrganizationBase'>
+export type OrganizationPatch = Schema<'OrganizationPatch'>
+export type OrganizationOut = Schema<'OrganizationOut'>

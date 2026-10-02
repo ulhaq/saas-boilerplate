@@ -672,6 +672,7 @@
         },
         "type": "object",
         "required": [
+          "mfa_required",
           "mfa_token"
         ],
         "title": "MfaChallengeOut",
@@ -804,6 +805,7 @@
           "created_at",
           "updated_at",
           "name",
+          "description",
           "id",
           "organization_id"
         ],
@@ -871,7 +873,8 @@
         "type": "object",
         "required": [
           "access_token",
-          "refresh_token"
+          "refresh_token",
+          "token_type"
         ],
         "title": "Token"
       },
@@ -974,7 +977,9 @@
             "type": "string"
           },
           "ctx": {
-            "title": "Ctx"
+            "additionalProperties": true,
+            "title": "Ctx",
+            "type": "object"
           }
         },
         "required": [
@@ -1013,7 +1018,9 @@
                 "type": "string"
               },
               "ctx": {
-                "title": "Ctx"
+                "additionalProperties": true,
+                "title": "Ctx",
+                "type": "object"
               }
             },
             "required": [

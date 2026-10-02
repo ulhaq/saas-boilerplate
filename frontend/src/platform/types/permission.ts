@@ -1,7 +1,3 @@
-export interface PermissionOut {
-  id: number
-  name: string
-  description: string | null
-  created_at: string
-  updated_at: string
-}
+import type { Schema } from './api'
+
+export type PermissionOut = Schema<'PermissionOut'>

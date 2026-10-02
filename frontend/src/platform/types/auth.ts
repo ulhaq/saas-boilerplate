@@ -1,80 +1,39 @@
-export interface Token {
-  access_token: string
-  refresh_token: string
-  token_type: string
-}
+import type { Schema } from './api'
+
+export type Token = Schema<'Token'>
 
 // Returned instead of a Token when the account has two-factor auth enabled;
 // exchange it (plus a code) for a Token via POST /auth/mfa/verify.
-export interface MfaChallenge {
-  mfa_required: true
-  mfa_token: string
-}
+export type MfaChallenge = Schema<'MfaChallengeOut'>
 
-export interface MfaVerifyIn {
-  mfa_token: string
-  code: string
-}
+export type MfaVerifyIn = Schema<'MfaVerifyIn'>
 
 export interface LoginIn {
   username: string
   password: string
 }
 
-export interface ResetPasswordRequestIn {
-  email: string
-}
+export type ResetPasswordRequestIn = Schema<'EmailIn'>
 
-export interface ResetPasswordIn {
-  token: string
-  password: string
-}
+export type ResetPasswordIn = Schema<'ResetPasswordIn'>
 
-export interface ChangePasswordIn {
-  password: string
-  new_password: string
-  confirm_password: string
-}
+export type ChangePasswordIn = Schema<'ChangePasswordIn'>
 
-export interface SwitchOrganizationIn {
-  organization_id: number
-}
+export type SwitchOrganizationIn = Schema<'SwitchOrganizationIn'>
 
-export interface RegisterIn {
-  email: string
-  terms_accepted: boolean
-  locale?: string
-}
+export type RegisterIn = Schema<'RegisterIn'>
 
-export interface RegisterOut {
-  message: string
-}
+export type RegisterOut = Schema<'RegisterOut'>
 
-export interface VerifyEmailIn {
-  token: string
-}
+export type VerifyEmailIn = Schema<'VerifyEmailIn'>
 
-export interface VerifyEmailOut {
-  setup_token: string
-}
+export type VerifyEmailOut = Schema<'SetupTokenOut'>
 
-export interface CompleteRegistrationIn {
-  setup_token: string
-  name: string
-  password: string
-}
+export type CompleteRegistrationIn = Schema<'CompleteRegistrationIn'>
 
-export interface CompleteInviteIn {
-  invite_token: string
-  name?: string
-  password?: string
-  terms_accepted?: boolean
-}
+export type CompleteInviteIn = Schema<'CompleteInviteIn'>
 
-export interface InviteStatusResponse {
-  email: string
-  user_exists: boolean
-}
+export type InviteStatusResponse = Schema<'InviteStatusOut'>
 
 export interface JwtPayload {
   sub: string

@@ -2,6 +2,7 @@ from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from src.platform.core.schema import ResponseSchema
 from src.platform.schemas.common import Timestamp
 
 
@@ -12,7 +13,7 @@ class ProjectBase(BaseModel):
     description: str | None = None
 
 
-class ProjectOut(ProjectBase, Timestamp):
+class ProjectOut(ProjectBase, Timestamp, ResponseSchema):
     id: int
     organization_id: int
 

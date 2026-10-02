@@ -1,17 +1,6 @@
-export interface MfaSetupOut {
-  secret: string
-  otpauth_uri: string
-}
+import type { Schema } from './api'
 
-export interface MfaCodeIn {
-  code: string
-}
-
-export interface MfaDisableIn {
-  password: string
-  code: string
-}
-
-export interface MfaRecoveryCodesOut {
-  recovery_codes: string[]
-}
+export type MfaSetupOut = Schema<'MfaSetupOut'>
+export type MfaCodeIn = Schema<'MfaCodeIn'>
+export type MfaDisableIn = Schema<'MfaDisableIn'>
+export type MfaRecoveryCodesOut = Schema<'MfaRecoveryCodesOut'>

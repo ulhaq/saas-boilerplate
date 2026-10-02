@@ -16,6 +16,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
+from starlette.routing import BaseRoute
 
 from src.bootstrap import bootstrap
 from src.platform.core.config import settings
@@ -33,6 +34,7 @@ from src.platform.core.middlewares import (
     AuditContextMiddleware,
     ErrorHandlingMiddleware,
 )
+from src.platform.core.routing import API_PREFIX, RouterMount
 from src.platform.core.telemetry import instrument_app, setup_telemetry
 from src.platform.enums import ErrorCode
 from src.platform.routers import (
@@ -256,74 +258,49 @@ async def health_check(session: DbSession) -> Response:
         )
 
 
-# Public API - visible in schema for external consumers
-app.include_router(auth.router, tags=["Authentication"], prefix="/v1")
-for product in PRODUCTS:
-    for product_router in product.routers:
-        app.include_router(
-            product_router.router,
-            tags=list(product_router.tags),
-            prefix="/v1",
-            include_in_schema=product_router.public,
-        )
+# Mount order is route-matching and schema order. `public` routers are in the
+# published OpenAPI schema for API-token consumers; the rest serve the
+# dashboard and auth flows.
+ROUTERS: list[RouterMount] = [
+    RouterMount(router=auth.router, tags=["Authentication"]),
+    RouterMount(router=auth.internal_router, tags=["Authentication"], public=False),
+    *(mount for product in PRODUCTS for mount in product.routers),
+    RouterMount(router=api_token.router, tags=["API Tokens"], public=False),
+    RouterMount(router=billing.plan_router, tags=["Billing Plans"], public=False),
+    RouterMount(router=organization.router, tags=["Organizations"], public=False),
+    RouterMount(router=user.router, tags=["Users"], public=False),
+    RouterMount(router=invitation.router, tags=["Invitations"], public=False),
+    RouterMount(router=role.router, tags=["Roles"], public=False),
+    RouterMount(router=permission.router, tags=["Permissions"], public=False),
+    RouterMount(
+        router=billing.subscription_router,
+        tags=["Billing Subscriptions"],
+        public=False,
+    ),
+    RouterMount(router=billing.usage_router, tags=["Billing Usage"], public=False),
+    RouterMount(router=billing.webhook_router, tags=["Billing Webhooks"], public=False),
+    RouterMount(router=audit_log.router, tags=["Audit Log"], public=False),
+    RouterMount(router=notification.router, tags=["Notifications"], public=False),
+    RouterMount(router=waitlist.router, tags=["Waitlists"], public=False),
+    RouterMount(router=contact.router, tags=["Contact"], public=False),
+]
 
-# Internal - dashboard/auth flows, not useful to API token consumers
-app.include_router(
-    api_token.router, tags=["API Tokens"], prefix="/v1", include_in_schema=False
-)
-app.include_router(
-    billing.plan_router, tags=["Billing Plans"], prefix="/v1", include_in_schema=False
-)
-app.include_router(
-    organization.router, tags=["Organizations"], prefix="/v1", include_in_schema=False
-)
-app.include_router(user.router, tags=["Users"], prefix="/v1", include_in_schema=False)
-app.include_router(
-    invitation.router, tags=["Invitations"], prefix="/v1", include_in_schema=False
-)
-app.include_router(role.router, tags=["Roles"], prefix="/v1", include_in_schema=False)
-app.include_router(
-    permission.router, tags=["Permissions"], prefix="/v1", include_in_schema=False
-)
-app.include_router(
-    billing.subscription_router,
-    tags=["Billing Subscriptions"],
-    prefix="/v1",
-    include_in_schema=False,
-)
-app.include_router(
-    billing.usage_router, tags=["Billing Usage"], prefix="/v1", include_in_schema=False
-)
-app.include_router(
-    billing.webhook_router,
-    tags=["Billing Webhooks"],
-    prefix="/v1",
-    include_in_schema=False,
-)
-app.include_router(
-    audit_log.router, tags=["Audit Log"], prefix="/v1", include_in_schema=False
-)
-app.include_router(
-    notification.router, tags=["Notifications"], prefix="/v1", include_in_schema=False
-)
-app.include_router(
-    waitlist.router, tags=["Waitlists"], prefix="/v1", include_in_schema=False
-)
-app.include_router(
-    contact.router, tags=["Contact"], prefix="/v1", include_in_schema=False
-)
+for mount in ROUTERS:
+    app.include_router(
+        mount.router,
+        tags=list(mount.tags),
+        prefix=API_PREFIX,
+        include_in_schema=mount.public,
+    )
 
 
-def custom_openapi() -> dict[str, Any]:
-    if app.openapi_schema:
-        return app.openapi_schema
-
+def _build_openapi(routes: list[BaseRoute]) -> dict[str, Any]:
     openapi_schema = get_openapi(
         title=app.title,
         version=app.version,
         summary=app.summary,
         description=app.description,
-        routes=app.routes,
+        routes=routes,
     )
 
     if not settings.auth_enabled:
@@ -386,8 +363,26 @@ def custom_openapi() -> dict[str, Any]:
                     },
                 }
 
-    app.openapi_schema = openapi_schema
+    return openapi_schema
+
+
+def custom_openapi() -> dict[str, Any]:
+    if not app.openapi_schema:
+        app.openapi_schema = _build_openapi(app.routes)
     return app.openapi_schema
+
+
+def internal_openapi() -> dict[str, Any]:
+    """Schema of every API route, including those hidden from the public one.
+
+    Not served - `generate_openapi.py` writes it for the frontend, whose API
+    types are generated from it. Mounts `ROUTERS` on a throwaway app with
+    every route visible, so it can never list a different set of routes.
+    """
+    internal = FastAPI()
+    for mount in ROUTERS:
+        internal.include_router(mount.router, tags=list(mount.tags), prefix=API_PREFIX)
+    return _build_openapi(internal.routes)
 
 
 app.openapi = custom_openapi  # ty: ignore[invalid-assignment]

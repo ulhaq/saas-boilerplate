@@ -13,20 +13,11 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
-from fastapi import APIRouter
-
 from src.platform.core.hooks import Handler, HookEvent
+from src.platform.core.routing import RouterMount
 
 # Receives the session factory (`ASYNC_SESSION_LOCAL`) and runs forever.
 WorkerLoop = Callable[[Any], Coroutine[Any, Any, None]]
-
-
-@dataclass(frozen=True, kw_only=True)
-class ProductRouter:
-    router: APIRouter
-    tags: list[str]
-    # Listed in the public OpenAPI schema for API-token consumers.
-    public: bool = True
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -41,7 +32,7 @@ class ProductModule:
         default_factory=dict
     )
     default_role_descriptions: Mapping[str, str] = field(default_factory=dict)
-    routers: Sequence[ProductRouter] = ()
+    routers: Sequence[RouterMount] = ()
     hooks: Mapping[HookEvent, Sequence[Handler]] = field(default_factory=dict)
     # Started by `worker.py`; wrap each iteration in `track_worker_run`.
     worker_loops: Sequence[WorkerLoop] = ()

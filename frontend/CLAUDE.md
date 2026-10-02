@@ -7,7 +7,8 @@ Vue 3 + TypeScript SPA for the SaaS boilerplate: the signed-in app (auth, organi
 ```bash
 npm run dev       # dev server on :5173 (proxies /v1 → localhost:8000)
 npm run build     # production build
-npm run typecheck # tsc --noEmit
+npm run typecheck # vue-tsc -b (checks the app and the config files)
+npm run gen:api   # regenerate src/api-schema.ts from ../backend/openapi.internal.json
 ```
 
 ## Project Structure
@@ -142,6 +143,12 @@ Store ↔ api naming must match the domain (`stores/organizations.ts` ↔ `api/o
 - `withCredentials: true` for httponly refresh token cookie
 
 API modules (`api/auth.ts`, `api/users.ts`, etc.) export plain functions that call the shared client. Add new endpoints in the relevant domain module. **These modules are imported only by stores (see "Data Access" above), never by components or pages.**
+
+### API types are generated - never hand-write them
+
+`src/api-schema.ts` is generated from `backend/openapi.internal.json`, the schema of every route that the backend writes (`uv run poe openapi`). The files in `platform/types/` (and a product's `types/`) alias it by schema name: `export type RoleOut = Schema<'RoleOut'>` (`Schema` is in `platform/types/api.ts`). A type with no backend schema (form state, a decoded JWT) stays hand-written. Narrow a generated field only where the backend declares a plain string the frontend relies on as a union - say so in a comment (see `platform/types/billing.ts`).
+
+After changing a backend request/response schema: `cd backend && uv run poe openapi`, then `npm run gen:api`, and commit the backend's schema files + `src/api-schema.ts` (the pre-commit hook does this when backend code changes). CI regenerates them and fails if they are out of date.
 
 ## Components
 

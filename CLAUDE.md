@@ -70,6 +70,10 @@ The backend runs as **two separate processes**:
 
 Adding a new background loop: implement a `run_X_loop(session_factory)` coroutine and add it to `worker_loops` in the product's manifest (`src/example/product.py`); `worker.py` starts every listed loop. Wrap each iteration in `track_worker_run("x", interval)` (`backend/src/platform/core/telemetry.py`) so it shows up on the dashboard and in the overdue/failing alerts. Never start background tasks inside `main.py`'s lifespan - horizontal API scaling would cause duplicate runs.
 
+## API Types (Backend → Frontend)
+
+The frontend's API types are generated from the backend's schema, not hand-written: after changing a backend request/response model or route, run `cd backend && uv run poe openapi`, then `cd frontend && npm run gen:api`, and commit `backend/openapi.internal.json` (every route), `backend/openapi.json` (the public schema) and `frontend/src/api-schema.ts`. CI fails when they are stale; the pre-commit hook regenerates and stages all three when backend code changes. Details: `frontend/CLAUDE.md` ("API types are generated").
+
 ## Permission Flow (Backend → Frontend)
 
 Platform permissions are a `Permission` StrEnum in `backend/src/platform/enums.py`; product permissions are `ExamplePermission` in `backend/src/example/enums.py`. The composition root (`backend/src/bootstrap.py`) merges both into the seeded `DEFAULT_ROLES`. At login, the API returns the user's flattened permission list; the frontend stores it in `stores/auth.ts` and checks it via `hasPermission()` / `usePermission()` / `<PermissionGuard>`.

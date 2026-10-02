@@ -159,7 +159,7 @@ meta:
               <div>
                 <h4 class="font-semibold">{{ plan.name }}</h4>
                 <p class="text-xs text-muted-foreground mt-0.5">
-                  {{ $t(`planDescriptions.${plan.name}`, plan.description) }}
+                  {{ planDescription(plan) }}
                 </p>
               </div>
               <span
@@ -302,7 +302,7 @@ meta:
             <div>
               <h4 class="font-semibold">{{ plan.name }}</h4>
               <p v-if="plan.description" class="text-xs text-muted-foreground mt-0.5">
-                {{ $t(`planDescriptions.${plan.name}`, plan.description) }}
+                {{ planDescription(plan) }}
               </p>
             </div>
             <ul v-if="comparisonRows.length" class="space-y-1.5">
@@ -509,7 +509,7 @@ meta:
             <div>
               <h4 class="font-semibold">{{ plan.name }}</h4>
               <p v-if="plan.description" class="text-xs text-muted-foreground mt-0.5">
-                {{ $t(`planDescriptions.${plan.name}`, plan.description) }}
+                {{ planDescription(plan) }}
               </p>
             </div>
             <ul v-if="comparisonRows.length" class="space-y-1.5">
@@ -614,7 +614,7 @@ meta:
             <div>
               <h4 class="font-semibold">{{ plan.name }}</h4>
               <p v-if="plan.description" class="text-xs text-muted-foreground mt-0.5">
-                {{ $t(`planDescriptions.${plan.name}`, plan.description) }}
+                {{ planDescription(plan) }}
               </p>
             </div>
             <ul v-if="comparisonRows.length" class="space-y-1.5">
@@ -754,6 +754,12 @@ const trialPrice = computed<PlanPriceOut | undefined>(() => {
   }
   return undefined
 })
+
+// Product locales may describe each plan; otherwise show the plan's own text.
+function planDescription(plan: PlanOut): string {
+  const key = `planDescriptions.${plan.name}`
+  return plan.description ? t(key, plan.description) : t(key)
+}
 
 const paidPlans = computed(() =>
   availablePlans.value.filter((p) => p.prices.some((pr) => pr.is_active && pr.amount > 0)),
@@ -920,16 +926,11 @@ async function handleSwitchPlan(priceId: number, priceAmount: number) {
   switchId.value = priceId
   try {
     const data = await subscriptionStore.switchPlan(priceId)
-    if ('checkout_url' in data) {
-      switchId.value = undefined
-      window.location.href = data.checkout_url
-    } else {
-      subscription.value = data
-      subscriptionStore.subscriptionStatus = data.status
-      subscriptionStore.subscriptionTrialEnd = data.trial_end
-      toast({ title: t('subscription.switchPlanSuccess') })
-      switchId.value = undefined
-    }
+    subscription.value = data
+    subscriptionStore.subscriptionStatus = data.status
+    subscriptionStore.subscriptionTrialEnd = data.trial_end
+    toast({ title: t('subscription.switchPlanSuccess') })
+    switchId.value = undefined
   } catch (err: unknown) {
     toast({ title: resolveError(err), variant: 'destructive' })
     switchId.value = undefined

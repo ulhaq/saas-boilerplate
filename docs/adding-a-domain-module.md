@@ -43,7 +43,7 @@ ACME = ProductModule(
     permissions=list(AcmePermission),
     permission_descriptions={**ACME_PERMISSION_DESCRIPTIONS},
     default_role_permissions=ACME_DEFAULT_ROLE_PERMISSIONS,
-    routers=[ProductRouter(router=widgets.router, tags=["Widgets"])],  # public=False hides it from the API schema
+    routers=[RouterMount(router=widgets.router, tags=["Widgets"])],  # public=False hides it from the API schema
     hooks={HookEvent.MEMBER_ADDED: [on_member_added]},
     worker_loops=[run_acme_loop],                    # wrap each iteration in track_worker_run("acme", interval)
     email_subjects=ACME_EMAIL_SUBJECTS,              # if you send email
@@ -80,7 +80,8 @@ src/acme/
 ├── pages/            # file-based routes, merged into the app's route tree
 ├── components/       # auto-registered, same as platform components
 ├── stores/ + api/    # Pinia store is the data gateway; api module used only by the store
-├── composables/ utils/ types/ constants.ts
+├── composables/ utils/ constants.ts
+├── types/            # aliases of the generated API schema: Schema<'WidgetOut'>
 ├── locales/en.ts, da.ts   # message tree, deep-merged over platform messages
 └── notifications/    # optional: notification presenter registrations
 ```
@@ -112,6 +113,7 @@ export default acme
 ### 4. Verify
 
 ```bash
+(cd ../backend && uv run poe openapi) && npm run gen:api   # your endpoints' types
 npm run typecheck && npm run lint && npm run build
 ```
 

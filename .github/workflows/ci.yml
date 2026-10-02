@@ -38,8 +38,11 @@ jobs:
       - name: Install dependencies
         run: uv sync --locked
 
-      - name: Lint (ty + ruff)
+      - name: Lint (ty + ruff + import-linter)
         run: uv run poe lint
+
+      - name: API schemas match the code
+        run: uv run poe openapi && git diff --exit-code openapi.json openapi.internal.json
 
       - name: Migrations match models
         env:
@@ -72,11 +75,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: API types match the schema
+        run: npm run gen:api && git diff --exit-code src/api-schema.ts
+
       - name: Type-check
         run: npm run typecheck
 
+      # Not `npm run lint`: that runs eslint --fix, which would pass by
+      # rewriting the checkout instead of failing.
       - name: Lint
-        run: npm run lint
+        run: npx eslint .
 
       - name: Build
         run: npm run build

@@ -1,15 +1,5 @@
-export interface ProjectOut {
-  id: number
-  organization_id: number
-  name: string
-  description: string | null
-  created_at: string
-  updated_at: string
-}
+import type { Schema } from '@/platform/types/api'
 
-export interface ProjectIn {
-  name: string
-  description?: string | null
-}
-
-export type ProjectPatch = Partial<ProjectIn>
+export type ProjectOut = Schema<'ProjectOut'>
+export type ProjectIn = Schema<'ProjectIn'>
+export type ProjectPatch = Schema<'ProjectPatch'>

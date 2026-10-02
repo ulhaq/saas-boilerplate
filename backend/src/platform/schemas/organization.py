@@ -2,6 +2,7 @@ from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from src.platform.core.schema import ResponseSchema
 from src.platform.schemas.common import Timestamp
 from src.platform.schemas.types import NonEmptyStr
 
@@ -16,7 +17,7 @@ class OrganizationOut(OrganizationBase, Timestamp):
     id: int
 
 
-class MyOrganizationOut(OrganizationOut):
+class MyOrganizationOut(OrganizationOut, ResponseSchema):
     is_owner: bool = False
 
 
