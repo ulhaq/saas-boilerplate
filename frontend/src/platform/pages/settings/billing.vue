@@ -911,14 +911,9 @@ async function handlePortal() {
 async function handleSwitchPlan(priceId: number, priceAmount: number) {
   const currentAmount = subscription.value?.plan_price?.amount ?? 0
   const isUpgrade = priceAmount > currentAmount
-  const isFreeToPaid = currentAmount === 0
   const ok = await confirm(
     t('subscription.switchPlanTitle'),
-    t(
-      isFreeToPaid
-        ? 'subscription.switchPlanCheckoutDescription'
-        : 'subscription.switchPlanDescription',
-    ),
+    t('subscription.switchPlanDescription'),
     t(isUpgrade ? 'subscription.upgrade' : 'subscription.downgrade'),
     isUpgrade ? 'default' : 'destructive',
   )

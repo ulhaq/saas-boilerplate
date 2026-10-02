@@ -479,8 +479,6 @@ export default {
     switchPlanTitle: 'Skift plan?',
     switchPlanDescription:
       'Dit abonnement opdateres med det samme. Proratering vil blive anvendt på din næste faktura.',
-    switchPlanCheckoutDescription:
-      'Du bliver sendt til en sikker betalingsside for at indtaste dine betalingsoplysninger.',
     switchPlanSuccess: 'Abonnementsplan opdateret',
     incompleteNotice:
       'Du har en afventende betaling. Annuller den for at skifte til en anden plan.',

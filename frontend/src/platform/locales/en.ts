@@ -475,8 +475,6 @@ export default {
     switchPlanTitle: 'Switch plan?',
     switchPlanDescription:
       'Your subscription will be updated immediately. Proration will be applied to your next invoice.',
-    switchPlanCheckoutDescription:
-      "You'll be taken to a secure checkout page to enter your payment details.",
     switchPlanSuccess: 'Subscription plan updated',
     incompleteNotice: 'You have a pending checkout. Cancel it to switch to a different plan.',
     checkoutSuccess: 'Payment successful!',
