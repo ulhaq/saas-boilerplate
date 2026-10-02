@@ -39,7 +39,7 @@ async def verify_user_mfa_code(
 ) -> None:
     """Accept a fresh TOTP code (or, if allowed, an unused recovery code,
     which is consumed) for a signed-in user's re-authentication. Raises
-    MFA_CODE_INVALID otherwise. Login uses AuthService.verify_mfa instead,
+    MFA_CODE_INVALID otherwise. Login uses SessionService.verify_mfa instead,
     which adds the failed-attempt lockout."""
     secret = decrypt_secret(user.mfa_secret) if user.mfa_secret else None
     step = verify_totp(secret, code, user.mfa_last_used_step) if secret else None

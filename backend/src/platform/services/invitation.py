@@ -15,7 +15,7 @@ class InvitationService(BaseService):
     """Pending invitations of the current user's active organization.
 
     Creating invites lives in UserService.invite_user; accepting them in
-    AuthService.
+    InviteService (services/auth/invites.py).
     """
 
     def __init__(

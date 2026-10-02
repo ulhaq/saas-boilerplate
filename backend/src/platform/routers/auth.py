@@ -23,7 +23,12 @@ from src.platform.schemas.user import (
     VerifyEmailIn,
 )
 from src.platform.services.access import authenticate, authenticate_user_session
-from src.platform.services.auth import AuthService
+from src.platform.services.auth import (
+    CredentialsService,
+    InviteService,
+    RegistrationService,
+    SessionService,
+)
 
 router = APIRouter(prefix="/auth")
 # Sign-up, invite and password flows driven by the app's own pages - mounted
@@ -57,7 +62,7 @@ def _delete_refresh_token_cookie(response: Response) -> None:
 async def create_an_account(
     request: Request,
     bg_tasks: BackgroundTasks,
-    service: Annotated[AuthService, Depends()],
+    service: Annotated[RegistrationService, Depends()],
     register_in: RegisterIn,
 ) -> RegisterOut:
     return await service.register_organization(register_in, bg_tasks.add_task)
@@ -67,7 +72,7 @@ async def create_an_account(
 @limiter.limit("10/minute")
 async def verify_email(
     request: Request,
-    service: Annotated[AuthService, Depends()],
+    service: Annotated[RegistrationService, Depends()],
     schema_in: VerifyEmailIn,
 ) -> SetupTokenOut:
     return await service.verify_email(schema_in)
@@ -82,7 +87,7 @@ async def complete_registration(
     request: Request,
     response: Response,
     bg_tasks: BackgroundTasks,
-    service: Annotated[AuthService, Depends()],
+    service: Annotated[RegistrationService, Depends()],
     schema_in: CompleteRegistrationIn,
 ) -> Token:
     token = await service.complete_registration(schema_in, bg_tasks.add_task)
@@ -96,7 +101,7 @@ async def get_access_token(
     request: Request,
     response: Response,
     auth_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-    service: Annotated[AuthService, Depends()],
+    service: Annotated[SessionService, Depends()],
 ) -> Token | MfaChallengeOut:
     """Returns a Token, or - when the user has two-factor auth enabled - an
     MfaChallengeOut to exchange at POST /auth/mfa/verify."""
@@ -111,7 +116,7 @@ async def get_access_token(
 async def verify_mfa(
     request: Request,
     response: Response,
-    service: Annotated[AuthService, Depends()],
+    service: Annotated[SessionService, Depends()],
     schema_in: MfaVerifyIn,
 ) -> Token:
     token = await service.verify_mfa(schema_in)
@@ -123,7 +128,7 @@ async def verify_mfa(
 async def refresh_access_token(
     request: Request,
     response: Response,
-    service: Annotated[AuthService, Depends()],
+    service: Annotated[SessionService, Depends()],
 ) -> Token:
     token = await service.refresh_access_token(request.cookies.get("refresh_token"))
     _set_refresh_token_cookie(response, token.refresh_token)
@@ -134,7 +139,7 @@ async def refresh_access_token(
 async def logout(
     request: Request,
     response: Response,
-    service: Annotated[AuthService, Depends()],
+    service: Annotated[SessionService, Depends()],
 ) -> None:
     await service.logout(request.cookies.get("refresh_token"))
     _delete_refresh_token_cookie(response)
@@ -148,7 +153,7 @@ async def logout(
 async def request_password_reset(
     request: Request,
     bg_tasks: BackgroundTasks,
-    service: Annotated[AuthService, Depends()],
+    service: Annotated[CredentialsService, Depends()],
     email_in: EmailIn,
 ) -> None:
     return await service.request_password_reset(email_in, bg_tasks.add_task)
@@ -158,7 +163,7 @@ async def request_password_reset(
 @limiter.limit("5/minute")
 async def reset_password(
     request: Request,
-    service: Annotated[AuthService, Depends()],
+    service: Annotated[CredentialsService, Depends()],
     reset_password_in: ResetPasswordIn,
 ) -> None:
     await service.reset_password(reset_password_in)
@@ -168,7 +173,7 @@ async def reset_password(
 @limiter.limit("10/minute")
 async def get_invite_status(
     request: Request,
-    service: Annotated[AuthService, Depends()],
+    service: Annotated[InviteService, Depends()],
     schema_in: InviteStatusIn,
 ) -> InviteStatusOut:
     return await service.invite_status(schema_in.token)
@@ -180,7 +185,7 @@ async def complete_invite(
     request: Request,
     response: Response,
     bg_tasks: BackgroundTasks,
-    service: Annotated[AuthService, Depends()],
+    service: Annotated[InviteService, Depends()],
     schema_in: CompleteInviteIn,
 ) -> Token:
     """Accept an invite by creating a new account. Existing accounts get
@@ -196,7 +201,7 @@ async def accept_invite(
     request: Request,
     response: Response,
     bg_tasks: BackgroundTasks,
-    service: Annotated[AuthService, Depends()],
+    service: Annotated[InviteService, Depends()],
     current_user: Annotated[Auth, Depends(authenticate_user_session)],
     schema_in: AcceptInviteIn,
 ) -> Token:
@@ -221,7 +226,7 @@ async def confirm_email_change(
     request: Request,
     response: Response,
     bg_tasks: BackgroundTasks,
-    service: Annotated[AuthService, Depends()],
+    service: Annotated[CredentialsService, Depends()],
     schema_in: ConfirmEmailChangeIn,
 ) -> None:
     """Apply an email change from the confirmation link; ends all sessions."""
@@ -233,7 +238,7 @@ async def confirm_email_change(
 async def switch_organization(
     request: Request,
     response: Response,
-    service: Annotated[AuthService, Depends()],
+    service: Annotated[SessionService, Depends()],
     current_user: Annotated[Auth, Depends(authenticate)],
     switch_in: SwitchOrganizationIn,
 ) -> Token:

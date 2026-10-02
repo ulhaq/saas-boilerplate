@@ -1,4 +1,4 @@
-"""Direct unit tests for AuthService - call methods without HTTP layer.
+"""Direct unit tests for the auth services - call methods without HTTP layer.
 
 These tests bypass TestClient (which executes code in anyio threads that evade
 coverage tracking) and instead instantiate the service with a real SQLAlchemy
@@ -27,7 +27,13 @@ from src.platform.schemas.user import (
     ResetPasswordIn,
     VerifyEmailIn,
 )
-from src.platform.services.auth import AuthService
+from src.platform.services.auth import (
+    CredentialsService,
+    InviteService,
+    RegistrationService,
+    SessionService,
+)
+from src.platform.services.auth.base import AuthBaseService
 from tests.conftest import TestSessionLocal
 
 
@@ -35,9 +41,9 @@ def _no_op_schedule(fn, **kwargs):
     """Replacement for BackgroundTasks.add_task - discards scheduled work."""
 
 
-async def _make_service(session, provider) -> AuthService:
+async def _make_service[S: AuthBaseService](session, service_class: type[S]) -> S:
     repos = RepositoryManager(session)
-    return AuthService(repos, provider)
+    return service_class(repos)
 
 
 async def _auth(repos: RepositoryManager, email: str, organization_id: int) -> Auth:
@@ -79,7 +85,7 @@ def _token(result: object) -> Token:
 async def test_register_new_email(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = await _make_service(session, mock_billing_provider)
+            service = await _make_service(session, RegistrationService)
             out = await service.register_organization(
                 RegisterIn(email="brand_new@example.com", terms_accepted=True),
                 schedule_task=_no_op_schedule,
@@ -90,7 +96,7 @@ async def test_register_new_email(mock_billing_provider):
 async def test_register_duplicate_email_raises(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = await _make_service(session, mock_billing_provider)
+            service = await _make_service(session, RegistrationService)
             with pytest.raises(AlreadyExistsException):
                 await service.register_organization(
                     RegisterIn(email="admin@example.org", terms_accepted=True),
@@ -114,7 +120,7 @@ async def test_verify_email_valid_token(mock_billing_provider):
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = await _make_service(session, mock_billing_provider)
+            service = await _make_service(session, RegistrationService)
             await service.register_organization(
                 RegisterIn(email=email, terms_accepted=True),
                 schedule_task=capture_schedule,
@@ -127,7 +133,7 @@ async def test_verify_email_valid_token(mock_billing_provider):
 async def test_verify_email_invalid_token_raises(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = await _make_service(session, mock_billing_provider)
+            service = await _make_service(session, RegistrationService)
             # Token is valid (signed) but no DB record exists
             token = sign(data="nobody@example.com", salt="email-verification")
             with pytest.raises(NotAuthenticatedException):
@@ -147,7 +153,7 @@ async def test_complete_registration_creates_user_and_org(mock_billing_provider)
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = await _make_service(session, mock_billing_provider)
+            service = await _make_service(session, RegistrationService)
             token = await service.complete_registration(
                 CompleteRegistrationIn(
                     setup_token=setup_token,
@@ -170,7 +176,7 @@ async def test_complete_registration_duplicate_email_raises(mock_billing_provide
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = await _make_service(session, mock_billing_provider)
+            service = await _make_service(session, RegistrationService)
             with pytest.raises(AlreadyExistsException):
                 await service.complete_registration(
                     CompleteRegistrationIn(
@@ -190,7 +196,7 @@ async def test_complete_registration_duplicate_email_raises(mock_billing_provide
 async def test_get_access_token_valid_credentials(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = await _make_service(session, mock_billing_provider)
+            service = await _make_service(session, SessionService)
             token = _token(
                 await service.get_access_token("admin@example.org", "password")
             )
@@ -202,7 +208,7 @@ async def test_get_access_token_valid_credentials(mock_billing_provider):
 async def test_get_access_token_wrong_password(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = await _make_service(session, mock_billing_provider)
+            service = await _make_service(session, SessionService)
             with pytest.raises(NotAuthenticatedException):
                 await service.get_access_token("admin@example.org", "wrong")
 
@@ -210,7 +216,7 @@ async def test_get_access_token_wrong_password(mock_billing_provider):
 async def test_get_access_token_unknown_user(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = await _make_service(session, mock_billing_provider)
+            service = await _make_service(session, SessionService)
             with pytest.raises(NotAuthenticatedException):
                 await service.get_access_token("ghost@example.org", "password")
 
@@ -223,7 +229,7 @@ async def test_get_access_token_unknown_user(mock_billing_provider):
 async def test_refresh_access_token_valid(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = await _make_service(session, mock_billing_provider)
+            service = await _make_service(session, SessionService)
             # Log in first to get a persisted refresh token
             original = _token(
                 await service.get_access_token("admin@example.org", "password")
@@ -237,7 +243,7 @@ async def test_refresh_access_token_valid(mock_billing_provider):
 async def test_refresh_access_token_missing_raises(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = await _make_service(session, mock_billing_provider)
+            service = await _make_service(session, SessionService)
             with pytest.raises(NotAuthenticatedException):
                 await service.refresh_access_token(None)
 
@@ -245,7 +251,7 @@ async def test_refresh_access_token_missing_raises(mock_billing_provider):
 async def test_refresh_access_token_bogus_raises(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = await _make_service(session, mock_billing_provider)
+            service = await _make_service(session, SessionService)
             with pytest.raises(NotAuthenticatedException):
                 await service.refresh_access_token("not.a.valid.jwt")
 
@@ -266,7 +272,7 @@ async def test_switch_organization_valid(mock_billing_provider):
             assert user
             current_auth = Auth.from_user_model(user, active_organization_id=1)
 
-            service = AuthService(repos, mock_billing_provider)
+            service = SessionService(repos)
             # Switch back to org 1 (they already belong to it)
             token = await service.switch_organization(current_auth, organization_id=1)
 
@@ -283,7 +289,7 @@ async def test_switch_organization_non_member_raises(mock_billing_provider):
             assert user
             current_auth = Auth.from_user_model(user, active_organization_id=1)
 
-            service = AuthService(repos, mock_billing_provider)
+            service = SessionService(repos)
             # Org 999 does not exist
             with pytest.raises(PermissionDeniedException):
                 await service.switch_organization(current_auth, organization_id=999)
@@ -297,7 +303,7 @@ async def test_switch_organization_non_member_raises(mock_billing_provider):
 async def test_logout_deletes_refresh_token(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = await _make_service(session, mock_billing_provider)
+            service = await _make_service(session, SessionService)
             tokens = _token(
                 await service.get_access_token("admin@example.org", "password")
             )
@@ -308,7 +314,7 @@ async def test_logout_deletes_refresh_token(mock_billing_provider):
 async def test_logout_invalid_token_is_silent(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = await _make_service(session, mock_billing_provider)
+            service = await _make_service(session, SessionService)
             # Should not raise
             await service.logout("garbage.token.here")
 
@@ -316,7 +322,7 @@ async def test_logout_invalid_token_is_silent(mock_billing_provider):
 async def test_logout_none_is_silent(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = await _make_service(session, mock_billing_provider)
+            service = await _make_service(session, SessionService)
             await service.logout(None)
 
 
@@ -328,7 +334,7 @@ async def test_logout_none_is_silent(mock_billing_provider):
 async def test_request_password_reset_existing_user(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = await _make_service(session, mock_billing_provider)
+            service = await _make_service(session, CredentialsService)
             # Should complete without error
             result = await service.request_password_reset(
                 EmailIn(email="admin@example.org"),
@@ -340,7 +346,7 @@ async def test_request_password_reset_existing_user(mock_billing_provider):
 async def test_request_password_reset_unknown_email_is_silent(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = await _make_service(session, mock_billing_provider)
+            service = await _make_service(session, CredentialsService)
             result = await service.request_password_reset(
                 EmailIn(email="nobody@example.org"),
                 schedule_task=_no_op_schedule,
@@ -356,7 +362,7 @@ async def test_request_password_reset_unknown_email_is_silent(mock_billing_provi
 async def test_reset_password_valid(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = await _make_service(session, mock_billing_provider)
+            service = await _make_service(session, CredentialsService)
             # Create the reset token record
             await service.request_password_reset(
                 EmailIn(email="admin@example.org"), schedule_task=_no_op_schedule
@@ -379,7 +385,7 @@ async def test_reset_password_valid(mock_billing_provider):
 async def test_reset_password_invalid_token_raises(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = await _make_service(session, mock_billing_provider)
+            service = await _make_service(session, CredentialsService)
             token = sign(data="admin@example.org", salt="reset-password")
             # No DB record exists - should raise
             with pytest.raises(NotAuthenticatedException):
@@ -391,7 +397,7 @@ async def test_reset_password_invalid_token_raises(mock_billing_provider):
 async def test_reset_password_unknown_email_raises(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = await _make_service(session, mock_billing_provider)
+            service = await _make_service(session, CredentialsService)
             token = sign(data="ghost@example.org", salt="reset-password")
             with pytest.raises(NotFoundException):
                 await service.reset_password(
@@ -412,7 +418,7 @@ async def test_invite_status_valid(mock_billing_provider):
         async with session.begin():
             repos = RepositoryManager(session)
             token = await _seed_invite(repos, email, organization_id=1, role_ids=[])
-            service = AuthService(repos, mock_billing_provider)
+            service = InviteService(repos)
             out = await service.invite_status(token)
 
     assert out.email == email
@@ -427,7 +433,7 @@ async def test_invite_status_existing_user(mock_billing_provider):
         async with session.begin():
             repos = RepositoryManager(session)
             token = await _seed_invite(repos, email, organization_id=1, role_ids=[])
-            service = AuthService(repos, mock_billing_provider)
+            service = InviteService(repos)
             out = await service.invite_status(token)
 
     assert out.user_exists is True
@@ -446,7 +452,7 @@ async def test_complete_invite_new_user(mock_billing_provider):
         async with session.begin():
             repos = RepositoryManager(session)
             token = await _seed_invite(repos, email, organization_id=1, role_ids=[])
-            service = AuthService(repos, mock_billing_provider)
+            service = InviteService(repos)
             result = _token(
                 await service.complete_invite(
                     CompleteInviteIn(
@@ -471,7 +477,7 @@ async def test_complete_invite_existing_user_requires_sign_in(mock_billing_provi
         async with session.begin():
             repos = RepositoryManager(session)
             token = await _seed_invite(repos, email, organization_id=2, role_ids=[])
-            service = AuthService(repos, mock_billing_provider)
+            service = InviteService(repos)
             with pytest.raises(PermissionDeniedException) as exc:
                 await service.complete_invite(
                     CompleteInviteIn(invite_token=token),
@@ -491,7 +497,7 @@ async def test_accept_invite_existing_user(mock_billing_provider):
         async with session.begin():
             repos = RepositoryManager(session)
             token = await _seed_invite(repos, email, organization_id=2, role_ids=[])
-            service = AuthService(repos, mock_billing_provider)
+            service = InviteService(repos)
             result = await service.accept_invite(
                 await _auth(repos, email, organization_id=1),
                 token,
@@ -532,7 +538,7 @@ async def test_complete_registration_restores_soft_deleted_user(mock_billing_pro
     async with TestSessionLocal() as session:
         async with session.begin():
             repos = RepositoryManager(session)
-            service = AuthService(repos, mock_billing_provider)
+            service = RegistrationService(repos)
             token = await service.complete_registration(
                 CompleteRegistrationIn(
                     setup_token=setup_token,
@@ -558,7 +564,7 @@ async def test_invite_status_invalid_token_raises(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
             repos = RepositoryManager(session)
-            service = AuthService(repos, mock_billing_provider)
+            service = InviteService(repos)
             with pytest.raises(NotAuthenticatedException):
                 await service.invite_status(token)
 
@@ -576,7 +582,7 @@ async def test_complete_invite_invalid_token_raises(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
             repos = RepositoryManager(session)
-            service = AuthService(repos, mock_billing_provider)
+            service = InviteService(repos)
             with pytest.raises(NotAuthenticatedException):
                 await service.complete_invite(
                     CompleteInviteIn(invite_token=token),
@@ -601,7 +607,7 @@ async def test_complete_invite_org_deleted_raises(mock_billing_provider):
             assert organization is not None
             organization.deleted_at = datetime.now(UTC)
             await session.flush()
-            service = AuthService(repos, mock_billing_provider)
+            service = InviteService(repos)
             with pytest.raises(NotFoundException):
                 await service.complete_invite(
                     CompleteInviteIn(invite_token=token),
@@ -622,7 +628,7 @@ async def test_accept_invite_already_member_raises(mock_billing_provider):
         async with session.begin():
             repos = RepositoryManager(session)
             token = await _seed_invite(repos, email, organization_id=1, role_ids=[])
-            service = AuthService(repos, mock_billing_provider)
+            service = InviteService(repos)
             with pytest.raises(AlreadyExistsException):
                 await service.accept_invite(
                     await _auth(repos, email, organization_id=1),
@@ -646,7 +652,7 @@ async def test_accept_invite_with_roles(mock_billing_provider):
         async with session.begin():
             repos = RepositoryManager(session)
             token = await _seed_invite(repos, email, organization_id=2, role_ids=[4])
-            service = AuthService(repos, mock_billing_provider)
+            service = InviteService(repos)
             await service.accept_invite(
                 await _auth(repos, email, organization_id=1),
                 token,
@@ -673,7 +679,7 @@ async def test_complete_invite_new_user_no_credentials_raises(mock_billing_provi
         async with session.begin():
             repos = RepositoryManager(session)
             token = await _seed_invite(repos, email, organization_id=1, role_ids=[])
-            service = AuthService(repos, mock_billing_provider)
+            service = InviteService(repos)
             with pytest.raises(ValidationException):
                 await service.complete_invite(
                     CompleteInviteIn(invite_token=token),  # no name or password
@@ -708,7 +714,7 @@ async def test_complete_invite_restores_soft_deleted_user(mock_billing_provider)
         async with session.begin():
             repos = RepositoryManager(session)
             token = await _seed_invite(repos, email, organization_id=1, role_ids=[])
-            service = AuthService(repos, mock_billing_provider)
+            service = InviteService(repos)
             result = _token(
                 await service.complete_invite(
                     CompleteInviteIn(
@@ -738,7 +744,7 @@ async def test_complete_invite_new_user_with_roles(mock_billing_provider):
         async with session.begin():
             repos = RepositoryManager(session)
             token = await _seed_invite(repos, email, organization_id=1, role_ids=[2])
-            service = AuthService(repos, mock_billing_provider)
+            service = InviteService(repos)
             result = _token(
                 await service.complete_invite(
                     CompleteInviteIn(
@@ -776,7 +782,7 @@ async def test_get_access_token_no_membership_raises(mock_billing_provider):
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = await _make_service(session, mock_billing_provider)
+            service = await _make_service(session, SessionService)
             with pytest.raises(NotAuthenticatedException):
                 await service.get_access_token("nomembership@example.com", "password")
 
@@ -789,13 +795,13 @@ async def test_get_access_token_no_membership_raises(mock_billing_provider):
 async def test_refresh_access_token_zero_user_id_raises(mock_billing_provider, mocker):
     """JWT decodes successfully but sub='0' > user_id falsy > NotAuthenticated."""
     mocker.patch(
-        "src.platform.services.auth.decode_token",
+        "src.platform.services.auth.sessions.decode_token",
         return_value={"sub": "0"},
     )
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = await _make_service(session, mock_billing_provider)
+            service = await _make_service(session, SessionService)
             with pytest.raises(NotAuthenticatedException):
                 await service.refresh_access_token("fake.jwt.token")
 
@@ -810,13 +816,13 @@ async def test_refresh_access_token_user_not_found_raises(
 ):
     """JWT has valid sub but user doesn't exist in DB."""
     mocker.patch(
-        "src.platform.services.auth.decode_token",
+        "src.platform.services.auth.sessions.decode_token",
         return_value={"sub": "99999"},
     )
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = await _make_service(session, mock_billing_provider)
+            service = await _make_service(session, SessionService)
             with pytest.raises(NotAuthenticatedException):
                 await service.refresh_access_token("fake.jwt.token")
 
@@ -830,7 +836,7 @@ async def test_second_login_does_not_invalidate_first_session(mock_billing_provi
     """Logins are independent sessions; both refresh tokens stay valid."""
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = await _make_service(session, mock_billing_provider)
+            service = await _make_service(session, SessionService)
             first = _token(
                 await service.get_access_token("admin@example.org", "password")
             )
@@ -847,7 +853,7 @@ async def test_refresh_token_reuse_revokes_all_sessions(mock_billing_provider):
     # No session.begin() here: the theft response commits internally so the
     # revocation survives the 401, which conflicts with an outer transaction.
     async with TestSessionLocal() as session:
-        service = await _make_service(session, mock_billing_provider)
+        service = await _make_service(session, SessionService)
         first = _token(await service.get_access_token("admin@example.org", "password"))
         rotated = await service.refresh_access_token(first.refresh_token)
         # Replay the pre-rotation token
@@ -871,7 +877,7 @@ async def test_refresh_access_token_no_membership_raises(mock_billing_provider):
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = await _make_service(session, mock_billing_provider)
+            service = await _make_service(session, SessionService)
             tokens = _token(
                 await service.get_access_token("admin@example.org", "password")
             )
@@ -885,7 +891,7 @@ async def test_refresh_access_token_no_membership_raises(mock_billing_provider):
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = await _make_service(session, mock_billing_provider)
+            service = await _make_service(session, SessionService)
             with pytest.raises(NotAuthenticatedException):
                 await service.refresh_access_token(tokens.refresh_token)
 
@@ -911,6 +917,6 @@ async def test_switch_organization_user_not_found_raises(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
             repos = RepositoryManager(session)
-            service = AuthService(repos, mock_billing_provider)
+            service = SessionService(repos)
             with pytest.raises(NotAuthenticatedException):
                 await service.switch_organization(ghost_auth, organization_id=1)

@@ -241,7 +241,9 @@ async def prepare_database() -> AsyncGenerator[None]:
 def mock_send_email(mocker):
     """Prevent real SMTP calls in unit/integration tests."""
     mocker.patch("src.platform.services.email_outbox.send_email")
-    mocker.patch("src.platform.services.auth.send_email")
+    mocker.patch("src.platform.services.auth.registration.send_email")
+    mocker.patch("src.platform.services.auth.invites.send_email")
+    mocker.patch("src.platform.services.auth.credentials.send_email")
     mocker.patch("src.platform.services.user.send_email")
     mocker.patch("src.platform.services.contact.send_email")
     mocker.patch("src.platform.services.mailer._MAX_EMAIL_ATTEMPTS", 1)

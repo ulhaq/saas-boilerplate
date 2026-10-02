@@ -16,7 +16,7 @@ def _do_register(client: TestClient, email: str = "purge_test@example.org") -> N
 async def test_purge_expired_tokens_removes_stale_tokens(
     mocker: MockerFixture, client: TestClient
 ) -> None:
-    mocker.patch("src.platform.services.auth.send_email")
+    mocker.patch("src.platform.services.auth.credentials.send_email")
     _do_register(client)
     client.post("v1/auth/reset-password/request", json={"email": "admin@example.org"})
 

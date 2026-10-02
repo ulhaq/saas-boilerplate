@@ -248,7 +248,8 @@ def test_verify_mfa_locks_after_repeated_failures(
     assert rs.json()["error_code"] == "mfa_locked"
 
     with advance_clock(
-        "src.platform.services.auth", seconds=settings.mfa_lockout_seconds + 1
+        "src.platform.services.auth.sessions",
+        seconds=settings.mfa_lockout_seconds + 1,
     ):
         rs = fresh_client.post(
             "/v1/auth/mfa/verify",
@@ -393,7 +394,7 @@ def test_existing_mfa_user_must_complete_sign_in_to_accept_invite(
         invite_token = mock_send.call_args.kwargs["data"]["invite_url"].split("token=")[
             1
         ]
-        mocker.patch("src.platform.services.auth.send_email")
+        mocker.patch("src.platform.services.auth.invites.send_email")
 
         # The invite link alone neither signs in nor joins the org.
         rs = invitee.post(

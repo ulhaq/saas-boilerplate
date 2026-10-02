@@ -24,7 +24,10 @@ def user_mail(mocker: MockerFixture) -> MagicMock:
 
 @pytest.fixture
 def auth_mail(mocker: MockerFixture) -> MagicMock:
-    return mocker.patch("src.platform.services.auth.send_email")
+    # Email from the auth flows: email-change confirmations and sign-up links.
+    mail = mocker.patch("src.platform.services.auth.credentials.send_email")
+    mocker.patch("src.platform.services.auth.registration.send_email", mail)
+    return mail
 
 
 @pytest.fixture
