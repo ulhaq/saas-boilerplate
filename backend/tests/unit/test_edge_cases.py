@@ -7,9 +7,7 @@ import pytest
 from pydantic import ValidationError
 
 from src.platform.core.exceptions import (
-    AlreadyExistsException,
     NotFoundException,
-    ValidationException,
 )
 from src.platform.core.security import Auth
 from src.platform.enums import ComparisonOperator
@@ -17,12 +15,11 @@ from src.platform.enums import Permission as PermEnum
 from src.platform.models.user import User
 from src.platform.models.user_organization import UserOrganization
 from src.platform.repositories.repository_manager import RepositoryManager
-from src.platform.schemas.billing import CheckoutIn, StartTrialIn
 from src.platform.schemas.common import FilterItem
 from src.platform.schemas.organization import TransferOwnershipIn
 from src.platform.schemas.permission import PermissionIn
 from src.platform.schemas.user import ChangePasswordIn, CompleteInviteIn
-from src.platform.services.billing import SubscriptionService, WebhookService
+from src.platform.services.billing import WebhookService
 from src.platform.services.organization import OrganizationService
 from src.platform.services.permission import PermissionService
 from tests.conftest import TestSessionLocal
@@ -194,84 +191,6 @@ async def test_transfer_ownership_no_owner_role_raises(mock_billing_provider, mo
 
             with pytest.raises(NotFoundException):
                 await service.transfer_ownership(1, TransferOwnershipIn(user_id=2))
-
-
-# ---------------------------------------------------------------------------
-# services/billing/subscriptions.py - post-lock AlreadyExistsException
-# ---------------------------------------------------------------------------
-
-
-async def test_start_checkout_raises_post_lock_when_already_active(
-    mock_billing_provider, plan_with_price, mocker
-):
-    """
-    Race-condition guard: second get_active_for_organization_locked returns paid sub
-    """
-    price_id = plan_with_price["price"]["id"]
-
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            repos = RepositoryManager(session)
-            repos.subscription.set_organization_scope(1)
-            service = SubscriptionService(repos, mock_billing_provider, _admin_auth())
-
-            # Build a fake active paid subscription
-            from src.platform.models.billing import PlanPrice, Subscription
-
-            paid_price = PlanPrice()
-            paid_price.amount = 999
-            paid_sub = Subscription()
-            paid_sub.status = "active"
-            paid_sub.plan_price = paid_price
-
-            # First call (pre-lock) > None to pass the initial check.
-            # Second call (post-lock) > active paid sub to trigger line 139.
-            mock_locked = AsyncMock(side_effect=[None, paid_sub])
-            mocker.patch.object(
-                repos.subscription,
-                "get_active_for_organization_locked",
-                mock_locked,
-            )
-
-            with pytest.raises(AlreadyExistsException):
-                await service.start_checkout(CheckoutIn(plan_price_id=price_id))
-
-
-# ---------------------------------------------------------------------------
-# services/billing/subscriptions.py - post-lock ValidationException trial used
-# ---------------------------------------------------------------------------
-
-
-async def test_start_trial_raises_post_lock_when_trial_already_used(
-    mock_billing_provider, plan_with_price, mocker
-):
-    """Race-condition guard: org.trial_used becomes True after lock."""
-    price_id = plan_with_price["price"]["id"]
-    mocker.patch(
-        "src.platform.services.billing.subscriptions.settings.billing_trial_period_days",
-        14,
-    )
-
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            repos = RepositoryManager(session)
-            repos.subscription.set_organization_scope(1)
-            service = SubscriptionService(repos, mock_billing_provider, _admin_auth())
-
-            # Fetch real org first (trial_used=False) for the pre-lock call
-            real_org = await repos.organization.get(1)
-
-            # Fake org with trial_used=True for the post-lock re-check
-            org_used = MagicMock()
-            org_used.trial_used = True
-
-            # First call > real org (trial_used=False, passes pre-lock check)
-            # Second call > org_used (trial_used=True, triggers line 219)
-            mock_get = AsyncMock(side_effect=[real_org, org_used])
-            mocker.patch.object(repos.organization, "get", mock_get)
-
-            with pytest.raises(ValidationException):
-                await service.start_trial(StartTrialIn(plan_price_id=price_id))
 
 
 # ---------------------------------------------------------------------------

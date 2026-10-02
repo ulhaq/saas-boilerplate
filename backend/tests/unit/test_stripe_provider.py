@@ -1,11 +1,16 @@
 """Unit tests for StripeProvider - mock the stripe SDK directly."""
 
+import threading
+import time
+from collections.abc import Generator
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import stripe
 
-from src.platform.billing.stripe_provider import StripeProvider
+from src.platform.billing.stripe_provider import StripeProvider, configure_stripe
 from src.platform.billing.types import (
     CheckoutResult,
     CustomerPortalResult,
@@ -13,6 +18,7 @@ from src.platform.billing.types import (
     ExternalProduct,
     ExternalSubscription,
 )
+from src.platform.core.config import settings
 from src.platform.core.exceptions import (
     BillingProviderException,
     BillingWebhookException,
@@ -815,3 +821,66 @@ def test_map_subscription_with_canceled_at():
     sub = _fake_sub(canceled_at=1700000000)
     result = StripeProvider._map_subscription(sub)
     assert result.canceled_at is not None
+
+
+# ---------------------------------------------------------------------------
+# configure_stripe - a hanging Stripe must not hold a request (and its locks)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def unresponsive_stripe() -> Generator[None]:
+    """Point the Stripe client at a local server that never answers in time."""
+
+    class Slow(BaseHTTPRequestHandler):
+        def do_GET(self) -> None:
+            time.sleep(3)
+
+        def log_message(self, format: str, *args: Any) -> None:
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Slow)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    original_base = stripe.api_base
+    stripe.api_base = f"http://127.0.0.1:{server.server_address[1]}"
+    yield
+    stripe.api_base = original_base
+    server.shutdown()
+    configure_stripe(
+        settings.stripe_timeout_seconds, settings.stripe_max_network_retries
+    )
+
+
+async def test_a_hanging_stripe_call_fails_at_the_timeout(
+    unresponsive_stripe: None,
+) -> None:
+    configure_stripe(timeout_seconds=0.3, max_network_retries=0)
+    assert stripe.max_network_retries == 0
+    started = time.monotonic()
+    with pytest.raises(BillingProviderException):
+        await _provider().get_or_create_customer(
+            organization_id=1, organization_name="Acme"
+        )
+    assert time.monotonic() - started < 2
+
+
+async def test_get_or_create_customer_is_idempotent_per_organization() -> None:
+    """Concurrent first checkouts can both miss the (eventually consistent)
+    search; one idempotency key per organization stops a duplicate customer."""
+    provider = _provider()
+    with (
+        patch(
+            "stripe.Customer.search_async",
+            new=AsyncMock(return_value=MagicMock(data=[])),
+        ),
+        patch(
+            "stripe.Customer.create_async",
+            new=AsyncMock(return_value=MagicMock(id="cus_new")),
+        ) as create,
+    ):
+        customer_id = await provider.get_or_create_customer(
+            organization_id=42, organization_name="Acme"
+        )
+
+    assert customer_id == "cus_new"
+    assert create.call_args.kwargs["idempotency_key"] == "org-42-customer"

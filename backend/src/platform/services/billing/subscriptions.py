@@ -43,21 +43,16 @@ class SubscriptionService(BaseService):
         super().__init__(repos)
         self.repos.subscription.set_organization_scope(current_user.organization_id)
 
+    # Checkout and trial take no row or advisory locks: they only read local
+    # state and call Stripe (which can be slow), and the subscription itself is
+    # written later by the webhooks. Duplicate Stripe customers are prevented by
+    # the provider's idempotency key, not by a lock.
     async def start_checkout(self, schema_in: CheckoutIn) -> CheckoutOut:
         price, external_price_id = await self._get_billable_price(
             schema_in.plan_price_id
         )
         await self._raise_if_subscribed()
         organization = await self._get_organization()
-
-        # Acquire a transaction-scoped advisory lock keyed on organization_id to prevent
-        # two concurrent first-time checkouts from creating duplicate Stripe customers.
-        # The lock is automatically released when the transaction commits or rolls back.
-        await self._acquire_checkout_lock(self.current_user.organization_id)
-
-        # Re-check after acquiring the lock - a concurrent request may have inserted a
-        # subscription row between our initial check and the lock acquisition.
-        await self._raise_if_subscribed()
 
         # Do not touch the local subscription row here. The row is created or
         # updated by _handle_subscription_created once Stripe confirms the
@@ -91,21 +86,7 @@ class SubscriptionService(BaseService):
                 error_code=ErrorCode.TRIAL_ALREADY_USED,
             )
 
-        # Acquire lock to prevent concurrent trial
-        # starts from creating duplicate customers.
-        await self._acquire_checkout_lock(self.current_user.organization_id)
-
-        # Re-check after acquiring the lock.
-        organization = await self.repos.organization.get(
-            self.current_user.organization_id
-        )
-        if not organization or organization.trial_used:
-            raise ValidationException(
-                "Trial has already been used.",
-                error_code=ErrorCode.TRIAL_ALREADY_USED,
-            )
-
-        existing = await self.repos.subscription.get_active_for_organization_locked(
+        existing = await self.repos.subscription.get_active_for_organization(
             self.current_user.organization_id
         )
         if existing and existing.status in ("trialing", "past_due", "paused"):
@@ -341,7 +322,7 @@ class SubscriptionService(BaseService):
     async def _raise_if_subscribed(self) -> None:
         """Checkout is for organizations without a paid subscription - an
         active free subscription doesn't count."""
-        existing = await self.repos.subscription.get_active_for_organization_locked(
+        existing = await self.repos.subscription.get_active_for_organization(
             self.current_user.organization_id
         )
         if (
@@ -397,9 +378,6 @@ class SubscriptionService(BaseService):
             details={"plan_price_id": price.id},
         )
         return CheckoutOut(checkout_url=result.checkout_url)
-
-    async def _acquire_checkout_lock(self, organization_id: int) -> None:
-        await self.repos.subscription.acquire_checkout_lock(organization_id)
 
     async def _get_active_subscription(self) -> Subscription:
         sub = await self.repos.subscription.get_active_for_organization_locked(

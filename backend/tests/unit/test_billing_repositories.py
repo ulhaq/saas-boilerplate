@@ -434,16 +434,6 @@ async def test_subscription_bulk_cancel_stale_incomplete():
             assert count >= 1
 
 
-async def test_subscription_acquire_checkout_lock():
-    """pg_advisory_xact_lock is mocked to SELECT 1 by conftest fixture."""
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            repos = RepositoryManager(session)
-            repos.subscription.set_organization_scope(1)
-            # Should not raise
-            await repos.subscription.acquire_checkout_lock(1)
-
-
 async def test_subscription_create_or_get_active():
     async with TestSessionLocal() as session:
         async with session.begin():

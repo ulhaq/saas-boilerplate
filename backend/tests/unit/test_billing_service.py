@@ -8,6 +8,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
+from sqlalchemy import text
 
 from src.platform.core.config import settings
 from src.platform.core.exceptions import (
@@ -2745,3 +2746,39 @@ async def test_run_trial_reminder_loop_handles_exception(mocker):
         await run_trial_reminder_loop(TestSessionLocal)
 
     assert call_count >= 3
+
+
+# ---------------------------------------------------------------------------
+# Checkout and trial take no locks - Stripe calls must not block webhooks
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("flow", ["checkout", "trial"])
+async def test_checkout_and_trial_do_not_wait_for_a_locked_subscription(
+    flow, mock_billing_provider, plan_with_price, mocker
+):
+    """Another transaction (e.g. a webhook) holding the subscription row must
+    not block starting a checkout or trial."""
+    mocker.patch(
+        "src.platform.services.billing.subscriptions.settings.billing_trial_period_days",
+        14,
+    )
+    price_id = plan_with_price["price"]["id"]
+
+    async with TestSessionLocal() as webhook_session, webhook_session.begin():
+        webhook_repos = RepositoryManager(webhook_session)
+        await webhook_repos.subscription.get_active_for_organization_locked(1)
+
+        async with TestSessionLocal() as session, session.begin():
+            # Fail fast rather than hang if the flow does wait for the row.
+            await session.execute(text("SET LOCAL lock_timeout = '2s'"))
+            repos = RepositoryManager(session)
+            service = SubscriptionService(repos, mock_billing_provider, _admin_auth())
+            if flow == "checkout":
+                result = await service.start_checkout(
+                    CheckoutIn(plan_price_id=price_id)
+                )
+            else:
+                result = await service.start_trial(StartTrialIn(plan_price_id=price_id))
+
+    assert result.checkout_url

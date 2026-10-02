@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from datetime import UTC, date, datetime
 
-from sqlalchemy import exists, select, text, update
+from sqlalchemy import exists, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,8 +20,6 @@ from src.platform.repositories.base import (
     SoftDeleteRepository,
     SQLResourceRepository,
 )
-
-_CHECKOUT_LOCK_NS = 0x62696C6C  # "bill" in ASCII - namespaces checkout advisory locks
 
 
 class PlanRepository(SoftDeleteRepository[Plan]):
@@ -269,12 +267,6 @@ class SubscriptionRepository(OrganizationScopedRepository[Subscription]):
         )
         rs = await self.db.execute(stmt)
         return rs.rowcount
-
-    async def acquire_checkout_lock(self, organization_id: int) -> None:
-        await self.db.execute(
-            text("SELECT pg_advisory_xact_lock(:tid)"),
-            {"tid": organization_id ^ _CHECKOUT_LOCK_NS},
-        )
 
     async def create_or_get_active(
         self,

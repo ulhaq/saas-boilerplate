@@ -26,6 +26,31 @@ def _ts_to_dt(ts: int | None) -> datetime | None:
     return datetime.fromtimestamp(ts, tz=UTC)
 
 
+def configure_stripe(timeout_seconds: float, max_network_retries: int) -> None:
+    """Bound every Stripe call.
+
+    The library's default is an 80 s timeout per attempt, and some of these
+    calls run while the request holds row locks and a pooled DB connection.
+    Builds the same clients the library would (`requests` for sync calls,
+    `httpx` for async ones) with a shorter timeout. Retried requests carry an
+    idempotency key, so retries are safe.
+    """
+    stripe.max_network_retries = max_network_retries
+    stripe.default_http_client = stripe.new_default_http_client(
+        timeout=timeout_seconds,
+        verify_ssl_certs=stripe.verify_ssl_certs,
+        proxy=stripe.proxy,
+        async_fallback_client=stripe.HTTPXClient(
+            timeout=timeout_seconds,
+            verify_ssl_certs=stripe.verify_ssl_certs,
+            proxy=stripe.proxy,
+        ),
+    )
+
+
+configure_stripe(settings.stripe_timeout_seconds, settings.stripe_max_network_retries)
+
+
 class StripeProvider(BillingProviderABC):
     def __init__(self, api_key: str, webhook_secret: str) -> None:
         self._api_key = api_key
@@ -195,8 +220,13 @@ class StripeProvider(BillingProviderABC):
             }
             if email:
                 params["email"] = email
+            # Search is eventually consistent, so two concurrent first calls
+            # can both miss; the idempotency key makes Stripe return the same
+            # customer to both instead of creating two.
             customer = await stripe.Customer.create_async(
-                **params, api_key=self._api_key
+                **params,
+                api_key=self._api_key,
+                idempotency_key=f"org-{organization_id}-customer",
             )
             return customer.id
         except stripe.StripeError as exc:

@@ -80,6 +80,9 @@ class Settings(EnvSettings):
 
     stripe_secret_key: SecretStr = SecretStr("")
     stripe_webhook_secret: SecretStr = SecretStr("")
+    # Per attempt; failed attempts are retried (with idempotency keys).
+    stripe_timeout_seconds: float = 10
+    stripe_max_network_retries: int = 2
     billing_success_url: str = "http://localhost:5173/billing/success"
     billing_cancel_url: str = "http://localhost:5173/billing/cancel"
     billing_portal_return_url: str = "http://localhost:5173/settings/billing"
