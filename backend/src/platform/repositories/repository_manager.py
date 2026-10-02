@@ -1,5 +1,6 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from functools import cached_property
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -37,148 +38,86 @@ class RepositoryManager:
 
     def __init__(self, db: DbSession) -> None:
         self.db = db
-        self._audit_log: AuditLogRepository | None = None
-        self._api_token: ApiTokenRepository | None = None
-        self._notification: NotificationRepository | None = None
-        self._worker_run: WorkerRunRepository | None = None
-        self._organization: OrganizationRepository | None = None
-        self._user: UserRepository | None = None
-        self._role: RoleRepository | None = None
-        self._permission: PermissionRepository | None = None
-        self._refresh_token: RefreshTokenRepository | None = None
-        self._user_organization: UserOrganizationRepository | None = None
-        self._plan: PlanRepository | None = None
-        self._plan_price: PlanPriceRepository | None = None
-        self._plan_feature: PlanFeatureRepository | None = None
-        self._plan_setting: PlanSettingRepository | None = None
-        self._plan_usage: PlanUsageRepository | None = None
-        self._subscription: SubscriptionRepository | None = None
-        self._webhook_event: WebhookEventRepository | None = None
-        self._email_verification_token: EmailVerificationTokenRepository | None = None
-        self._invitation: InvitationRepository | None = None
-        self._waitlist_entry: WaitlistEntryRepository | None = None
-        self._email_outbox: EmailOutboxRepository | None = None
-        self._login_throttle: LoginThrottleRepository | None = None
 
-    @property
+    @cached_property
     def audit_log(self) -> AuditLogRepository:
-        if self._audit_log is None:
-            self._audit_log = AuditLogRepository(self.db)
-        return self._audit_log
+        return AuditLogRepository(self.db)
 
-    @property
+    @cached_property
     def api_token(self) -> ApiTokenRepository:
-        if self._api_token is None:
-            self._api_token = ApiTokenRepository(self.db)
-        return self._api_token
+        return ApiTokenRepository(self.db)
 
-    @property
+    @cached_property
     def organization(self) -> OrganizationRepository:
-        if self._organization is None:
-            self._organization = OrganizationRepository(self.db)
-        return self._organization
+        return OrganizationRepository(self.db)
 
-    @property
+    @cached_property
     def user(self) -> UserRepository:
-        if self._user is None:
-            self._user = UserRepository(self.db)
-        return self._user
+        return UserRepository(self.db)
 
-    @property
+    @cached_property
     def role(self) -> RoleRepository:
-        if self._role is None:
-            self._role = RoleRepository(self.db)
-        return self._role
+        return RoleRepository(self.db)
 
-    @property
+    @cached_property
     def permission(self) -> PermissionRepository:
-        if self._permission is None:
-            self._permission = PermissionRepository(self.db)
-        return self._permission
+        return PermissionRepository(self.db)
 
-    @property
+    @cached_property
     def refresh_token(self) -> RefreshTokenRepository:
-        if self._refresh_token is None:
-            self._refresh_token = RefreshTokenRepository(self.db)
-        return self._refresh_token
+        return RefreshTokenRepository(self.db)
 
-    @property
+    @cached_property
     def user_organization(self) -> UserOrganizationRepository:
-        if self._user_organization is None:
-            self._user_organization = UserOrganizationRepository(self.db)
-        return self._user_organization
+        return UserOrganizationRepository(self.db)
 
-    @property
+    @cached_property
     def plan(self) -> PlanRepository:
-        if self._plan is None:
-            self._plan = PlanRepository(self.db)
-        return self._plan
+        return PlanRepository(self.db)
 
-    @property
+    @cached_property
     def plan_price(self) -> PlanPriceRepository:
-        if self._plan_price is None:
-            self._plan_price = PlanPriceRepository(self.db)
-        return self._plan_price
+        return PlanPriceRepository(self.db)
 
-    @property
+    @cached_property
     def plan_feature(self) -> PlanFeatureRepository:
-        if self._plan_feature is None:
-            self._plan_feature = PlanFeatureRepository(self.db)
-        return self._plan_feature
+        return PlanFeatureRepository(self.db)
 
-    @property
+    @cached_property
     def plan_setting(self) -> PlanSettingRepository:
-        if self._plan_setting is None:
-            self._plan_setting = PlanSettingRepository(self.db)
-        return self._plan_setting
+        return PlanSettingRepository(self.db)
 
-    @property
+    @cached_property
     def plan_usage(self) -> PlanUsageRepository:
-        if self._plan_usage is None:
-            self._plan_usage = PlanUsageRepository(self.db)
-        return self._plan_usage
+        return PlanUsageRepository(self.db)
 
-    @property
+    @cached_property
     def subscription(self) -> SubscriptionRepository:
-        if self._subscription is None:
-            self._subscription = SubscriptionRepository(self.db)
-        return self._subscription
+        return SubscriptionRepository(self.db)
 
-    @property
+    @cached_property
     def webhook_event(self) -> WebhookEventRepository:
-        if self._webhook_event is None:
-            self._webhook_event = WebhookEventRepository(self.db)
-        return self._webhook_event
+        return WebhookEventRepository(self.db)
 
-    @property
+    @cached_property
     def email_verification_token(self) -> EmailVerificationTokenRepository:
-        if self._email_verification_token is None:
-            self._email_verification_token = EmailVerificationTokenRepository(self.db)
-        return self._email_verification_token
+        return EmailVerificationTokenRepository(self.db)
 
-    @property
+    @cached_property
     def invitation(self) -> InvitationRepository:
-        if self._invitation is None:
-            self._invitation = InvitationRepository(self.db)
-        return self._invitation
+        return InvitationRepository(self.db)
 
-    @property
+    @cached_property
     def notification(self) -> NotificationRepository:
-        if self._notification is None:
-            self._notification = NotificationRepository(self.db)
-        return self._notification
+        return NotificationRepository(self.db)
 
-    @property
+    @cached_property
     def worker_run(self) -> WorkerRunRepository:
-        if self._worker_run is None:
-            self._worker_run = WorkerRunRepository(self.db)
-        return self._worker_run
+        return WorkerRunRepository(self.db)
 
-    @property
+    @cached_property
     def waitlist_entry(self) -> WaitlistEntryRepository:
-        if self._waitlist_entry is None:
-            self._waitlist_entry = WaitlistEntryRepository(self.db)
-        return self._waitlist_entry
+        return WaitlistEntryRepository(self.db)
 
     async def commit_before_raise(self) -> None:
         """Commit the request transaction now, ahead of an exception that
@@ -191,17 +130,13 @@ class RepositoryManager:
         """
         await self.db.commit()
 
-    @property
+    @cached_property
     def email_outbox(self) -> EmailOutboxRepository:
-        if self._email_outbox is None:
-            self._email_outbox = EmailOutboxRepository(self.db)
-        return self._email_outbox
+        return EmailOutboxRepository(self.db)
 
-    @property
+    @cached_property
     def login_throttle(self) -> LoginThrottleRepository:
-        if self._login_throttle is None:
-            self._login_throttle = LoginThrottleRepository(self.db)
-        return self._login_throttle
+        return LoginThrottleRepository(self.db)
 
     @asynccontextmanager
     async def savepoint(self) -> AsyncGenerator[None]:

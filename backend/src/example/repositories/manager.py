@@ -6,18 +6,13 @@ Hook handlers that receive a platform manager can wrap its session via
 ``ExampleRepositoryManager(repos.db)`` to join the same transaction.
 """
 
+from functools import cached_property
+
 from src.example.repositories.project import ProjectRepository
-from src.platform.core.database import DbSession
 from src.platform.repositories.repository_manager import RepositoryManager
 
 
 class ExampleRepositoryManager(RepositoryManager):
-    def __init__(self, db: DbSession) -> None:
-        super().__init__(db)
-        self._project: ProjectRepository | None = None
-
-    @property
+    @cached_property
     def project(self) -> ProjectRepository:
-        if self._project is None:
-            self._project = ProjectRepository(self.db)
-        return self._project
+        return ProjectRepository(self.db)
