@@ -328,7 +328,7 @@ async def test_switch_plan_success(
         price2_id = price2.id
         await session.commit()
 
-    emit_mock = mocker.patch("src.platform.services.billing.emit")
+    emit_mock = mocker.patch("src.platform.services.billing.subscriptions.emit")
     response = admin_authenticated.post(
         "/v1/billing/subscriptions/current/switch-plan",
         json={"plan_price_id": price2_id},

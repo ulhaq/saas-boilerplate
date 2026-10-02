@@ -197,7 +197,7 @@ async def test_transfer_ownership_no_owner_role_raises(mock_billing_provider, mo
 
 
 # ---------------------------------------------------------------------------
-# services/billing.py - post-lock AlreadyExistsException (line 139)
+# services/billing/subscriptions.py - post-lock AlreadyExistsException
 # ---------------------------------------------------------------------------
 
 
@@ -238,16 +238,19 @@ async def test_start_checkout_raises_post_lock_when_already_active(
 
 
 # ---------------------------------------------------------------------------
-# services/billing.py - post-lock ValidationException trial used (line 219)
+# services/billing/subscriptions.py - post-lock ValidationException trial used
 # ---------------------------------------------------------------------------
 
 
 async def test_start_trial_raises_post_lock_when_trial_already_used(
     mock_billing_provider, plan_with_price, mocker
 ):
-    """Race-condition guard: org.trial_used becomes True after lock (line 219)."""
+    """Race-condition guard: org.trial_used becomes True after lock."""
     price_id = plan_with_price["price"]["id"]
-    mocker.patch("src.platform.services.billing.settings.billing_trial_period_days", 14)
+    mocker.patch(
+        "src.platform.services.billing.subscriptions.settings.billing_trial_period_days",
+        14,
+    )
 
     async with TestSessionLocal() as session:
         async with session.begin():
@@ -272,12 +275,12 @@ async def test_start_trial_raises_post_lock_when_trial_already_used(
 
 
 # ---------------------------------------------------------------------------
-# services/billing.py - early return when customer_id is None (line 682)
+# services/billing/webhooks/customers.py - early return when customer_id is None
 # ---------------------------------------------------------------------------
 
 
 async def test_handle_payment_method_detached_no_customer_id(mock_billing_provider):
-    """_handle_payment_method_detached returns early when no customer_id (line 682)."""
+    """payment_method.detached returns early when no customer_id."""
     async with TestSessionLocal() as session:
         async with session.begin():
             repos = RepositoryManager(session)
@@ -290,7 +293,7 @@ async def test_handle_payment_method_detached_no_customer_id(mock_billing_provid
                 }
             }
             # Should complete without querying the database
-            await service._handle_payment_method_detached(raw)
+            await service._dispatch("payment_method.detached", raw)
 
     # The organization repo must not have been touched
     mock_billing_provider.has_payment_method.assert_not_called()

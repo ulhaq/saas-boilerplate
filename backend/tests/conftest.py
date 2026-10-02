@@ -240,7 +240,7 @@ async def prepare_database() -> AsyncGenerator[None]:
 @pytest.fixture(autouse=True)
 def mock_send_email(mocker):
     """Prevent real SMTP calls in unit/integration tests."""
-    mocker.patch("src.platform.services.billing.send_email")
+    mocker.patch("src.platform.services.billing.common.send_email")
     mocker.patch("src.platform.services.auth.send_email")
     mocker.patch("src.platform.services.user.send_email")
     mocker.patch("src.platform.services.contact.send_email")

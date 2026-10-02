@@ -25,10 +25,11 @@ from src.platform.services.billing import (
     SubscriptionService,
     UsageService,
     WebhookService,
-    _get_period_field,
     run_stale_checkout_cleanup_loop,
     run_trial_reminder_loop,
 )
+from src.platform.services.billing.common import _get_period_field
+from src.platform.services.billing.webhooks.invoices import InvoiceWebhookHandlers
 from tests.conftest import TestSessionLocal
 
 
@@ -1313,7 +1314,7 @@ async def test_process_webhook_billing_exception_returns_false(
     )
 
     mocker.patch(
-        "src.platform.services.billing.WebhookService._dispatch",
+        "src.platform.services.billing.webhooks.WebhookService._dispatch",
         side_effect=BillingProviderException("provider down"),
     )
 
@@ -1341,7 +1342,7 @@ async def test_process_webhook_permanent_exception_returns_true(
     )
 
     mocker.patch(
-        "src.platform.services.billing.WebhookService._dispatch",
+        "src.platform.services.billing.webhooks.WebhookService._dispatch",
         side_effect=RuntimeError("unexpected bug"),
     )
 
@@ -2288,7 +2289,10 @@ async def test_run_stale_checkout_cleanup_loop(mocker):
         if call_count >= 2:
             raise asyncio.CancelledError()
 
-    mocker.patch("src.platform.services.billing.asyncio.sleep", side_effect=mock_sleep)
+    mocker.patch(
+        "src.platform.services.billing.maintenance.asyncio.sleep",
+        side_effect=mock_sleep,
+    )
 
     with pytest.raises(asyncio.CancelledError):
         await run_stale_checkout_cleanup_loop(TestSessionLocal)
@@ -2364,12 +2368,12 @@ async def test_checkout_completed_invalid_org_id_in_metadata(mock_billing_provid
 
 
 async def test_notify_subscription_managers_org_not_found(mock_billing_provider):
-    """_notify_subscription_managers returns early when org not found (line 516)."""
+    """_notify_subscription_managers returns early when org not found."""
     async with TestSessionLocal() as session:
         async with session.begin():
             repos = RepositoryManager(session)
-            service = WebhookService(repos, mock_billing_provider)
-            await service._notify_subscription_managers(
+            handlers = InvoiceWebhookHandlers(repos, mock_billing_provider)
+            await handlers._notify_subscription_managers(
                 organization_id=9999,
                 email_template="test-template",
                 data={},
@@ -2606,9 +2610,12 @@ async def test_run_stale_checkout_cleanup_loop_handles_exception(mocker):
         if call_count >= 3:
             raise asyncio.CancelledError()
 
-    mocker.patch("src.platform.services.billing.asyncio.sleep", side_effect=mock_sleep)
     mocker.patch(
-        "src.platform.services.billing.BillingMaintenanceService.cleanup_stale_checkouts",
+        "src.platform.services.billing.maintenance.asyncio.sleep",
+        side_effect=mock_sleep,
+    )
+    mocker.patch(
+        "src.platform.services.billing.maintenance.BillingMaintenanceService.cleanup_stale_checkouts",
         side_effect=RuntimeError("simulated db error"),
     )
 
@@ -2641,7 +2648,7 @@ async def _run_trial_reminders() -> int:
 
 
 async def test_send_trial_reminders_emails_managers_once(mocker):
-    send = mocker.patch("src.platform.services.billing.send_email")
+    send = mocker.patch("src.platform.services.billing.common.send_email")
     await _age_organization(1, days=settings.billing_trial_reminder_delay_days + 1)
 
     count = await _run_trial_reminders()
@@ -2663,7 +2670,7 @@ async def test_send_trial_reminders_emails_managers_once(mocker):
 
 
 async def test_send_trial_reminders_skips_recent_signups(mocker):
-    send = mocker.patch("src.platform.services.billing.send_email")
+    send = mocker.patch("src.platform.services.billing.common.send_email")
 
     # Organizations are created "now" by the fixture, so none clear the delay.
     assert await _run_trial_reminders() == 0
@@ -2671,7 +2678,7 @@ async def test_send_trial_reminders_skips_recent_signups(mocker):
 
 
 async def test_send_trial_reminders_skips_used_trial(mocker):
-    send = mocker.patch("src.platform.services.billing.send_email")
+    send = mocker.patch("src.platform.services.billing.common.send_email")
     await _age_organization(1, days=settings.billing_trial_reminder_delay_days + 1)
 
     async with TestSessionLocal() as session:
@@ -2687,7 +2694,7 @@ async def test_send_trial_reminders_skips_used_trial(mocker):
 
 
 async def test_send_trial_reminders_skips_trialing_subscription(mocker):
-    send = mocker.patch("src.platform.services.billing.send_email")
+    send = mocker.patch("src.platform.services.billing.common.send_email")
     await _age_organization(1, days=settings.billing_trial_reminder_delay_days + 1)
 
     async with TestSessionLocal() as session:
@@ -2707,7 +2714,7 @@ async def test_send_trial_reminders_skips_trialing_subscription(mocker):
 
 
 async def test_send_trial_reminders_disabled_when_trials_off(mocker):
-    send = mocker.patch("src.platform.services.billing.send_email")
+    send = mocker.patch("src.platform.services.billing.common.send_email")
     mocker.patch.object(settings, "billing_trial_period_days", 0)
     await _age_organization(1, days=30)
 
@@ -2725,9 +2732,12 @@ async def test_run_trial_reminder_loop_handles_exception(mocker):
         if call_count >= 3:
             raise asyncio.CancelledError()
 
-    mocker.patch("src.platform.services.billing.asyncio.sleep", side_effect=mock_sleep)
     mocker.patch(
-        "src.platform.services.billing.BillingMaintenanceService.send_trial_reminders",
+        "src.platform.services.billing.maintenance.asyncio.sleep",
+        side_effect=mock_sleep,
+    )
+    mocker.patch(
+        "src.platform.services.billing.maintenance.BillingMaintenanceService.send_trial_reminders",
         side_effect=RuntimeError("simulated db error"),
     )
 
