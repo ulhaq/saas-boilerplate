@@ -1,7 +1,7 @@
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
-import Billing from './billing.vue'
+import Billing from '@/platform/pages/settings/billing.vue'
 import { i18n } from '@/plugins/i18n'
 import { useSubscriptionStore } from '@/platform/stores/subscription'
 import type { PlanOut, PlanPriceOut, SubscriptionOut } from '@/platform/types'

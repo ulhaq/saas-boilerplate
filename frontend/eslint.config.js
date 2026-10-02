@@ -146,7 +146,7 @@ export default [
   {
     // Boundary contract (mirrors backend import-linter): the platform shell
     // must never import from the product domain.
-    files: ['src/platform/**/*.{ts,tsx,vue}'],
+    files: ['src/platform/**/*.{ts,tsx,vue}', 'tests/unit/platform/**/*.ts'],
     rules: {
       'no-restricted-imports': [
         'error',

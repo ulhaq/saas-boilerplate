@@ -27,14 +27,14 @@ Each layer has its own CLAUDE.md. Always read `backend/CLAUDE.md` and `frontend/
 
 ### Step 2 - Enumerate Source Modules
 **Backend - scan for:**
-- All router files: `backend/src/routers/*.py`
-- All service files: `backend/src/services/*.py`
+- All router files: `backend/src/platform/routers/*.py` and the product's (`backend/src/example/routers/*.py`)
+- All service files: `backend/src/platform/services/**/*.py` and the product's (`backend/src/example/services/*.py`)
 - Existing tests live in `backend/tests/api/` (integration tests) and `backend/tests/unit/` (unit tests)
 - Any other testable units called out in `backend/CLAUDE.md`
 
 **Frontend - scan for:**
-- All Pinia store files (e.g., `frontend/src/stores/*.ts`)
-- All composable files (e.g., `frontend/src/composables/*.ts`)
+- All Pinia store files (e.g., `frontend/src/platform/stores/*.ts`, `frontend/src/example/stores/*.ts`)
+- All composable files (e.g., `frontend/src/platform/composables/*.ts`)
 - Any API client or service modules
 - Any other testable units called out in `frontend/CLAUDE.md`
 
@@ -79,12 +79,12 @@ async def test_create_subscription(client: AsyncClient) -> None:
 - Follows the existing test patterns in `frontend/CLAUDE.md` or existing test files
 - Example:
 ```typescript
-// frontend/src/stores/__tests__/billing.test.ts
+// frontend/tests/unit/platform/stores/subscription.test.ts (mirrors src/platform/stores/subscription.ts)
 import { describe, it, expect, beforeEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
-import { useBillingStore } from '../billing'
+import { useSubscriptionStore } from '@/platform/stores/subscription'
 
-describe('useBillingStore', () => {
+describe('useSubscriptionStore', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
   })
@@ -109,7 +109,7 @@ describe('useBillingStore', () => {
 ### Frontend Gaps Fixed
 | Source Module | Test File Created |
 |---|---|
-| src/stores/billing.ts | src/stores/__tests__/billing.test.ts |
+| src/platform/stores/subscription.ts | tests/unit/platform/stores/subscription.test.ts |
 
 ### Already Covered (no action needed)
 - app/routers/auth.py → tests/routers/test_auth.py ✓

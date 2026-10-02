@@ -1,7 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { expect, test, vi } from 'vitest'
-import AuditLog from './audit-log.vue'
+import AuditLog from '@/platform/pages/settings/audit-log.vue'
 import { auditActionValues } from '@/api-schema'
 import { i18n } from '@/plugins/i18n'
 import { useAuditLogsStore } from '@/platform/stores/auditLogs'

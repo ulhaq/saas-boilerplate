@@ -217,7 +217,7 @@ Key namespaces: `auth.*`, `nav.*`, `common.*`, `settings.*`, `errors.api.*`, `er
 
 ## Testing
 
-Component tests sit next to the code as `*.test.ts` and run with Vitest in a simulated DOM (`happy-dom`, `@vue/test-utils`); `vitest.config.ts` reuses the Vite config. `src/platform/pages/settings/billing.test.ts` is the model: mount the page per state with a real Pinia store whose API-calling actions are replaced by `vi.fn()`, mock `useConfirm`/`useToast` with `vi.mock`, then assert what the user sees and which store action a click calls. Look up visible text through i18n keys (`i18n.global.t(...)`), not hard-coded copy. Fixtures use the generated API types, so `npm run typecheck` flags fixtures that drift from the backend. CI runs `npm test`.
+Component tests live in `tests/unit/`, mirroring the `src/` path of the code they test (`tests/unit/platform/pages/settings/billing.test.ts` tests `src/platform/pages/settings/billing.vue`), and run with Vitest in a simulated DOM (`happy-dom`, `@vue/test-utils`); `vitest.config.ts` reuses the Vite config. `billing.test.ts` is the model: mount the page per state with a real Pinia store whose API-calling actions are replaced by `vi.fn()`, mock `useConfirm`/`useToast` with `vi.mock`, then assert what the user sees and which store action a click calls. Look up visible text through i18n keys (`i18n.global.t(...)`), not hard-coded copy. Fixtures use the generated API types, so `npm run typecheck` flags fixtures that drift from the backend. CI runs `npm test`.
 
 Platform tests must not depend on product content - the product's locale strings are merged in at runtime, so assert platform keys only.
 
