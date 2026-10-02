@@ -32,14 +32,26 @@ def _is_active_free_sub(sub: Subscription | None) -> bool:
     )
 
 
+def _notification_payload(data: dict) -> dict:
+    """The email data, made JSON-safe for the notification: dates as ISO
+    strings (the app formats them per locale) and no absolute URLs (the app
+    links to its own pages)."""
+    return {
+        key: value.isoformat() if isinstance(value, date) else value
+        for key, value in data.items()
+        if not key.endswith("_url")
+    }
+
+
 async def notify_subscription_managers(
     repos: RepositoryManager,
     organization: Organization,
     email_template: str,
     data: dict,
 ) -> int:
-    """Queue an email to every member of ``organization`` who can manage the
-    subscription; the worker sends them once the caller's transaction commits.
+    """Notify every member of ``organization`` who can manage the subscription:
+    an in-app notification (``billing.<email_template>``) and an email, which
+    the worker sends once the caller's transaction commits.
 
     Returns the number of recipients. Used both by webhook handlers and by the
     trial reminder loop, so it takes an Organization rather than reading one
@@ -66,6 +78,12 @@ async def notify_subscription_managers(
             email_template=email_template,
             locale=user.locale,
             data=localized_data,
+        )
+        await repos.notification.create(
+            user_id=user.id,
+            organization_id=organization.id,
+            type=f"billing.{email_template}",
+            payload=_notification_payload(data),
         )
         sent += 1
     return sent

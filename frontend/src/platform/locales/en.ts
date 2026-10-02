@@ -12,6 +12,46 @@ export default {
     newTitle: '{count} new notification | {count} new notifications',
     newDescription: 'Open the notification panel to view details.',
     viewAll: 'View all notifications',
+    billing: {
+      paymentFailed: {
+        title: 'Payment failed',
+        description:
+          "We couldn't collect your latest payment. Update your payment method to keep your subscription.",
+      },
+      paymentUncollectible: {
+        title: 'Subscription downgraded',
+        description: "We couldn't collect payment, so your organization is now on the free plan.",
+      },
+      paymentActionRequired: {
+        title: 'Payment needs your action',
+        description: 'Your bank asked for extra verification. Complete it to finish the payment.',
+      },
+      trialAvailable: {
+        title: 'Your free trial is waiting',
+        description: 'Try the paid features free for {days} days.',
+      },
+      trialEnding: {
+        title: 'Your trial ends soon',
+        description: 'Your trial ends on {date}.',
+        descriptionSoon: 'Your trial ends soon.',
+      },
+      trialEnded: {
+        title: 'Your trial has ended',
+        description: 'Your organization is back on the free plan.',
+      },
+      subscriptionPaused: {
+        title: 'Subscription paused',
+        description: 'Add a payment method to resume your subscription.',
+      },
+      subscriptionResumed: {
+        title: 'Subscription resumed',
+        description: 'Your subscription is active again.',
+      },
+      duplicateSubscriptionRefunded: {
+        title: 'Duplicate subscription refunded',
+        description: 'We canceled a second subscription and refunded it in full.',
+      },
+    },
   },
   notFound: {
     title: 'Page not found',

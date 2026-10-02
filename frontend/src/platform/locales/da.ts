@@ -12,6 +12,47 @@ export default {
     newTitle: '{count} ny notifikation | {count} nye notifikationer',
     newDescription: 'Åbn notifikationspanelet for at se detaljer.',
     viewAll: 'Se alle notifikationer',
+    billing: {
+      paymentFailed: {
+        title: 'Betaling mislykkedes',
+        description:
+          'Vi kunne ikke opkræve din seneste betaling. Opdater din betalingsmetode for at beholde dit abonnement.',
+      },
+      paymentUncollectible: {
+        title: 'Abonnement nedgraderet',
+        description: 'Vi kunne ikke opkræve betalingen, så din organisation er nu på gratisplanen.',
+      },
+      paymentActionRequired: {
+        title: 'Betalingen kræver din handling',
+        description:
+          'Din bank har bedt om ekstra bekræftelse. Gennemfør den for at fuldføre betalingen.',
+      },
+      trialAvailable: {
+        title: 'Din gratis prøveperiode venter',
+        description: 'Prøv de betalte funktioner gratis i {days} dage.',
+      },
+      trialEnding: {
+        title: 'Din prøveperiode slutter snart',
+        description: 'Din prøveperiode slutter den {date}.',
+        descriptionSoon: 'Din prøveperiode slutter snart.',
+      },
+      trialEnded: {
+        title: 'Din prøveperiode er slut',
+        description: 'Din organisation er tilbage på gratisplanen.',
+      },
+      subscriptionPaused: {
+        title: 'Abonnement sat på pause',
+        description: 'Tilføj en betalingsmetode for at genoptage dit abonnement.',
+      },
+      subscriptionResumed: {
+        title: 'Abonnement genoptaget',
+        description: 'Dit abonnement er aktivt igen.',
+      },
+      duplicateSubscriptionRefunded: {
+        title: 'Dobbelt abonnement refunderet',
+        description: 'Vi har annulleret et ekstra abonnement og refunderet det fuldt ud.',
+      },
+    },
   },
   notFound: {
     title: 'Siden blev ikke fundet',

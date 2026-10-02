@@ -7,6 +7,7 @@ import { i18n } from './plugins/i18n'
 import { configureApp } from '@/platform/config'
 import { initTelemetry } from '@/platform/lib/telemetry'
 import { products } from '@/products'
+import '@/platform/notifications/billing'
 import './assets/index.css'
 
 for (const product of products) product.setup?.()
