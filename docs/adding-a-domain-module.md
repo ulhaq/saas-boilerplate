@@ -30,7 +30,7 @@ Conventions that carry over from `example`:
 
 - Models declare `organization_id` FKs toward platform tables (never the reverse); repositories that hold tenant data extend `OrganizationScopedRepository` so unscoped queries fail loudly.
 - Services raise `ClientException(AcmeErrorCode.X)`; the platform middleware renders the JSON error.
-- Routers/services depend on `AcmeRepositoryManager` (FastAPI instantiates it via `Depends()` exactly like the platform one). Hook handlers receive the *platform* manager and wrap its session: `repos = AcmeRepositoryManager(repos.db)` - same transaction.
+- Routers/services depend on `AcmeRepositoryManager` (FastAPI instantiates it via `Depends()` exactly like the platform one). Hook handlers receive the _platform_ manager and wrap its session: `repos = AcmeRepositoryManager(repos.db)` - same transaction.
 
 ### 2. Declare its manifest (`src/acme/product.py`)
 
@@ -53,10 +53,10 @@ ACME = ProductModule(
 
 ### 3. Install it
 
-| Where | What |
-|-------|------|
-| `src/products.py` | add `ACME` to `PRODUCTS` - `bootstrap()`, the API router includes, the worker loops and Alembic's model registration all iterate this list |
-| `pyproject.toml` | in the import-linter contracts, add `src.acme` next to (or instead of) `src.example`: the platform contract's `forbidden_modules` (so the platform can't import it), the layers contract's `containers`, and the routers contract's module lists |
+| Where             | What                                                                                                                                                                                                                                             |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `src/products.py` | add `ACME` to `PRODUCTS` - `bootstrap()`, the API router includes, the worker loops and Alembic's model registration all iterate this list                                                                                                       |
+| `pyproject.toml`  | in the import-linter contracts, add `src.acme` next to (or instead of) `src.example`: the platform contract's `forbidden_modules` (so the platform can't import it), the layers contract's `containers`, and the routers contract's module lists |
 
 Never start loops in `main.py` - `worker.py` runs them in a single process.
 
@@ -105,9 +105,9 @@ export default acme
 
 ### 3. Install it
 
-| Where | What |
-|-------|------|
-| `src/products.ts` | import the manifest and add it to `products` - `main.ts` runs its `setup()` and home route, `plugins/i18n.ts` merges its messages |
+| Where                | What                                                                                                                                    |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/products.ts`    | import the manifest and add it to `products` - `main.ts` runs its `setup()` and home route, `plugins/i18n.ts` merges its messages       |
 | `products.config.js` | add `'acme'` to `productPackages` - Vite reads it for `src/acme/pages` and `src/acme/components`, ESLint for the platform boundary rule |
 
 ### 4. Verify

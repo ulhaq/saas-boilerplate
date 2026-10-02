@@ -1,20 +1,12 @@
-export type {
-  PaginatedResponse,
-  PageQueryParams,
-  FilterExpression,
-  FilterOp,
-  ApiError,
-} from './api'
+export type { PaginatedResponse, FilterOp, ApiError } from './api'
 export type {
   Token,
   MfaChallenge,
   MfaVerifyIn,
-  LoginIn,
   ResetPasswordRequestIn,
   ResetPasswordIn,
   ChangePasswordIn,
   SwitchOrganizationIn,
-  JwtPayload,
   RegisterIn,
   RegisterOut,
   VerifyEmailIn,
@@ -23,11 +15,11 @@ export type {
   CompleteInviteIn,
   InviteStatusResponse,
 } from './auth'
-export type { UserBase, UserPatch, UserRoleIn, UserOut, EmailChangeIn } from './user'
+export type { UserPatch, UserRoleIn, UserOut, EmailChangeIn } from './user'
 export type { MfaSetupOut, MfaCodeIn, MfaDisableIn, MfaRecoveryCodesOut } from './mfa'
 export type { InvitationOut, InvitationRoleOut, InvitationInviterOut } from './invitation'
 export type { OrganizationBase, OrganizationPatch, OrganizationOut } from './organization'
-export type { RoleBase, RoleIn, RolePatch, RolePermissionIn, RoleOut } from './role'
+export type { RoleIn, RolePatch, RolePermissionIn, RoleOut } from './role'
 export type { PermissionOut } from './permission'
 export type {
   PlanPriceOut,

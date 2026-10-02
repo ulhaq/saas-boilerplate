@@ -22,7 +22,7 @@ test('the action filter offers every action an organization can have', async () 
 
   // Every backend action except those recorded without an organization,
   // sorted, after the "all actions" entry.
-  const organizationLess = ['auth.password_reset', 'user.email_change', 'billing.webhook']
+  const organizationLess = ['auth.password_reset', 'user.email_change']
   expect(options.slice(1)).toEqual(
     auditActionValues.filter((a) => !organizationLess.includes(a)).sort(),
   )

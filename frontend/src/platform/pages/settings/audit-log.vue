@@ -121,13 +121,9 @@ const { t } = useI18n()
 const auditLogsStore = useAuditLogsStore()
 const { formatDateTime } = useFormatDate()
 
-// Recorded without an organization (user-level or unattributed), so they never
-// appear in an organization's audit log.
-const ORGANIZATION_LESS_ACTIONS: AuditAction[] = [
-  'auth.password_reset',
-  'user.email_change',
-  'billing.webhook',
-]
+// User-level actions, recorded without an organization, so they never appear
+// in an organization's audit log.
+const ORGANIZATION_LESS_ACTIONS: AuditAction[] = ['auth.password_reset', 'user.email_change']
 
 // Every action the backend records (from the generated API schema) that can
 // appear here.

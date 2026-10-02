@@ -2906,3 +2906,47 @@ async def test_first_paid_subscription_still_replaces_the_free_plan(
 
     assert (await _tracked_subscription())[0] == "sub_first"
     mock_billing_provider.cancel_duplicate_subscription.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# billing.webhook audit entries belong to the organization the event concerns
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("event_id", "obj", "expected_organization_id"),
+    [
+        ("evt_inv", {"object": "invoice", "customer": "cus_audit"}, 1),
+        ("evt_cus", {"object": "customer", "id": "cus_audit"}, 1),
+        ("evt_prod", {"object": "product", "id": "prod_1"}, None),
+        ("evt_other", {"object": "invoice", "customer": "cus_unknown"}, None),
+    ],
+    ids=["customer-field", "customer-object", "catalog", "unknown-customer"],
+)
+async def test_webhook_audit_entry_names_the_events_organization(
+    event_id, obj, expected_organization_id, mock_billing_provider
+):
+    from src.platform.billing.types import WebhookPayload
+
+    async with TestSessionLocal() as session, session.begin():
+        repos = RepositoryManager(session)
+        org = await repos.organization.get(1)
+        assert org
+        await repos.organization.update(org, external_customer_id="cus_audit")
+
+    # An event type no handler acts on: only the audit entry is under test.
+    mock_billing_provider.construct_webhook_event.return_value = WebhookPayload(
+        external_event_id=event_id,
+        event_type="test.unhandled",
+        raw={"data": {"object": obj}},
+    )
+    async with TestSessionLocal() as session, session.begin():
+        service = WebhookService(RepositoryManager(session), mock_billing_provider)
+        assert await service.process_webhook(b"payload", "sig") is True
+
+    async with TestSessionLocal() as session:
+        rs = await session.execute(
+            select(AuditLog).where(AuditLog.action == "billing.webhook")
+        )
+        [entry] = rs.scalars().all()
+    assert entry.organization_id == expected_organization_id

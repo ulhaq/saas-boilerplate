@@ -11,6 +11,7 @@
     "gen:api": "openapi-typescript ../backend/openapi.internal.json --default-non-nullable false --enum-values -o src/api-schema.ts && prettier --write src/api-schema.ts",
     "lint": "eslint . --fix",
     "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",

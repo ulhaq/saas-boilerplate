@@ -157,7 +157,7 @@ The path, method, path params, body and response type are checked against the ge
 
 ### API types are generated - never hand-write them
 
-`src/api-schema.ts` is generated from `backend/openapi.internal.json`, the schema of every route that the backend writes (`uv run poe openapi`). The files in `platform/types/` (and a product's `types/`) alias it by schema name: `export type RoleOut = Schema<'RoleOut'>` (`Schema` is in `platform/types/api.ts`). A type with no backend schema (form state, a decoded JWT) stays hand-written. Narrow a generated field only where the backend declares a plain string the frontend relies on as a union - say so in a comment (see `platform/types/billing.ts`).
+`src/api-schema.ts` is generated from `backend/openapi.internal.json`, the schema of every route that the backend writes (`uv run poe openapi`). The files in `platform/types/` (and a product's `types/`) alias it by schema name: `export type RoleOut = Schema<'RoleOut'>` (`Schema` is in `platform/types/api.ts`). A type with no backend schema (e.g. form state) stays hand-written. Narrow a generated field only where the backend declares a plain string the frontend relies on as a union - say so in a comment (see `platform/types/billing.ts`).
 
 After changing a backend request/response schema: `cd backend && uv run poe openapi`, then `npm run gen:api`, and commit the backend's schema files + `src/api-schema.ts` (the pre-commit hook does this when backend code changes). CI regenerates them and fails if they are out of date.
 

@@ -25,16 +25,16 @@ Files older than `KEEP_DAYS` (default 30) are pruned automatically.
 
 ### Environment variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DB_NAME` | `app_db` | Database name |
-| `DB_USER` | `username` | Database user (matches `DB_USER` in `backend/.env`) |
-| `DB_PASSWORD` | _(empty)_ | Database password |
-| `DB_HOST` | `localhost` | Host (native pg_dump only) |
-| `DB_PORT` | `5432` | Port (native pg_dump only) |
-| `BACKUP_DIR` | `./backups` | Output directory |
-| `KEEP_DAYS` | `30` | Retention window in days |
-| `COMPOSE_SERVICE` | `postgres` | Docker Compose service name (Docker fallback only) |
+| Variable          | Default     | Description                                         |
+| ----------------- | ----------- | --------------------------------------------------- |
+| `DB_NAME`         | `app_db`    | Database name                                       |
+| `DB_USER`         | `username`  | Database user (matches `DB_USER` in `backend/.env`) |
+| `DB_PASSWORD`     | _(empty)_   | Database password                                   |
+| `DB_HOST`         | `localhost` | Host (native pg_dump only)                          |
+| `DB_PORT`         | `5432`      | Port (native pg_dump only)                          |
+| `BACKUP_DIR`      | `./backups` | Output directory                                    |
+| `KEEP_DAYS`       | `30`        | Retention window in days                            |
+| `COMPOSE_SERVICE` | `postgres`  | Docker Compose service name (Docker fallback only)  |
 
 ### Recommended schedule
 

@@ -31,12 +31,12 @@ Then open http://localhost:5050 and log in with the credentials above.
 
 Register the database once (Servers → Register → Server), it is saved in the volume:
 
-| Field | Value |
-|-------|-------|
-| Host | `postgres` (the compose service name) |
-| Port | `5432` |
-| Maintenance database | value of `DB_NAME` |
-| Username / Password | `DB_USER` / `DB_PASSWORD` for app access, or `postgres` / `POSTGRES_PASSWORD` for superuser |
+| Field                | Value                                                                                       |
+| -------------------- | ------------------------------------------------------------------------------------------- |
+| Host                 | `postgres` (the compose service name)                                                       |
+| Port                 | `5432`                                                                                      |
+| Maintenance database | value of `DB_NAME`                                                                          |
+| Username / Password  | `DB_USER` / `DB_PASSWORD` for app access, or `postgres` / `POSTGRES_PASSWORD` for superuser |
 
 Prefer `DB_USER` for day-to-day inspection; use the superuser only when you need it.
 

@@ -88,6 +88,9 @@ class WebhookService(BaseService):
         record_webhook_event(webhook.event_type, "processed")
         await self.log_audit(
             AuditAction.BILLING_WEBHOOK,
+            # Resolved after the handler ran: a first checkout's handler is what
+            # links the Stripe customer to the organization.
+            organization_id=await self._organization_id_for(webhook.raw),
             resource_type="webhook_event",
             details={
                 "event_type": webhook.event_type,
@@ -95,6 +98,20 @@ class WebhookService(BaseService):
             },
         )
         return True
+
+    async def _organization_id_for(self, raw: dict) -> int | None:
+        """The organization an event concerns, via its Stripe customer; None for
+        catalog events (products, prices) and customers no organization has."""
+        obj = raw.get("data", {}).get("object", {})
+        customer = (
+            obj.get("id") if obj.get("object") == "customer" else obj.get("customer")
+        )
+        if not isinstance(customer, str):
+            return None
+        organization = await self.repos.organization.get_by_external_customer_id(
+            customer
+        )
+        return organization.id if organization else None
 
     async def _dispatch(self, event_type: str, raw: dict) -> None:
         handler = self._handlers.get(event_type)

@@ -16,12 +16,12 @@ The product-specific code lives in one package per side (`backend/src/example/`,
 
 ## Tech Stack
 
-| Layer | Stack |
-|-------|-------|
-| Backend | Python 3.14, FastAPI, async SQLAlchemy, PostgreSQL, Alembic, `uv` |
-| Worker | Standalone asyncio process (product loops, GDPR retention, billing cleanup, trial reminders) |
-| Frontend | Vue 3, TypeScript, Vite, Pinia, vue-i18n, Tailwind + Reka UI, file-based routing |
-| Infra | Docker Compose (postgres, pgadmin, mailpit, backend, worker, frontend, site); opt-in profiles: `analytics` (Umami), `observability` (Alloy agent + Grafana, Prometheus, Loki, Tempo) |
+| Layer    | Stack                                                                                                                                                                                |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Backend  | Python 3.14, FastAPI, async SQLAlchemy, PostgreSQL, Alembic, `uv`                                                                                                                    |
+| Worker   | Standalone asyncio process (product loops, GDPR retention, billing cleanup, trial reminders)                                                                                         |
+| Frontend | Vue 3, TypeScript, Vite, Pinia, vue-i18n, Tailwind + Reka UI, file-based routing                                                                                                     |
+| Infra    | Docker Compose (postgres, pgadmin, mailpit, backend, worker, frontend, site); opt-in profiles: `analytics` (Umami), `observability` (Alloy agent + Grafana, Prometheus, Loki, Tempo) |
 
 ## Architecture
 
@@ -55,10 +55,10 @@ How the two halves connect without the platform knowing about the product:
 
 ### Two-process backend
 
-| Process | Entry point | Role |
-|---------|-------------|------|
-| API | `src/main.py` (uvicorn) | HTTP requests |
-| Worker | `worker.py` | Product loops, GDPR retention, billing cleanup, trial reminders |
+| Process | Entry point             | Role                                                            |
+| ------- | ----------------------- | --------------------------------------------------------------- |
+| API     | `src/main.py` (uvicorn) | HTTP requests                                                   |
+| Worker  | `worker.py`             | Product loops, GDPR retention, billing cleanup, trial reminders |
 
 Background loops live only in the worker so the API can scale horizontally without duplicate job runs or duplicate emails.
 
@@ -83,12 +83,12 @@ make logs                              # tail everything
 make down                              # stop
 ```
 
-| Service | URL |
-|---------|-----|
-| Frontend | http://localhost:5173 |
-| API (+ OpenAPI docs) | http://localhost:8000 |
+| Service                | URL                   |
+| ---------------------- | --------------------- |
+| Frontend               | http://localhost:5173 |
+| API (+ OpenAPI docs)   | http://localhost:8000 |
 | Mailpit (caught email) | http://localhost:8025 |
-| pgAdmin | http://localhost:5050 |
+| pgAdmin                | http://localhost:5050 |
 
 ### Without Docker
 
@@ -145,6 +145,7 @@ npm run lint        # eslint --fix (includes the platform/product boundary rule)
 npm run gen:api     # regenerate the API types from ../backend/openapi.internal.json
 npm run build       # production build (SPA)
 npm test            # component tests (vitest)
+npm run format      # prettier (CI checks it)
 npm run test:e2e    # playwright (needs the dev stack running)
 ```
 

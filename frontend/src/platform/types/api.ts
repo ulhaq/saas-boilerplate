@@ -14,21 +14,6 @@ export interface PaginatedResponse<T> {
   total: number
 }
 
-export interface PageQueryParams {
-  page_number: number
-  page_size: number
-  sort?: string
-  q?: string
-  [key: string]: string | number | undefined
-}
-
-export interface FilterExpression {
-  [field: string]: {
-    v: (string | number | boolean)[]
-    op: FilterOp
-  }
-}
-
 export type FilterOp =
   | 'eq'
   | 'neq'

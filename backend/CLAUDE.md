@@ -7,6 +7,7 @@ This file provides comprehensive guidance for working with this FastAPI multi-te
 **SaaS boilerplate backend** - multi-tenant FastAPI service with auth, organizations, RBAC, Stripe billing, audit log, GDPR tooling, and email/in-app notifications. Product code lives in `src/example/`, a minimal Projects feature that demonstrates every extension point.
 
 **Key Characteristics:**
+
 - Multi-tenant architecture with enforced tenant isolation
 - Fine-grained RBAC with granular permissions (platform `Permission` + product `ExamplePermission`)
 - Async/await throughout using SQLAlchemy async drivers
@@ -18,17 +19,17 @@ This file provides comprehensive guidance for working with this FastAPI multi-te
 
 ### Example product modules
 
-| Path | Purpose |
-|------|---------|
-| `src/example/enums.py` | `ExamplePermission`, `ExampleAuditAction`, `ExampleUsageMetric.PROJECTS`, `ExampleErrorCode`, permission descriptions + per-role grants |
-| `src/example/models/project.py` | Org-scoped, soft-deletable `Project` |
-| `src/example/repositories/` | `ProjectRepository(OrganizationScopedRepository)` + `ExampleRepositoryManager` |
-| `src/example/services/project.py` | `ProjectService(ResourceService)` - name uniqueness, plan capacity check, audit logging |
-| `src/example/routers/projects.py` | `/v1/projects` CRUD guarded by `require_permission(ExamplePermission.X)` |
-| `src/example/hooks.py` | `PLAN_CHANGED` handler (reports orgs above their project limit) |
-| `src/example/worker.py` | `run_example_loop` - heartbeat loop recording `worker_run` rows |
-| `src/example/config.py` | `ExampleSettings` (`env_prefix="example_"`) |
-| `src/example/product.py` | `EXAMPLE` manifest (`ProductModule`): permissions, role grants, routers, hooks, worker loops, models |
+| Path                              | Purpose                                                                                                                                 |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/example/enums.py`            | `ExamplePermission`, `ExampleAuditAction`, `ExampleUsageMetric.PROJECTS`, `ExampleErrorCode`, permission descriptions + per-role grants |
+| `src/example/models/project.py`   | Org-scoped, soft-deletable `Project`                                                                                                    |
+| `src/example/repositories/`       | `ProjectRepository(OrganizationScopedRepository)` + `ExampleRepositoryManager`                                                          |
+| `src/example/services/project.py` | `ProjectService(ResourceService)` - name uniqueness, plan capacity check, audit logging                                                 |
+| `src/example/routers/projects.py` | `/v1/projects` CRUD guarded by `require_permission(ExamplePermission.X)`                                                                |
+| `src/example/hooks.py`            | `PLAN_CHANGED` handler (reports orgs above their project limit)                                                                         |
+| `src/example/worker.py`           | `run_example_loop` - heartbeat loop recording `worker_run` rows                                                                         |
+| `src/example/config.py`           | `ExampleSettings` (`env_prefix="example_"`)                                                                                             |
+| `src/example/product.py`          | `EXAMPLE` manifest (`ProductModule`): permissions, role grants, routers, hooks, worker loops, models                                    |
 
 ---
 
@@ -40,16 +41,16 @@ The backend is split into a **generic SaaS platform** (auth, organizations, user
 RBAC, billing, audit, GDPR) and the **product domain**. The core never imports
 domain code; the two are wired together in exactly one place:
 
-| Piece | Path | Purpose |
-|-------|------|---------|
-| Hook registry | `src/platform/core/hooks.py` | Core emits `HookEvent`s (`MEMBER_ADDED`, `MEMBER_REMOVED`, `PLAN_CHANGED`); domain modules register async handlers |
-| Platform enums | `src/platform/enums.py` | Core `Permission`, `AuditAction`, `ErrorCode`, `PlanFeature`, `UsageMetric`, `DEFAULT_ROLES` - no domain members allowed |
-| Domain enums | `src/example/enums.py` | Product permissions, audit actions, error codes, usage metrics, plus per-role grant/description contributions |
-| Domain hooks | `src/example/hooks.py` | Handlers for platform lifecycle events |
-| Domain settings | `src/example/config.py` | Independent settings namespace extending the shared `EnvSettings` base |
-| Product manifest | `src/platform/core/product.py` | `ProductModule`: everything a product contributes (permissions, role grants, routers, hooks, worker loops, models, emails) |
-| Installed products | `src/products.py` | `PRODUCTS` list - the only assembly file that names a product package |
-| Composition root | `src/bootstrap.py` | Merges core + every product's permissions/roles (`ALL_PERMISSIONS`, `PERMISSION_DESCRIPTIONS`, `DEFAULT_ROLES`) and registers their hooks, email subjects, and template directories via `bootstrap()` |
+| Piece              | Path                           | Purpose                                                                                                                                                                                               |
+| ------------------ | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Hook registry      | `src/platform/core/hooks.py`   | Core emits `HookEvent`s (`MEMBER_ADDED`, `MEMBER_REMOVED`, `PLAN_CHANGED`); domain modules register async handlers                                                                                    |
+| Platform enums     | `src/platform/enums.py`        | Core `Permission`, `AuditAction`, `ErrorCode`, `PlanFeature`, `UsageMetric`, `DEFAULT_ROLES` - no domain members allowed                                                                              |
+| Domain enums       | `src/example/enums.py`         | Product permissions, audit actions, error codes, usage metrics, plus per-role grant/description contributions                                                                                         |
+| Domain hooks       | `src/example/hooks.py`         | Handlers for platform lifecycle events                                                                                                                                                                |
+| Domain settings    | `src/example/config.py`        | Independent settings namespace extending the shared `EnvSettings` base                                                                                                                                |
+| Product manifest   | `src/platform/core/product.py` | `ProductModule`: everything a product contributes (permissions, role grants, routers, hooks, worker loops, models, emails)                                                                            |
+| Installed products | `src/products.py`              | `PRODUCTS` list - the only assembly file that names a product package                                                                                                                                 |
+| Composition root   | `src/bootstrap.py`             | Merges core + every product's permissions/roles (`ALL_PERMISSIONS`, `PERMISSION_DESCRIPTIONS`, `DEFAULT_ROLES`) and registers their hooks, email subjects, and template directories via `bootstrap()` |
 
 `bootstrap()` is called at startup by `src/main.py` (API) and `worker.py` (worker).
 `src/main.py` includes each product's routers, `worker.py` starts its loops, and
@@ -63,6 +64,7 @@ your product package when you rename it.
 
 **Building a new product on this backend** - replace the domain and keep the core
 (full guide: `docs/adding-a-domain-module.md`):
+
 1. Replace `src/example/` with your package (enums, models, repositories, services, routers, hooks).
 2. Declare its `ProductModule` (like `src/example/product.py`), list it in `src/products.py`, and update the import-linter contracts.
 3. Replace the example migration and `tests/api/test_projects.py`; update the seeded Member role permissions in `src/init_db.py`.
@@ -77,6 +79,7 @@ your product package when you rename it.
 - `src/platform/core/` - Cross-cutting concerns: config, security (JWT/passwords), DI dependencies, error handling, rate limiting, hooks
 
 Enforced by import-linter (`uv run poe lint`), for `src/platform/` and `src/example/` alike:
+
 - Each layer imports only the layers below it: `routers > services > billing > repositories > models | schemas` (`billing` is the platform's payment-provider adapter; `models` and `schemas` must not import each other).
 - Routers never import repositories or models directly - always go through a service.
 - `core` imports none of these layers - no exceptions. Where a core helper needs a model's data, it declares the shape it reads as a `Protocol` (e.g. `UserLike` in `core/security.py`) instead of importing the model.
@@ -108,16 +111,17 @@ Enforced by import-linter (`uv run poe lint`), for `src/platform/` and `src/exam
 `uv run poe openapi` writes both: `openapi.json` (public) and `openapi.internal.json` (every route), from code defaults only (no `.env`). Run it after changing a request/response schema or a route, then `npm run gen:api` in `frontend/`, and commit the results - CI fails when either is stale. The pre-commit hook does all of this when backend code changes.
 
 ### Database migrations
+
 Add columns/tables in models, then `alembic revision --autogenerate`.
 Prefer adding to an existing staged migration file over creating a new one.
 The initial migration holds the platform schema and seeds (permissions, plans, seat limits); product tables and product plan limits go in product migrations.
 
 ### Testing
+
 - Tests run against the app's **PostgreSQL** server (`settings.db_connection`: docker compose builds `DB_CONNECTION` from the `DB_*` parts in `.env`; outside compose `Settings` does the same), never the app database itself: each xdist worker creates and drops its own `<db>_test_<worker>` database, so the role needs `CREATEDB`. The dev stack grants that at postgres init (`DB_USER_CREATEDB`); run `uv run poe test` - without a `DB_CONNECTION` (only compose and CI set one) the app settings point at `localhost:$POSTGRES_PORT` (default 5432, `APP_ENV=local` only)
 - `tests/conftest.py` provides: async test client, pre-seeded organizations/users/roles/permissions, and per-test table truncation (`RESTART IDENTITY`, so seeded ids are stable)
 - `asyncio_mode = auto` (set in `pytest.ini`); all test functions can be `async`
 - Platform tests must not import product code - use a test-local enum where a metric/feature is needed
-
 
 ## Commands (`cd backend` first)
 

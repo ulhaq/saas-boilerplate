@@ -9,6 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Product-specific code lives in one package per side - `backend/src/example/` and `frontend/src/example/` - currently a minimal **Projects** feature (org-scoped CRUD, permissions, a `projects` plan limit, a hook handler, a worker loop). It exists to exercise every extension point; replace it with the real product.
 
 Starting a new product from this template:
+
 - Replace/rename the `example` package on both sides - see `docs/adding-a-domain-module.md`.
 - Set the product identity in `frontend/src/brand.ts` (name, app and marketing domains) and `APP_NAME` / `EMAIL_FROM_*` in `backend/.env`.
 - Adapt plan seeds (initial migration + product migration), and plan copy (`planComparisonRows` / `planDescriptions` in the product locales). Mirror plan and brand changes in the marketing site (`site/src/config.ts`, `site/src/content/plans.ts`); the app links to its terms/privacy pages (`LEGAL_PATHS` in `frontend/src/platform/constants.ts`).
@@ -17,6 +18,7 @@ Starting a new product from this template:
 ## Repository Structure
 
 Full-stack multi-tenant SaaS:
+
 - `backend/` - FastAPI + Python, PostgreSQL, async SQLAlchemy, Alembic migrations. See `backend/CLAUDE.md`.
 - `frontend/` - the signed-in app: Vue 3 + TypeScript SPA, Vite, Pinia, file-based routing. See `frontend/CLAUDE.md`.
 - `site/` - the marketing site (landing, features, pricing, about, contact, legal pages): standalone static Astro site, da/en. See `site/CLAUDE.md`.
@@ -63,10 +65,10 @@ The frontend and site dev servers proxy `/v1` → `localhost:8000`.
 
 The backend runs as **two separate processes**:
 
-| Process | Entry point | What it does |
-|---------|-------------|--------------|
-| **API** | `src/main.py` (uvicorn) | Handles HTTP requests |
-| **Worker** | `worker.py` | Runs product loops (the example heartbeat), GDPR retention, billing cleanup, and trial reminder loops as concurrent asyncio tasks |
+| Process    | Entry point             | What it does                                                                                                                      |
+| ---------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **API**    | `src/main.py` (uvicorn) | Handles HTTP requests                                                                                                             |
+| **Worker** | `worker.py`             | Runs product loops (the example heartbeat), GDPR retention, billing cleanup, and trial reminder loops as concurrent asyncio tasks |
 
 Adding a new background loop: implement a `run_X_loop(session_factory)` coroutine and add it to `worker_loops` in the product's manifest (`src/example/product.py`); `worker.py` starts every listed loop. Wrap each iteration in `track_worker_run("x", interval)` (`backend/src/platform/core/telemetry.py`) so it shows up on the dashboard and in the overdue/failing alerts. Never start background tasks inside `main.py`'s lifespan - horizontal API scaling would cause duplicate runs.
 
@@ -79,6 +81,7 @@ The frontend's API types are generated from the backend's schema, not hand-writt
 Platform permissions are a `Permission` StrEnum in `backend/src/platform/enums.py`; product permissions are `ExamplePermission` in `backend/src/example/enums.py`. The composition root (`backend/src/bootstrap.py`) merges both into the seeded `DEFAULT_ROLES`. At login, the API returns the user's flattened permission list; the frontend stores it in `stores/auth.ts` and checks it via `hasPermission()` / `usePermission()` / `<PermissionGuard>`.
 
 When adding a new permission-gated feature:
+
 1. Add the enum value: platform features in `backend/src/platform/enums.py`, product features in `backend/src/example/enums.py`
 2. Add a human-readable description to the `PERMISSION_DESCRIPTIONS` / `EXAMPLE_PERMISSION_DESCRIPTIONS` map in the same file
 3. Assign it to the appropriate default roles (`DEFAULT_ROLES` / `EXAMPLE_DEFAULT_ROLE_PERMISSIONS`)
