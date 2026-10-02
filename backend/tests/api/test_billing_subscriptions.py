@@ -1,11 +1,13 @@
 from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
+import pytest
 from fastapi.testclient import TestClient
 from httpx import Headers
 from sqlalchemy import select
 
 from src.platform.billing.types import WebhookPayload
+from src.platform.models.audit_log import AuditLog
 from src.platform.models.billing import Plan, PlanPrice, Subscription
 from src.platform.models.organization import Organization
 from tests.conftest import TestSessionLocal
@@ -22,6 +24,31 @@ def test_start_checkout_returns_url(
     assert response.status_code == 200
     rs = response.json()
     assert rs["checkout_url"] == "https://checkout.stripe.com/test_session"
+
+
+@pytest.mark.parametrize(
+    ("endpoint", "action"),
+    [("checkout", "billing.checkout_start"), ("trial", "billing.trial_start")],
+)
+async def test_checkout_and_trial_are_audited(
+    admin_authenticated: TestClient,
+    plan_with_price: dict,
+    endpoint: str,
+    action: str,
+) -> None:
+    price_id = plan_with_price["price"]["id"]
+    response = admin_authenticated.post(
+        f"/v1/billing/subscriptions/{endpoint}", json={"plan_price_id": price_id}
+    )
+    assert response.status_code == 200
+
+    async with TestSessionLocal() as session:
+        rs = await session.execute(select(AuditLog).where(AuditLog.action == action))
+        [entry] = rs.scalars().all()
+    assert entry.organization_id == 1
+    assert entry.user_id == 1
+    assert entry.resource_type == "subscription"
+    assert entry.details == {"plan_price_id": price_id}
 
 
 def test_start_checkout_calls_provider_with_correct_price(

@@ -13,7 +13,8 @@ from src.platform.core.exceptions import (
 from src.platform.core.hooks import HookEvent, emit
 from src.platform.core.security import Auth
 from src.platform.enums import AuditAction, ErrorCode
-from src.platform.models.billing import Subscription
+from src.platform.models.billing import PlanPrice, Subscription
+from src.platform.models.organization import Organization
 from src.platform.repositories.repository_manager import RepositoryManager
 from src.platform.schemas.billing import (
     CheckoutIn,
@@ -43,33 +44,11 @@ class SubscriptionService(BaseService):
         self.repos.subscription.set_organization_scope(current_user.organization_id)
 
     async def start_checkout(self, schema_in: CheckoutIn) -> CheckoutOut:
-        price = await self.repos.plan_price.get(schema_in.plan_price_id)
-        if not price or not price.is_active:
-            raise NotFoundException(
-                f"Plan price not found or inactive. [id={schema_in.plan_price_id}]"
-            )
-        if not price.external_price_id:
-            raise NotFoundException("Plan price is not synced with billing provider.")
-
-        existing = await self.repos.subscription.get_active_for_organization_locked(
-            self.current_user.organization_id
+        price, external_price_id = await self._get_billable_price(
+            schema_in.plan_price_id
         )
-        if (
-            existing
-            and existing.status in ("active", "trialing", "past_due", "paused")
-            and not _is_active_free_sub(existing)
-        ):
-            raise AlreadyExistsException(
-                "Organization already has an active subscription.",
-                error_code=ErrorCode.SUBSCRIPTION_ALREADY_ACTIVE,
-            )
-
-        # Get or create provider customer
-        organization = await self.repos.organization.get(
-            self.current_user.organization_id
-        )
-        if not organization:
-            raise NotFoundException("Organization not found.")
+        await self._raise_if_subscribed()
+        organization = await self._get_organization()
 
         # Acquire a transaction-scoped advisory lock keyed on organization_id to prevent
         # two concurrent first-time checkouts from creating duplicate Stripe customers.
@@ -78,44 +57,7 @@ class SubscriptionService(BaseService):
 
         # Re-check after acquiring the lock - a concurrent request may have inserted a
         # subscription row between our initial check and the lock acquisition.
-        existing = await self.repos.subscription.get_active_for_organization_locked(
-            self.current_user.organization_id
-        )
-        if (
-            existing
-            and existing.status in ("active", "trialing", "past_due", "paused")
-            and not _is_active_free_sub(existing)
-        ):
-            raise AlreadyExistsException(
-                "Organization already has an active subscription.",
-                error_code=ErrorCode.SUBSCRIPTION_ALREADY_ACTIVE,
-            )
-
-        external_customer_id = organization.external_customer_id
-        if not external_customer_id:
-            external_customer_id = await self.provider.get_or_create_customer(
-                organization_id=self.current_user.organization_id,
-                organization_name=organization.name,
-                email=organization.billing_email,
-            )
-            await self.repos.organization.update(
-                organization, external_customer_id=external_customer_id
-            )
-
-        metadata = {
-            "organization_id": str(self.current_user.organization_id),
-            "plan_price_id": str(price.id),
-        }
-
-        result = await self.provider.create_checkout_session(
-            external_customer_id=external_customer_id,
-            external_price_id=price.external_price_id,
-            amount=price.amount,
-            success_url=settings.billing_success_url,
-            cancel_url=settings.billing_cancel_url,
-            metadata=metadata,
-            trial_period_days=None,
-        )
+        await self._raise_if_subscribed()
 
         # Do not touch the local subscription row here. The row is created or
         # updated by _handle_subscription_created once Stripe confirms the
@@ -124,35 +66,24 @@ class SubscriptionService(BaseService):
         # _handle_checkout_session_expired handles cleanup if checkout is
         # abandoned; since no row is changed here, that handler is a no-op for
         # free-plan users (status stays "active", not "incomplete").
-
-        await self.log_audit(
-            AuditAction.BILLING_CHECKOUT_START,
-            organization_id=self.current_user.organization_id,
-            user_id=self.current_user.id,
-            resource_type="subscription",
-            details={"plan_price_id": schema_in.plan_price_id},
+        return await self._open_checkout_session(
+            organization,
+            price,
+            external_price_id,
+            trial_period_days=None,
+            audit_action=AuditAction.BILLING_CHECKOUT_START,
         )
-        return CheckoutOut(checkout_url=result.checkout_url)
 
     async def start_trial(self, schema_in: StartTrialIn) -> CheckoutOut:
-        price = await self.repos.plan_price.get(schema_in.plan_price_id)
-        if not price or not price.is_active:
-            raise NotFoundException(
-                f"Plan price not found or inactive. [id={schema_in.plan_price_id}]"
-            )
-        if price.amount == 0:
-            raise ValidationException("Cannot start a trial on the free plan.")
-        if not price.external_price_id:
-            raise NotFoundException("Plan price is not synced with billing provider.")
+        price, external_price_id = await self._get_billable_price(
+            schema_in.plan_price_id,
+            free_price_error="Cannot start a trial on the free plan.",
+        )
 
         if not settings.billing_trial_period_days:
             raise ValidationException("Trials are not configured.")
 
-        organization = await self.repos.organization.get(
-            self.current_user.organization_id
-        )
-        if not organization:
-            raise NotFoundException("Organization not found.")
+        organization = await self._get_organization()
 
         if organization.trial_used:
             raise ValidationException(
@@ -193,38 +124,13 @@ class SubscriptionService(BaseService):
                 error_code=ErrorCode.SUBSCRIPTION_ALREADY_ACTIVE,
             )
 
-        external_customer_id = organization.external_customer_id
-        if not external_customer_id:
-            external_customer_id = await self.provider.get_or_create_customer(
-                organization_id=self.current_user.organization_id,
-                organization_name=organization.name,
-                email=organization.billing_email,
-            )
-            await self.repos.organization.update(
-                organization, external_customer_id=external_customer_id
-            )
-
-        metadata = {
-            "organization_id": str(self.current_user.organization_id),
-            "plan_price_id": str(price.id),
-        }
-        result = await self.provider.create_checkout_session(
-            external_customer_id=external_customer_id,
-            external_price_id=price.external_price_id,
-            amount=price.amount,
-            success_url=settings.billing_success_url,
-            cancel_url=settings.billing_cancel_url,
-            metadata=metadata,
+        return await self._open_checkout_session(
+            organization,
+            price,
+            external_price_id,
             trial_period_days=settings.billing_trial_period_days,
+            audit_action=AuditAction.BILLING_TRIAL_START,
         )
-        await self.log_audit(
-            AuditAction.BILLING_TRIAL_START,
-            organization_id=self.current_user.organization_id,
-            user_id=self.current_user.id,
-            resource_type="subscription",
-            details={"plan_price_id": schema_in.plan_price_id},
-        )
-        return CheckoutOut(checkout_url=result.checkout_url)
 
     async def get_current_subscription(self) -> SubscriptionOut:
         sub = await self.repos.subscription.get_active_for_organization(
@@ -343,18 +249,13 @@ class SubscriptionService(BaseService):
                 "Use checkout to subscribe to a paid plan."
             )
 
-        price = await self.repos.plan_price.get(schema_in.plan_price_id)
-        if not price or not price.is_active:
-            raise NotFoundException(
-                f"Plan price not found or inactive. [id={schema_in.plan_price_id}]"
-            )
-        if price.amount == 0:
-            raise ValidationException(
+        price, external_price_id = await self._get_billable_price(
+            schema_in.plan_price_id,
+            free_price_error=(
                 "Cannot switch to the free plan. "
                 "Cancel your subscription to return to the free tier."
-            )
-        if not price.external_price_id:
-            raise NotFoundException("Plan price is not synced with billing provider.")
+            ),
+        )
 
         if sub.plan_price_id == price.id:
             raise ValidationException("Subscription is already on this plan.")
@@ -362,7 +263,7 @@ class SubscriptionService(BaseService):
         old_plan_price_id = sub.plan_price_id
         ext_sub = await self.provider.switch_subscription_price(
             sub.external_subscription_id,
-            price.external_price_id,
+            external_price_id,
             skip_proration=False,
             new_amount=price.amount,
         )
@@ -409,6 +310,93 @@ class SubscriptionService(BaseService):
             return_url=settings.billing_portal_return_url,
         )
         return CustomerPortalOut(portal_url=result.portal_url)
+
+    async def _get_billable_price(
+        self, plan_price_id: int, *, free_price_error: str | None = None
+    ) -> tuple[PlanPrice, str]:
+        """The active, provider-synced price, with its external price id.
+
+        `free_price_error` rejects the free price with that message, checked
+        between the inactive and not-synced checks.
+        """
+        price = await self.repos.plan_price.get(plan_price_id)
+        if not price or not price.is_active:
+            raise NotFoundException(
+                f"Plan price not found or inactive. [id={plan_price_id}]"
+            )
+        if free_price_error is not None and price.amount == 0:
+            raise ValidationException(free_price_error)
+        if not price.external_price_id:
+            raise NotFoundException("Plan price is not synced with billing provider.")
+        return price, price.external_price_id
+
+    async def _get_organization(self) -> Organization:
+        organization = await self.repos.organization.get(
+            self.current_user.organization_id
+        )
+        if not organization:
+            raise NotFoundException("Organization not found.")
+        return organization
+
+    async def _raise_if_subscribed(self) -> None:
+        """Checkout is for organizations without a paid subscription - an
+        active free subscription doesn't count."""
+        existing = await self.repos.subscription.get_active_for_organization_locked(
+            self.current_user.organization_id
+        )
+        if (
+            existing
+            and existing.status in ("active", "trialing", "past_due", "paused")
+            and not _is_active_free_sub(existing)
+        ):
+            raise AlreadyExistsException(
+                "Organization already has an active subscription.",
+                error_code=ErrorCode.SUBSCRIPTION_ALREADY_ACTIVE,
+            )
+
+    async def _open_checkout_session(
+        self,
+        organization: Organization,
+        price: PlanPrice,
+        external_price_id: str,
+        *,
+        trial_period_days: int | None,
+        audit_action: AuditAction,
+    ) -> CheckoutOut:
+        """Create the provider customer if needed, open a checkout session for
+        `price`, and audit it."""
+        external_customer_id = organization.external_customer_id
+        if not external_customer_id:
+            external_customer_id = await self.provider.get_or_create_customer(
+                organization_id=self.current_user.organization_id,
+                organization_name=organization.name,
+                email=organization.billing_email,
+            )
+            await self.repos.organization.update(
+                organization, external_customer_id=external_customer_id
+            )
+
+        metadata = {
+            "organization_id": str(self.current_user.organization_id),
+            "plan_price_id": str(price.id),
+        }
+        result = await self.provider.create_checkout_session(
+            external_customer_id=external_customer_id,
+            external_price_id=external_price_id,
+            amount=price.amount,
+            success_url=settings.billing_success_url,
+            cancel_url=settings.billing_cancel_url,
+            metadata=metadata,
+            trial_period_days=trial_period_days,
+        )
+        await self.log_audit(
+            audit_action,
+            organization_id=self.current_user.organization_id,
+            user_id=self.current_user.id,
+            resource_type="subscription",
+            details={"plan_price_id": price.id},
+        )
+        return CheckoutOut(checkout_url=result.checkout_url)
 
     async def _acquire_checkout_lock(self, organization_id: int) -> None:
         await self.repos.subscription.acquire_checkout_lock(organization_id)
