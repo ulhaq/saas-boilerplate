@@ -1,5 +1,5 @@
 import logging
-from collections.abc import AsyncGenerator, Callable
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -13,7 +13,6 @@ from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-from slowapi.middleware import SlowAPIMiddleware
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from starlette.routing import BaseRoute
@@ -33,6 +32,7 @@ from src.platform.core.middlewares import (
     AccessLogMiddleware,
     AuditContextMiddleware,
     ErrorHandlingMiddleware,
+    SecurityHeadersMiddleware,
 )
 from src.platform.core.routing import API_PREFIX, RouterMount
 from src.platform.core.telemetry import instrument_app, setup_telemetry
@@ -81,7 +81,6 @@ app = FastAPI(
         Middleware(AuditContextMiddleware),
         Middleware(AccessLogMiddleware),
         Middleware(ErrorHandlingMiddleware),
-        Middleware(SlowAPIMiddleware),
     ],
 )
 
@@ -113,22 +112,9 @@ DOCS_PATHS = {
 }
 
 
-@app.middleware("http")
-async def add_security_headers(
-    request: Request, call_next: Callable[..., Any]
-) -> Response:
-    response = await call_next(request)
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-Frame-Options"] = "DENY"
-    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    if settings.app_env != "local":
-        response.headers["Strict-Transport-Security"] = (
-            "max-age=31536000; includeSubDomains"
-        )
-        response.headers["Content-Security-Policy"] = (
-            DOCS_CSP if request.url.path in DOCS_PATHS else API_CSP
-        )
-    return response
+app.add_middleware(
+    SecurityHeadersMiddleware, csp=API_CSP, docs_csp=DOCS_CSP, docs_paths=DOCS_PATHS
+)
 
 
 @app.exception_handler(RateLimitExceeded)

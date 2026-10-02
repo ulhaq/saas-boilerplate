@@ -1,10 +1,12 @@
 import logging
 import time
 import uuid
+from collections.abc import Collection
 
 from fastapi import Request, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
+from starlette.datastructures import URL, MutableHeaders
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from src.platform.core.config import settings
@@ -170,3 +172,49 @@ class ErrorHandlingMiddleware:
 
         if not response_started:
             await response(scope, receive, send)
+
+
+class SecurityHeadersMiddleware:
+    """Set security headers on every HTTP response.
+
+    HSTS and the Content-Security-Policy are sent only outside local
+    development; `docs_csp` replaces `csp` on the API docs pages, whose
+    CDN-hosted UI the API policy would block.
+    """
+
+    def __init__(
+        self,
+        app: ASGIApp,
+        *,
+        csp: str,
+        docs_csp: str,
+        docs_paths: Collection[str],
+    ) -> None:
+        self.app = app
+        self.csp = csp
+        self.docs_csp = docs_csp
+        self.docs_paths = docs_paths
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        async def send_with_headers(message: Message) -> None:
+            if message["type"] == "http.response.start":
+                headers = MutableHeaders(scope=message)
+                headers["X-Content-Type-Options"] = "nosniff"
+                headers["X-Frame-Options"] = "DENY"
+                headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+                if settings.app_env != "local":
+                    headers["Strict-Transport-Security"] = (
+                        "max-age=31536000; includeSubDomains"
+                    )
+                    headers["Content-Security-Policy"] = (
+                        self.docs_csp
+                        if URL(scope=scope).path in self.docs_paths
+                        else self.csp
+                    )
+            await send(message)
+
+        await self.app(scope, receive, send_with_headers)
