@@ -1,56 +1,49 @@
-import { apiClient } from './client'
-import type {
-  PlanOut,
-  SubscriptionOut,
-  CheckoutOut,
-  CustomerPortalOut,
-  UsageOut,
-} from '@/platform/types'
+import { api } from './client'
 
 export const billingApi = {
   // Plans
   listPlans() {
-    return apiClient.get<PlanOut[]>('/billing/plans')
+    return api.get('/billing/plans')
   },
 
   getPlan(id: number) {
-    return apiClient.get<PlanOut>(`/billing/plans/${id}`)
+    return api.get('/billing/plans/{plan_id}', { path: { plan_id: id } })
   },
 
   // Subscriptions
   startTrial(data: { plan_price_id: number }) {
-    return apiClient.post<CheckoutOut>('/billing/subscriptions/trial', data)
+    return api.post('/billing/subscriptions/trial', { body: data })
   },
 
   checkout(data: { plan_price_id: number }) {
-    return apiClient.post<CheckoutOut>('/billing/subscriptions/checkout', data)
+    return api.post('/billing/subscriptions/checkout', { body: data })
   },
 
   getCurrentSubscription() {
-    return apiClient.get<SubscriptionOut>('/billing/subscriptions/current')
+    return api.get('/billing/subscriptions/current')
   },
 
   cancelSubscription() {
-    return apiClient.post<SubscriptionOut>('/billing/subscriptions/current/cancel')
+    return api.post('/billing/subscriptions/current/cancel')
   },
 
   resumeSubscription() {
-    return apiClient.post<SubscriptionOut>('/billing/subscriptions/current/resume')
+    return api.post('/billing/subscriptions/current/resume')
   },
 
   switchPlan(data: { plan_price_id: number }) {
-    return apiClient.post<SubscriptionOut>('/billing/subscriptions/current/switch-plan', data)
+    return api.post('/billing/subscriptions/current/switch-plan', { body: data })
   },
 
   updateBillingEmail(data: { billing_email: string }) {
-    return apiClient.put<SubscriptionOut>('/billing/subscriptions/current', data)
+    return api.put('/billing/subscriptions/current', { body: data })
   },
 
   getPortalUrl() {
-    return apiClient.get<CustomerPortalOut>('/billing/subscriptions/portal')
+    return api.get('/billing/subscriptions/portal')
   },
 
   getUsage() {
-    return apiClient.get<UsageOut>('/billing/usage')
+    return api.get('/billing/usage')
   },
 }

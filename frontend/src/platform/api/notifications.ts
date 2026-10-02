@@ -1,21 +1,21 @@
-import { apiClient } from './client'
-import type { NotificationOut, UnreadCountOut } from '@/platform/types/notification'
-import type { PaginatedResponse } from '@/platform/types'
+import { api } from './client'
 
 export const notificationsApi = {
   list(params?: { page_number?: number; page_size?: number }) {
-    return apiClient.get<PaginatedResponse<NotificationOut>>('/notifications', { params })
+    return api.get('/notifications', { query: params })
   },
 
   unreadCount() {
-    return apiClient.get<UnreadCountOut>('/notifications/unread-count')
+    return api.get('/notifications/unread-count')
   },
 
   markRead(id: number) {
-    return apiClient.post<NotificationOut>(`/notifications/${id}/read`)
+    return api.post('/notifications/{notification_id}/read', {
+      path: { notification_id: id },
+    })
   },
 
   markAllRead() {
-    return apiClient.post('/notifications/read-all')
+    return api.post('/notifications/read-all')
   },
 }

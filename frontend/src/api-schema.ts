@@ -1206,7 +1206,7 @@ export interface components {
        * Scope
        * @default
        */
-      scope: string
+      scope?: string
       /** Client Id */
       client_id?: string | null
       /**
@@ -1687,7 +1687,7 @@ export interface components {
       /** Terms Accepted */
       terms_accepted: boolean
       /** @default da */
-      locale: components['schemas']['Locale']
+      locale?: components['schemas']['Locale']
     }
     /** RegisterOut */
     RegisterOut: {

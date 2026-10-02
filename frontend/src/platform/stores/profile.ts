@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { usersApi } from '@/platform/api/users'
-import { DEFAULT_LOCALE, i18n } from '@/plugins/i18n'
+import { i18n, toSupportedLocale } from '@/plugins/i18n'
 import type { UserOut, UserPatch, ChangePasswordIn, EmailChangeIn } from '@/platform/types'
 
 export const useProfileStore = defineStore('profile', () => {
@@ -16,7 +16,7 @@ export const useProfileStore = defineStore('profile', () => {
     const { data: me } = await usersApi.getMe()
     user.value = me
     permissions.value = [...new Set(me.roles.flatMap((r) => r.permissions.map((p) => p.name)))]
-    i18n.global.locale.value = me.locale ?? DEFAULT_LOCALE
+    i18n.global.locale.value = toSupportedLocale(me.locale)
     localStorage.setItem('locale', i18n.global.locale.value)
     applyTheme((me.theme ?? 'system') as 'light' | 'dark' | 'system')
   }

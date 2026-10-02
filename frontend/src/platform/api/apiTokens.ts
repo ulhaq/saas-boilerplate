@@ -1,16 +1,16 @@
-import { apiClient } from './client'
-import type { ApiTokenCreate, ApiTokenCreatedResponse, ApiTokenResponse } from '@/platform/types'
+import { api } from './client'
+import type { ApiTokenCreate } from '@/platform/types'
 
 export const apiTokensApi = {
   list() {
-    return apiClient.get<ApiTokenResponse[]>('/api-tokens')
+    return api.get('/api-tokens')
   },
 
   create(data: ApiTokenCreate) {
-    return apiClient.post<ApiTokenCreatedResponse>('/api-tokens', data)
+    return api.post('/api-tokens', { body: data })
   },
 
   revoke(id: number) {
-    return apiClient.delete(`/api-tokens/${id}`)
+    return api.delete('/api-tokens/{token_id}', { path: { token_id: id } })
   },
 }

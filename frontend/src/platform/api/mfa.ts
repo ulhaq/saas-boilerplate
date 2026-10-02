@@ -1,20 +1,20 @@
-import { apiClient } from './client'
-import type { MfaCodeIn, MfaDisableIn, MfaRecoveryCodesOut, MfaSetupOut } from '@/platform/types'
+import { api } from './client'
+import type { MfaCodeIn, MfaDisableIn } from '@/platform/types'
 
 export const mfaApi = {
   setup() {
-    return apiClient.post<MfaSetupOut>('/users/me/mfa/setup')
+    return api.post('/users/me/mfa/setup')
   },
 
   enable(data: MfaCodeIn) {
-    return apiClient.post<MfaRecoveryCodesOut>('/users/me/mfa/enable', data)
+    return api.post('/users/me/mfa/enable', { body: data })
   },
 
   disable(data: MfaDisableIn) {
-    return apiClient.post('/users/me/mfa/disable', data)
+    return api.post('/users/me/mfa/disable', { body: data })
   },
 
   regenerateRecoveryCodes(data: MfaCodeIn) {
-    return apiClient.post<MfaRecoveryCodesOut>('/users/me/mfa/recovery-codes', data)
+    return api.post('/users/me/mfa/recovery-codes', { body: data })
   },
 }

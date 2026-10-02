@@ -34,10 +34,14 @@ export const LOCALE_LABELS: Record<SupportedLocale, string> = {
   en: 'English',
 }
 
+/** `value` if the app has messages for it, otherwise the default locale. */
+export function toSupportedLocale(value: string | null | undefined): SupportedLocale {
+  return LOCALE_ORDER.find((locale) => locale === value) ?? DEFAULT_LOCALE
+}
+
 // The visitor's last choice; a signed-in user's profile language replaces it
 // once the session loads.
-const savedLocale = (globalThis.localStorage?.getItem('locale') ??
-  DEFAULT_LOCALE) as SupportedLocale
+const savedLocale = toSupportedLocale(globalThis.localStorage?.getItem('locale'))
 
 export const i18n = createI18n({
   legacy: false,

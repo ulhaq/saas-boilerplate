@@ -1,22 +1,15 @@
-import { apiClient } from './client'
+import { api } from './client'
+import type { Schema } from '@/platform/types/api'
 
-export interface UserDataExport {
-  user: Record<string, unknown>
-  organizations: Record<string, unknown>[]
-  api_tokens: Record<string, unknown>[]
-  audit_logs: Record<string, unknown>[]
-}
-
-export interface DeleteMeIn {
-  current_password: string
-}
+export type UserDataExport = Schema<'UserDataExportOut'>
+export type DeleteMeIn = Schema<'DeleteMeIn'>
 
 export const gdprApi = {
   exportMyData() {
-    return apiClient.get<UserDataExport>('/users/me/export')
+    return api.get('/users/me/export')
   },
 
   deleteMyAccount(data: DeleteMeIn) {
-    return apiClient.delete('/users/me', { data })
+    return api.delete('/users/me', { body: data })
   },
 }

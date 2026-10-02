@@ -1,12 +1,11 @@
-import { apiClient } from './client'
-import type { InvitationOut } from '@/platform/types'
+import { api } from './client'
 
 export const invitationsApi = {
   list() {
-    return apiClient.get<InvitationOut[]>('/invitations')
+    return api.get('/invitations')
   },
 
   revoke(id: number) {
-    return apiClient.delete(`/invitations/${id}`)
+    return api.delete('/invitations/{invitation_id}', { path: { invitation_id: id } })
   },
 }

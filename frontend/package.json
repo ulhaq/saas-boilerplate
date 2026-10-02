@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "vue-tsc -b",
-    "gen:api": "openapi-typescript ../backend/openapi.internal.json -o src/api-schema.ts && prettier --write src/api-schema.ts",
+    "gen:api": "openapi-typescript ../backend/openapi.internal.json --default-non-nullable false -o src/api-schema.ts && prettier --write src/api-schema.ts",
     "lint": "eslint . --fix",
     "format": "prettier --write .",
     "test:e2e": "playwright test",

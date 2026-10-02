@@ -142,7 +142,16 @@ Store ↔ api naming must match the domain (`stores/organizations.ts` ↔ `api/o
 - Response interceptor: on 401, queues concurrent requests, refreshes token, retries - or clears session and redirects to login on failure
 - `withCredentials: true` for httponly refresh token cookie
 
-API modules (`api/auth.ts`, `api/users.ts`, etc.) export plain functions that call the shared client. Add new endpoints in the relevant domain module. **These modules are imported only by stores (see "Data Access" above), never by components or pages.**
+API modules (`api/auth.ts`, `api/users.ts`, etc.) export plain functions that call the shared client through its typed layer, `api` (also in `client.ts`):
+
+```ts
+api.get('/roles/{identifier}', { path: { identifier: id } }) // AxiosResponse<RoleOut>
+api.post('/roles', { body: data })
+api.get('/users', { query: params })
+api.post('/auth/token', { form: { username, password } }) // form-encoded endpoints
+```
+
+The path, method, path params, body and response type are checked against the generated schema, so a wrong URL, a missing param or a stale response type fails `npm run typecheck`. Don't pass a response type yourself (`get<RoleOut>`) - it comes from the schema. Query params aren't checked (list filters are dynamic `field__op` keys). Use `apiClient` directly only for what the typed layer can't express. Add new endpoints in the relevant domain module. **These modules are imported only by stores (see "Data Access" above), never by components or pages.**
 
 ### API types are generated - never hand-write them
 

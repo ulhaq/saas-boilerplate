@@ -1,6 +1,4 @@
-import { apiClient } from './client'
-import type { PaginatedResponse } from '@/platform/types'
-import type { AuditLogOut } from '@/platform/types/auditLog'
+import { api } from './client'
 
 interface ListParams {
   page_number?: number
@@ -10,6 +8,6 @@ interface ListParams {
 
 export const auditLogsApi = {
   list(params: ListParams = {}) {
-    return apiClient.get<PaginatedResponse<AuditLogOut>>('/audit-logs', { params })
+    return api.get('/audit-logs', { query: { ...params } })
   },
 }

@@ -79,7 +79,7 @@ src/acme/
 ├── index.ts          # manifest: messages, homeRoute, setup() (see step 2)
 ├── pages/            # file-based routes, merged into the app's route tree
 ├── components/       # auto-registered, same as platform components
-├── stores/ + api/    # Pinia store is the data gateway; api module used only by the store
+├── stores/ + api/    # Pinia store is the data gateway; api module (typed `api` calls) used only by the store
 ├── composables/ utils/ constants.ts
 ├── types/            # aliases of the generated API schema: Schema<'WidgetOut'>
 ├── locales/en.ts, da.ts   # message tree, deep-merged over platform messages

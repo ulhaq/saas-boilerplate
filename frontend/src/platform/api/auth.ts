@@ -1,15 +1,10 @@
-import { apiClient } from './client'
+import { api } from './client'
 import type {
-  Token,
-  MfaChallenge,
   MfaVerifyIn,
   RegisterIn,
-  RegisterOut,
   VerifyEmailIn,
-  VerifyEmailOut,
   CompleteRegistrationIn,
   CompleteInviteIn,
-  InviteStatusResponse,
   ResetPasswordRequestIn,
   ResetPasswordIn,
   SwitchOrganizationIn,
@@ -17,65 +12,61 @@ import type {
 
 export const authApi = {
   login(email: string, password: string) {
-    const form = new URLSearchParams()
-    form.append('username', email) // OAuth2 spec uses 'username'
-    form.append('password', password)
-    return apiClient.post<Token | MfaChallenge>('/auth/token', form, {
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    })
+    // OAuth2 password form: the email goes in `username`.
+    return api.post('/auth/token', { form: { username: email, password } })
   },
 
   verifyMfa(data: MfaVerifyIn) {
-    return apiClient.post<Token>('/auth/mfa/verify', data)
+    return api.post('/auth/mfa/verify', { body: data })
   },
 
   register(data: RegisterIn) {
-    return apiClient.post<RegisterOut>('/auth/register', data)
+    return api.post('/auth/register', { body: data })
   },
 
   verifyEmail(data: VerifyEmailIn) {
-    return apiClient.post<VerifyEmailOut>('/auth/verify-email', data)
+    return api.post('/auth/verify-email', { body: data })
   },
 
   completeRegistration(data: CompleteRegistrationIn) {
-    return apiClient.post<Token>('/auth/complete-registration', data)
+    return api.post('/auth/complete-registration', { body: data })
   },
 
   logout() {
-    return apiClient.post('/auth/logout')
+    return api.post('/auth/logout')
   },
 
   refresh() {
-    return apiClient.post<Token>('/auth/refresh')
+    return api.post('/auth/refresh')
   },
 
   requestPasswordReset(data: ResetPasswordRequestIn) {
-    return apiClient.post('/auth/reset-password/request', data)
+    return api.post('/auth/reset-password/request', { body: data })
   },
 
   resetPassword(data: ResetPasswordIn) {
-    return apiClient.post('/auth/reset-password', data)
+    return api.post('/auth/reset-password', { body: data })
   },
 
   confirmEmailChange(token: string) {
-    return apiClient.post('/auth/confirm-email-change', { token })
+    return api.post('/auth/confirm-email-change', { body: { token } })
   },
 
   switchOrganization(data: SwitchOrganizationIn) {
-    return apiClient.post<Token>('/auth/switch-organization', data)
+    return api.post('/auth/switch-organization', { body: data })
   },
 
   inviteStatus(token: string) {
-    return apiClient.post<InviteStatusResponse>('/auth/invite-status', { token })
+    return api.post('/auth/invite-status', { body: { token } })
   },
 
   completeInvite(data: CompleteInviteIn) {
-    return apiClient.post<Token>('/auth/complete-invite', data)
+    return api.post('/auth/complete-invite', { body: data })
   },
 
   // Existing accounts: accept as the signed-in user (switches the session to
   // the invited organization).
   acceptInvite(inviteToken: string) {
-    return apiClient.post<Token>('/auth/accept-invite', { invite_token: inviteToken })
+    return api.post('/auth/accept-invite', { body: { invite_token: inviteToken } })
   },
 }

@@ -1,42 +1,30 @@
-import { apiClient } from './client'
-import type {
-  PaginatedResponse,
-  RoleOut,
-  RoleIn,
-  RolePatch,
-  RolePermissionIn,
-} from '@/platform/types'
+import { api } from './client'
+import type { RoleIn, RolePatch, RolePermissionIn } from '@/platform/types'
 
-interface ListParams {
-  page_number?: number
-  page_size?: number
-  sort?: string
-  q?: string
-  [key: string]: string | number | undefined
-}
+type ListParams = Record<string, string | number | undefined>
 
 export const rolesApi = {
   list(params: ListParams = {}) {
-    return apiClient.get<PaginatedResponse<RoleOut>>('/roles', { params })
+    return api.get('/roles', { query: params })
   },
 
   get(id: number) {
-    return apiClient.get<RoleOut>(`/roles/${id}`)
+    return api.get('/roles/{identifier}', { path: { identifier: id } })
   },
 
   create(data: RoleIn) {
-    return apiClient.post<RoleOut>('/roles', data)
+    return api.post('/roles', { body: data })
   },
 
   patch(id: number, data: RolePatch) {
-    return apiClient.patch<RoleOut>(`/roles/${id}`, data)
+    return api.patch('/roles/{identifier}', { path: { identifier: id }, body: data })
   },
 
   delete(id: number) {
-    return apiClient.delete(`/roles/${id}`)
+    return api.delete('/roles/{identifier}', { path: { identifier: id } })
   },
 
   setPermissions(id: number, data: RolePermissionIn) {
-    return apiClient.post<RoleOut>(`/roles/${id}/permissions`, data)
+    return api.post('/roles/{identifier}/permissions', { path: { identifier: id }, body: data })
   },
 }

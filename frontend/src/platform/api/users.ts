@@ -1,66 +1,52 @@
-import { apiClient } from './client'
-import type {
-  PaginatedResponse,
-  UserOut,
-  UserPatch,
-  UserRoleIn,
-  OrganizationOut,
-  ChangePasswordIn,
-  EmailChangeIn,
-} from '@/platform/types'
+import { api } from './client'
+import type { UserPatch, UserRoleIn, ChangePasswordIn, EmailChangeIn } from '@/platform/types'
 
-interface ListParams {
-  page_number?: number
-  page_size?: number
-  sort?: string
-  q?: string
-  [key: string]: string | number | undefined
-}
+type ListParams = Record<string, string | number | undefined>
 
 export const usersApi = {
   list(params: ListParams = {}) {
-    return apiClient.get<PaginatedResponse<UserOut>>('/users', { params })
+    return api.get('/users', { query: params })
   },
 
   getMe() {
-    return apiClient.get<UserOut>('/users/me')
+    return api.get('/users/me')
   },
 
   getMyOrganizations() {
-    return apiClient.get<OrganizationOut[]>('/organizations')
+    return api.get('/organizations')
   },
 
   get(id: number) {
-    return apiClient.get<UserOut>(`/users/${id}`)
+    return api.get('/users/{identifier}', { path: { identifier: id } })
   },
 
   patch(id: number, data: UserPatch) {
-    return apiClient.patch<UserOut>(`/users/${id}`, data)
+    return api.patch('/users/{identifier}', { path: { identifier: id }, body: data })
   },
 
   patchMe(data: UserPatch) {
-    return apiClient.patch<UserOut>('/users/me', data)
+    return api.patch('/users/me', { body: data })
   },
 
   // Sends a confirmation link to the new address; the email changes only
   // once that link is confirmed (authApi.confirmEmailChange).
   requestEmailChange(data: EmailChangeIn) {
-    return apiClient.post('/users/me/email', data)
+    return api.post('/users/me/email', { body: data })
   },
 
   changePassword(data: ChangePasswordIn) {
-    return apiClient.put<UserOut>('/users/me/change-password', data)
+    return api.put('/users/me/change-password', { body: data })
   },
 
   removeFromOrganization(id: number) {
-    return apiClient.delete(`/users/${id}`)
+    return api.delete('/users/{identifier}', { path: { identifier: id } })
   },
 
   setRoles(id: number, data: UserRoleIn) {
-    return apiClient.post<UserOut>(`/users/${id}/roles`, data)
+    return api.post('/users/{identifier}/roles', { path: { identifier: id }, body: data })
   },
 
   invite(data: { email: string; role_ids: number[] }) {
-    return apiClient.post('/users/invite', data)
+    return api.post('/users/invite', { body: data })
   },
 }

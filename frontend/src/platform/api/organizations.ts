@@ -1,40 +1,37 @@
-import { apiClient } from './client'
-import type {
-  PaginatedResponse,
-  OrganizationOut,
-  OrganizationBase,
-  OrganizationPatch,
-  UserOut,
-} from '@/platform/types'
+import { api } from './client'
+import type { OrganizationBase, OrganizationPatch } from '@/platform/types'
 
 export const organizationsApi = {
   list() {
-    return apiClient.get<OrganizationOut[]>('/organizations')
+    return api.get('/organizations')
   },
 
   get(id: number) {
-    return apiClient.get<OrganizationOut>(`/organizations/${id}`)
+    return api.get('/organizations/{identifier}', { path: { identifier: id } })
   },
 
   create(data: OrganizationBase) {
-    return apiClient.post<OrganizationOut>('/organizations', data)
+    return api.post('/organizations', { body: data })
   },
 
   patch(id: number, data: OrganizationPatch) {
-    return apiClient.patch<OrganizationOut>(`/organizations/${id}`, data)
+    return api.patch('/organizations/{identifier}', { path: { identifier: id }, body: data })
   },
 
   delete(id: number) {
-    return apiClient.delete(`/organizations/${id}`)
+    return api.delete('/organizations/{identifier}', { path: { identifier: id } })
   },
 
   getUsers(organizationId: number) {
-    return apiClient.get<PaginatedResponse<UserOut>>(`/organizations/${organizationId}/users`)
+    return api.get('/organizations/{organization_id}/users', {
+      path: { organization_id: organizationId },
+    })
   },
 
   transferOwnership(organizationId: number, userId: number) {
-    return apiClient.post(`/organizations/${organizationId}/transfer-ownership`, {
-      user_id: userId,
+    return api.post('/organizations/{organization_id}/transfer-ownership', {
+      path: { organization_id: organizationId },
+      body: { user_id: userId },
     })
   },
 }
