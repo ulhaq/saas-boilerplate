@@ -6,8 +6,12 @@ from datetime import date
 import pytest
 from sqlalchemy import select
 
+from src.billing.emails import BILLING_EMAIL_CATEGORIES, BILLING_EMAIL_SUBJECTS
+from src.billing.enums import BillingNotificationCategory
 from src.billing.repositories.manager import BillingRepositoryManager
 from src.billing.services.common import notify_subscription_managers
+from src.foundation.core import composition
+from src.foundation.models.email_outbox import EmailOutbox
 from src.foundation.models.notification import Notification
 from tests.conftest import TestSessionLocal
 
@@ -27,7 +31,13 @@ async def _notifications() -> list[Notification]:
 # ---------------------------------------------------------------------------
 
 
-async def _notify(data: dict) -> int:
+async def _emails() -> list[EmailOutbox]:
+    async with TestSessionLocal() as session:
+        rs = await session.execute(select(EmailOutbox).order_by(EmailOutbox.id))
+        return list(rs.scalars().all())
+
+
+async def _notify(data: dict, template: str = "trial-ending") -> int:
     async with TestSessionLocal() as session, session.begin():
         repos = BillingRepositoryManager(session)
         organization = await repos.organization.get(1)
@@ -35,8 +45,18 @@ async def _notify(data: dict) -> int:
         return await notify_subscription_managers(
             repos,
             organization,
-            "trial-ending",
+            template,
             data,
+        )
+
+
+async def _prefer(category: str, *, in_app: bool, email: bool) -> None:
+    async with TestSessionLocal() as session, session.begin():
+        await BillingRepositoryManager(session).notification_preference.upsert(
+            user_id=ADMIN,
+            category=category,
+            in_app=in_app,
+            email=email,
         )
 
 
@@ -83,3 +103,33 @@ async def test_a_rolled_back_change_creates_no_notification():
         await notify_then_fail()
 
     assert await _notifications() == []
+
+
+# ---------------------------------------------------------------------------
+# Notification preferences
+# ---------------------------------------------------------------------------
+
+
+def test_every_billing_email_has_a_declared_category():
+    categories = composition.current().notification_categories
+    assert set(BILLING_EMAIL_CATEGORIES) == set(BILLING_EMAIL_SUBJECTS["en"])
+    assert set(BILLING_EMAIL_CATEGORIES.values()) <= set(categories)
+
+
+async def test_a_manager_can_opt_out_of_trial_notifications():
+    await _prefer(BillingNotificationCategory.TRIAL, in_app=False, email=False)
+
+    # Still counted: the manager was a recipient, they just chose silence.
+    assert await _notify({}) == 1
+    assert await _notifications() == []
+    assert await _emails() == []
+
+
+async def test_a_failed_payment_emails_even_when_turned_off():
+    await _prefer(BillingNotificationCategory.PAYMENT, in_app=False, email=False)
+
+    await _notify({}, template="payment-failed")
+
+    assert await _notifications() == []
+    [email] = await _emails()
+    assert email.email_template == "payment-failed"

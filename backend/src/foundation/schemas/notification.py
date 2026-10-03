@@ -3,6 +3,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
+from src.foundation.core.schema import ResponseSchema
+
 
 class NotificationOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -18,3 +20,17 @@ class NotificationOut(BaseModel):
 
 class UnreadCountOut(BaseModel):
     count: int
+
+
+class NotificationPreferenceOut(ResponseSchema):
+    category: str
+    in_app: bool
+    email: bool
+    # The email can't be turned off (account-critical).
+    email_required: bool
+
+
+class NotificationPreferenceIn(BaseModel):
+    category: str
+    in_app: bool
+    email: bool

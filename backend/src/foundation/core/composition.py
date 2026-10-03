@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from src.foundation.core.entitlements import Entitlements
     from src.foundation.core.hooks import Handler, HookEvent
-    from src.foundation.core.module import UserDataExporter
+    from src.foundation.core.module import NotificationCategory, UserDataExporter
 
 type RoleSpec = tuple[str, str, Sequence[StrEnum]]
 
@@ -41,6 +41,9 @@ class Composition:
     email_link_keys: frozenset[str]
     # Each module's share of a user's data export, by module name.
     user_data_exporters: Mapping[str, UserDataExporter]
+    # Notification groups users can opt out of, by key value (requests send
+    # it as a string), in module order.
+    notification_categories: Mapping[str, NotificationCategory]
     # Features and limits per organization (`UNLIMITED` without a plan module).
     entitlements: Entitlements
 

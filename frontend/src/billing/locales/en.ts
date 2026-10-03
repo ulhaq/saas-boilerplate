@@ -47,6 +47,24 @@ export default {
       },
     },
   },
+  notificationPreferences: {
+    categories: {
+      billing: {
+        trial: {
+          title: 'Free trial',
+          description: 'When a trial is available, about to end, or has ended.',
+        },
+        payment: {
+          title: 'Payment problems',
+          description: 'Failed payments and payments that need your action.',
+        },
+        subscription: {
+          title: 'Subscription changes',
+          description: 'When the subscription is paused, resumed or refunded.',
+        },
+      },
+    },
+  },
   subscription: {
     title: 'Subscription',
     description: 'Manage your subscription',

@@ -82,6 +82,7 @@ import { useI18n } from 'vue-i18n'
 import {
   User,
   Lock,
+  Bell,
   Settings2,
   ShieldCheck,
   ScrollText,
@@ -109,6 +110,7 @@ function registeredItems(group: SettingsNavGroup) {
 const accountItems = computed(() => [
   { to: '/settings', label: t('settings.profile'), icon: User, exact: true },
   { to: '/settings/security', label: t('settings.security'), icon: Lock },
+  { to: '/settings/notifications', label: t('notificationPreferences.nav'), icon: Bell },
   { to: '/settings/privacy', label: t('gdpr.privacyNav'), icon: ShieldCheck },
 ])
 

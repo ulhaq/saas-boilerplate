@@ -48,6 +48,24 @@ export default {
       },
     },
   },
+  notificationPreferences: {
+    categories: {
+      billing: {
+        trial: {
+          title: 'Gratis prøveperiode',
+          description: 'Når en prøveperiode er tilgængelig, snart slutter eller er slut.',
+        },
+        payment: {
+          title: 'Betalingsproblemer',
+          description: 'Mislykkede betalinger og betalinger, der kræver din handling.',
+        },
+        subscription: {
+          title: 'Ændringer i abonnementet',
+          description: 'Når abonnementet sættes på pause, genoptages eller refunderes.',
+        },
+      },
+    },
+  },
   subscription: {
     title: 'Abonnement',
     description: 'Administrer dit abonnement',

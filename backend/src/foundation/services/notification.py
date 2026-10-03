@@ -1,12 +1,81 @@
-from typing import Annotated
+import builtins
+from enum import StrEnum
+from typing import Annotated, Any
 
 from fastapi import Depends, HTTPException, status
 
+from src.foundation.core import composition
+from src.foundation.core.exceptions import ValidationException
+from src.foundation.core.module import NotificationCategory
 from src.foundation.core.security import Auth
+from src.foundation.enums import ErrorCode
+from src.foundation.models.notification_preference import NotificationPreference
+from src.foundation.models.user import User
 from src.foundation.repositories.repository_manager import RepositoryManager
 from src.foundation.schemas.common import PaginatedResponse
-from src.foundation.schemas.notification import NotificationOut, UnreadCountOut
+from src.foundation.schemas.notification import (
+    NotificationOut,
+    NotificationPreferenceIn,
+    NotificationPreferenceOut,
+    UnreadCountOut,
+)
 from src.foundation.services.access import authenticate
+from src.foundation.services.email_outbox import queue_email
+
+
+def _category(key: StrEnum) -> NotificationCategory:
+    category = composition.current().notification_categories.get(key)
+    if category is None:
+        raise ValueError(f"Unknown notification category {key!r}")
+    return category
+
+
+def _channels(
+    category: NotificationCategory,
+    preference: NotificationPreference | None,
+) -> tuple[bool, bool]:
+    """(in-app, email) for a user: their choice, else the category's
+    defaults. A required email is sent whatever they chose."""
+    in_app = preference.in_app if preference else category.in_app
+    email = preference.email if preference else category.email
+    return in_app, email or category.email_required
+
+
+async def deliver_notification(  # noqa: PLR0913 - keyword-only
+    repos: RepositoryManager,
+    *,
+    user: User,
+    organization_id: int,
+    category: StrEnum,
+    notification_type: str,
+    payload: dict[str, Any],
+    email_template: str,
+    email_data: dict[str, Any],
+) -> None:
+    """Notify ``user`` in-app and/or by email, as their preference for
+    ``category`` says. Both are written in the caller's transaction: the
+    email is queued (`queue_email`) and sent after commit. ``payload`` and
+    ``email_data`` must be JSON-serializable."""
+    in_app, email = _channels(
+        _category(category),
+        await repos.notification_preference.get(user.id, category),
+    )
+    if email:
+        await queue_email(
+            repos,
+            address=user.email,
+            user_name=user.name,
+            email_template=email_template,
+            locale=user.locale,
+            data=email_data,
+        )
+    if in_app:
+        await repos.notification.create(
+            user_id=user.id,
+            organization_id=organization_id,
+            notification_type=notification_type,
+            payload=payload,
+        )
 
 
 class NotificationService:
@@ -59,3 +128,56 @@ class NotificationService:
             user_id=self.current_user.id,
             organization_id=self.current_user.organization_id,
         )
+
+    async def list_preferences(self) -> builtins.list[NotificationPreferenceOut]:
+        """The categories offered to the user - those whose notifications they
+        can get in the current organization - with their current choice."""
+        saved = {
+            p.category: p
+            for p in await self.repos.notification_preference.list_for_user(
+                self.current_user.id,
+            )
+        }
+        preferences = []
+        for category in composition.current().notification_categories.values():
+            if (
+                category.permission is not None
+                and category.permission not in self.current_user.permissions
+            ):
+                continue
+            in_app, email = _channels(category, saved.get(category.key))
+            preferences.append(
+                NotificationPreferenceOut(
+                    category=category.key,
+                    in_app=in_app,
+                    email=email,
+                    email_required=category.email_required,
+                ),
+            )
+        return preferences
+
+    async def update_preferences(
+        self,
+        schema_in: builtins.list[NotificationPreferenceIn],
+    ) -> builtins.list[NotificationPreferenceOut]:
+        """Save the user's choice for each listed category; others keep theirs."""
+        categories = composition.current().notification_categories
+        for item in schema_in:
+            category = categories.get(item.category)
+            if category is None:
+                raise ValidationException(
+                    f"Unknown notification category {item.category!r}",
+                    error_code=ErrorCode.PARAMETER_INVALID,
+                )
+            if category.email_required and not item.email:
+                raise ValidationException(
+                    f"The {item.category!r} email can't be turned off",
+                    error_code=ErrorCode.PARAMETER_INVALID,
+                )
+            await self.repos.notification_preference.upsert(
+                user_id=self.current_user.id,
+                category=item.category,
+                in_app=item.in_app,
+                email=item.email,
+            )
+        return await self.list_preferences()

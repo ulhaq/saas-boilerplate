@@ -20,6 +20,12 @@ class BillingPermission(StrEnum):
     MANAGE_SUBSCRIPTION = "manage:subscription"
 
 
+class BillingNotificationCategory(StrEnum):
+    TRIAL = "billing.trial"
+    PAYMENT = "billing.payment"
+    SUBSCRIPTION = "billing.subscription"
+
+
 class BillingAuditAction(StrEnum):
     BILLING_WEBHOOK = "billing.webhook"
     BILLING_CHECKOUT_START = "billing.checkout_start"

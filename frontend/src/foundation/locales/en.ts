@@ -13,6 +13,16 @@ export default {
     newDescription: 'Open the notification panel to view details.',
     viewAll: 'View all notifications',
   },
+  notificationPreferences: {
+    nav: 'Notifications',
+    title: 'Notification settings',
+    description: 'Choose which notifications you get in the app and by email',
+    inApp: 'In-app',
+    email: 'Email',
+    emailRequired: 'Some emails are about your account and are always sent.',
+    emptyTitle: 'Nothing to configure',
+    emptyDescription: 'There are no notifications you can choose to receive here.',
+  },
   notFound: {
     title: 'Page not found',
     description: 'The page you are looking for does not exist or has been moved.',

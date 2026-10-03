@@ -13,6 +13,16 @@ export default {
     newDescription: 'Åbn notifikationspanelet for at se detaljer.',
     viewAll: 'Se alle notifikationer',
   },
+  notificationPreferences: {
+    nav: 'Notifikationer',
+    title: 'Notifikationsindstillinger',
+    description: 'Vælg hvilke notifikationer du får i appen og på email',
+    inApp: 'I appen',
+    email: 'Email',
+    emailRequired: 'Nogle emails handler om din konto og sendes altid.',
+    emptyTitle: 'Intet at indstille',
+    emptyDescription: 'Der er ingen notifikationer, du kan vælge til eller fra her.',
+  },
   notFound: {
     title: 'Siden blev ikke fundet',
     description: 'Siden du leder efter findes ikke eller er blevet flyttet.',

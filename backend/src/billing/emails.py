@@ -1,6 +1,9 @@
 """Billing's emails (templates in `templates/emails/`): subject lines keyed
-[locale][template], and the UTM medium of each tagged template. Installed with
-the module's manifest."""
+[locale][template], the UTM medium of each tagged template, and the
+notification category each belongs to. Installed with the module's manifest."""
+
+from src.billing.enums import BillingNotificationCategory, BillingPermission
+from src.foundation.core.module import NotificationCategory
 
 BILLING_EMAIL_SUBJECTS: dict[str, dict[str, str]] = {
     "en": {
@@ -42,4 +45,36 @@ BILLING_EMAIL_CAMPAIGNS: dict[str, str] = {
     "payment-uncollectible": "dunning",
     "subscription-paused": "dunning",
     "subscription-resumed": "dunning",
+}
+
+# What subscription managers can opt out of, per channel. A failed payment
+# always emails: missing it costs the organization its plan.
+BILLING_NOTIFICATION_CATEGORIES = [
+    NotificationCategory(
+        key=BillingNotificationCategory.TRIAL,
+        permission=BillingPermission.MANAGE_SUBSCRIPTION,
+    ),
+    NotificationCategory(
+        key=BillingNotificationCategory.PAYMENT,
+        email_required=True,
+        permission=BillingPermission.MANAGE_SUBSCRIPTION,
+    ),
+    NotificationCategory(
+        key=BillingNotificationCategory.SUBSCRIPTION,
+        permission=BillingPermission.MANAGE_SUBSCRIPTION,
+    ),
+]
+
+# Template -> the notification category it is sent under. Every template sent
+# by `notify_subscription_managers` must be listed.
+BILLING_EMAIL_CATEGORIES: dict[str, BillingNotificationCategory] = {
+    "trial-available": BillingNotificationCategory.TRIAL,
+    "trial-ending": BillingNotificationCategory.TRIAL,
+    "trial-ended": BillingNotificationCategory.TRIAL,
+    "payment-failed": BillingNotificationCategory.PAYMENT,
+    "payment-action-required": BillingNotificationCategory.PAYMENT,
+    "payment-uncollectible": BillingNotificationCategory.PAYMENT,
+    "subscription-paused": BillingNotificationCategory.SUBSCRIPTION,
+    "subscription-resumed": BillingNotificationCategory.SUBSCRIPTION,
+    "duplicate-subscription-refunded": BillingNotificationCategory.SUBSCRIPTION,
 }

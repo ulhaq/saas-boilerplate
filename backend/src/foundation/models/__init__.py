@@ -5,6 +5,7 @@ from src.foundation.models.email_verification_token import EmailVerificationToke
 from src.foundation.models.invitation import Invitation
 from src.foundation.models.login_throttle import LoginThrottle
 from src.foundation.models.notification import Notification
+from src.foundation.models.notification_preference import NotificationPreference
 from src.foundation.models.organization import Organization
 from src.foundation.models.password_reset_token import PasswordResetToken
 from src.foundation.models.permission import Permission
@@ -22,6 +23,7 @@ __all__ = [
     "Invitation",
     "LoginThrottle",
     "Notification",
+    "NotificationPreference",
     "Organization",
     "PasswordResetToken",
     "Permission",

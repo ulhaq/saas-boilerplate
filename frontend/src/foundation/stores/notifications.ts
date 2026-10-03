@@ -1,7 +1,11 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { notificationsApi } from '@/foundation/api/notifications'
-import type { NotificationOut } from '@/foundation/types/notification'
+import type {
+  NotificationOut,
+  NotificationPreferenceIn,
+  NotificationPreferenceOut,
+} from '@/foundation/types/notification'
 import type { PaginatedResponse } from '@/foundation/types'
 
 type ListParams = Record<string, string | number | undefined>
@@ -13,6 +17,8 @@ export const useNotificationsStore = defineStore('notifications', () => {
   const total = ref(0)
   const unreadCount = ref(0)
   const isLoading = ref(false)
+  // The user's per-category channel choices (settings page).
+  const preferences = ref<NotificationPreferenceOut[]>([])
   let pollTimer: ReturnType<typeof setInterval> | null = null
   let onNewNotificationsCallback: ((delta: number) => void) | null = null
 
@@ -69,6 +75,16 @@ export const useNotificationsStore = defineStore('notifications', () => {
     unreadCount.value = 0
   }
 
+  async function fetchPreferences() {
+    const { data } = await notificationsApi.preferences()
+    preferences.value = data
+  }
+
+  async function updatePreferences(changes: NotificationPreferenceIn[]) {
+    const { data } = await notificationsApi.updatePreferences(changes)
+    preferences.value = data
+  }
+
   function startPolling() {
     if (pollTimer) return
     fetchUnreadCount()
@@ -86,6 +102,7 @@ export const useNotificationsStore = defineStore('notifications', () => {
     notifications.value = []
     total.value = 0
     unreadCount.value = 0
+    preferences.value = []
     stopPolling()
   }
 
@@ -94,6 +111,7 @@ export const useNotificationsStore = defineStore('notifications', () => {
     total,
     unreadCount,
     isLoading,
+    preferences,
     hasUnread,
     onNewNotifications,
     fetchUnreadCount,
@@ -101,6 +119,8 @@ export const useNotificationsStore = defineStore('notifications', () => {
     list,
     markRead,
     markAllRead,
+    fetchPreferences,
+    updatePreferences,
     startPolling,
     stopPolling,
     clear,

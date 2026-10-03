@@ -1,11 +1,12 @@
 from datetime import UTC, date, datetime
 
+from src.billing.emails import BILLING_EMAIL_CATEGORIES
 from src.billing.enums import BillingPermission
 from src.billing.models.billing import Subscription
 from src.billing.repositories.manager import BillingRepositoryManager
 from src.foundation.models.organization import Organization
 from src.foundation.services.email_content import format_date
-from src.foundation.services.email_outbox import queue_email
+from src.foundation.services.notification import deliver_notification
 
 
 def _ts(ts: int | None) -> datetime | None:
@@ -51,7 +52,8 @@ async def notify_subscription_managers(
 ) -> int:
     """Notify every member of ``organization`` who can manage the subscription:
     an in-app notification (``billing.<email_template>``) and an email, which
-    the worker sends once the caller's transaction commits.
+    the worker sends once the caller's transaction commits - each only if the
+    recipient's preference for the template's category allows it.
 
     Returns the number of recipients. Used both by webhook handlers and by the
     trial reminder loop, so it takes an Organization rather than reading one
@@ -71,19 +73,15 @@ async def notify_subscription_managers(
             key: format_date(value, user.locale) if isinstance(value, date) else value
             for key, value in data.items()
         }
-        await queue_email(
+        await deliver_notification(
             repos,
-            address=user.email,
-            user_name=user.name,
-            email_template=email_template,
-            locale=user.locale,
-            data=localized_data,
-        )
-        await repos.notification.create(
-            user_id=user.id,
+            user=user,
             organization_id=organization.id,
+            category=BILLING_EMAIL_CATEGORIES[email_template],
             notification_type=f"billing.{email_template}",
             payload=_notification_payload(data),
+            email_template=email_template,
+            email_data=localized_data,
         )
         sent += 1
     return sent

@@ -26,6 +26,24 @@ WorkerLoop = Callable[[Any], Coroutine[Any, Any, None]]
 
 
 @dataclass(frozen=True, kw_only=True)
+class NotificationCategory:
+    """A group of notifications a user can turn on or off per channel, on the
+    notification settings page, labelled in the app under
+    `notificationPreferences.categories.<key>`. Modules list their keys in a
+    `StrEnum`, like their permissions."""
+
+    key: StrEnum
+    # What a user gets until they choose otherwise.
+    in_app: bool = True
+    email: bool = True
+    # Account-critical email the user can't turn off (e.g. a failed payment).
+    email_required: bool = False
+    # Only offered to users holding it in their current organization - the
+    # notifications go to them alone.
+    permission: StrEnum | None = None
+
+
+@dataclass(frozen=True, kw_only=True)
 class Module:
     name: str
     # Imported so the product's tables register on `Base.metadata` (Alembic).
@@ -50,6 +68,9 @@ class Module:
     # template is the campaign), and the template data keys holding links.
     email_campaigns: Mapping[str, str] = field(default_factory=dict)
     email_link_keys: Sequence[str] = ()
+    # Notification groups users can opt out of, per channel (in-app, email).
+    # Send them with `services.notification.deliver_notification`.
+    notification_categories: Sequence[NotificationCategory] = ()
     # Adds the module's personal data to a user's data export (GDPR): called
     # with `repos` (the request's RepositoryManager), `user_id` and `email`;
     # returns what it holds about that user, listed under the module's name.

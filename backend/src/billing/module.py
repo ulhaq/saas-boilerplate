@@ -5,7 +5,11 @@ and the foundation runs without plans: every feature on, no limits."""
 from pathlib import Path
 
 from src.billing import models
-from src.billing.emails import BILLING_EMAIL_CAMPAIGNS, BILLING_EMAIL_SUBJECTS
+from src.billing.emails import (
+    BILLING_EMAIL_CAMPAIGNS,
+    BILLING_EMAIL_SUBJECTS,
+    BILLING_NOTIFICATION_CATEGORIES,
+)
 from src.billing.enums import (
     BILLING_PERMISSION_DESCRIPTIONS,
     BillingAuditAction,
@@ -61,6 +65,7 @@ BILLING = Module(
     email_subjects=BILLING_EMAIL_SUBJECTS,
     email_campaigns=BILLING_EMAIL_CAMPAIGNS,
     email_link_keys=["billing_url"],
+    notification_categories=BILLING_NOTIFICATION_CATEGORIES,
     template_directory=Path(__file__).resolve().parent / "templates",
     entitlements=PlanEntitlements(),
     user_data_export=export_user_data,

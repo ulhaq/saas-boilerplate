@@ -14,7 +14,7 @@ from src.foundation.core import composition
 from src.foundation.core.composition import Composition, RoleSpec
 from src.foundation.core.entitlements import UNLIMITED
 from src.foundation.core.hooks import Handler, HookEvent
-from src.foundation.core.module import Module
+from src.foundation.core.module import Module, NotificationCategory
 from src.products import MODULES
 
 ALL_PERMISSIONS: list[StrEnum] = [
@@ -71,11 +71,18 @@ def compose(products: Sequence[Module]) -> Composition:
         raise ValueError("More than one installed module provides entitlements")
     hook_handlers: dict[HookEvent, list[Handler]] = {}
     email_subjects: dict[str, dict[str, str]] = {}
+    notification_categories: dict[str, NotificationCategory] = {}
     for product in products:
         for event, handlers in product.hooks.items():
             hook_handlers.setdefault(event, []).extend(handlers)
         for locale, subjects in product.email_subjects.items():
             email_subjects.setdefault(locale, {}).update(subjects)
+        for category in product.notification_categories:
+            if category.key in notification_categories:
+                raise ValueError(
+                    f"Notification category {category.key!r} is declared twice",
+                )
+            notification_categories[category.key] = category
     return Composition(
         default_roles=compose_default_roles(core_enums.DEFAULT_ROLES, products),
         hooks={event: tuple(handlers) for event, handlers in hook_handlers.items()},
@@ -85,6 +92,7 @@ def compose(products: Sequence[Module]) -> Composition:
             for product in products
             if product.template_directory
         ],
+        notification_categories=notification_categories,
         entitlements=providers[0] if providers else UNLIMITED,
         user_data_exporters={
             product.name: product.user_data_export

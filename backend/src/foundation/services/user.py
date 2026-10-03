@@ -497,6 +497,9 @@ class UserService(
         api_tokens = await self.repos.api_token.list_all_for_user(user.id)
         audit_logs = await self.repos.audit_log.get_all_for_user(user.id)
         notifications = await self.repos.notification.list_all_for_user(user.id)
+        notification_preferences = (
+            await self.repos.notification_preference.list_for_user(user.id)
+        )
         modules = {
             name: await export(repos=self.repos, user_id=user.id, email=user.email)
             for name, export in composition.current().user_data_exporters.items()
@@ -557,6 +560,15 @@ class UserService(
                     "created_at": n.created_at.isoformat(),
                 }
                 for n in notifications
+            ],
+            notification_preferences=[
+                {
+                    "category": p.category,
+                    "in_app": p.in_app,
+                    "email": p.email,
+                    "updated_at": p.updated_at.isoformat(),
+                }
+                for p in notification_preferences
             ],
             modules=modules,
         )

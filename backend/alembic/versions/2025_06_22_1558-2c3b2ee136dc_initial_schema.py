@@ -291,6 +291,17 @@ def upgrade() -> None:
     op.create_index("ix_notification_organization_id", "notification", ["organization_id"])
     op.create_index("ix_notification_created_at", "notification", ["created_at"])
 
+    op.create_table(
+        "notification_preference",
+        sa.Column("user_id", sa.Integer(), nullable=False),
+        sa.Column("category", sa.String(length=64), nullable=False),
+        sa.Column("in_app", sa.Boolean(), nullable=False),
+        sa.Column("email", sa.Boolean(), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["user_id"], ["user.id"], ondelete="CASCADE"),
+        sa.PrimaryKeyConstraint("user_id", "category"),
+    )
+
     # ── background worker runs ─────────────────────────────────────────────────
     op.create_table(
         "worker_run",
@@ -357,6 +368,7 @@ def downgrade() -> None:
     op.drop_index("ix_worker_run_started_at", table_name="worker_run")
     op.drop_table("worker_run")
 
+    op.drop_table("notification_preference")
     op.drop_index("ix_notification_created_at", table_name="notification")
     op.drop_index("ix_notification_organization_id", table_name="notification")
     op.drop_index("ix_notification_user_id", table_name="notification")

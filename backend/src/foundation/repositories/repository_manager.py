@@ -14,6 +14,9 @@ from src.foundation.repositories.email_verification_token import (
 from src.foundation.repositories.invitation import InvitationRepository
 from src.foundation.repositories.login_throttle import LoginThrottleRepository
 from src.foundation.repositories.notification import NotificationRepository
+from src.foundation.repositories.notification_preference import (
+    NotificationPreferenceRepository,
+)
 from src.foundation.repositories.organization import OrganizationRepository
 from src.foundation.repositories.permission import PermissionRepository
 from src.foundation.repositories.refresh_token import RefreshTokenRepository
@@ -72,6 +75,10 @@ class RepositoryManager:
     @cached_property
     def notification(self) -> NotificationRepository:
         return NotificationRepository(self.db)
+
+    @cached_property
+    def notification_preference(self) -> NotificationPreferenceRepository:
+        return NotificationPreferenceRepository(self.db)
 
     @cached_property
     def worker_run(self) -> WorkerRunRepository:

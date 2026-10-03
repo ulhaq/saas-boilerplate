@@ -4315,6 +4315,118 @@
           }
         ]
       }
+    },
+    "/v1/notifications/preferences": {
+      "get": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "List Notification Preferences",
+        "operationId": "list_notification_preferences_v1_notifications_preferences_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/NotificationPreferenceOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Notification Preferences V1 Notifications Preferences Get"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Update Notification Preferences",
+        "operationId": "update_notification_preferences_v1_notifications_preferences_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "items": {
+                  "$ref": "#/components/schemas/NotificationPreferenceIn"
+                },
+                "type": "array",
+                "title": "Schema In"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/NotificationPreferenceOut"
+                  },
+                  "type": "array",
+                  "title": "Response Update Notification Preferences V1 Notifications Preferences Patch"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -5458,6 +5570,57 @@
           "created_at"
         ],
         "title": "NotificationOut"
+      },
+      "NotificationPreferenceIn": {
+        "properties": {
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "in_app": {
+            "type": "boolean",
+            "title": "In App"
+          },
+          "email": {
+            "type": "boolean",
+            "title": "Email"
+          }
+        },
+        "type": "object",
+        "required": [
+          "category",
+          "in_app",
+          "email"
+        ],
+        "title": "NotificationPreferenceIn"
+      },
+      "NotificationPreferenceOut": {
+        "properties": {
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "in_app": {
+            "type": "boolean",
+            "title": "In App"
+          },
+          "email": {
+            "type": "boolean",
+            "title": "Email"
+          },
+          "email_required": {
+            "type": "boolean",
+            "title": "Email Required"
+          }
+        },
+        "type": "object",
+        "required": [
+          "category",
+          "in_app",
+          "email",
+          "email_required"
+        ],
+        "title": "NotificationPreferenceOut"
       },
       "OrganizationBase": {
         "properties": {
@@ -6605,6 +6768,14 @@
             "type": "array",
             "title": "Notifications"
           },
+          "notification_preferences": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Notification Preferences"
+          },
           "modules": {
             "additionalProperties": {
               "additionalProperties": true,
@@ -6621,6 +6792,7 @@
           "api_tokens",
           "audit_logs",
           "notifications",
+          "notification_preferences",
           "modules"
         ],
         "title": "UserDataExportOut"

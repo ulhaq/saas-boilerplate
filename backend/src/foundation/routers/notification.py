@@ -4,7 +4,12 @@ from fastapi import APIRouter, Depends, status
 
 from src.foundation.routers.query_options import PageNumberQuery, PageSizeQuery
 from src.foundation.schemas.common import PaginatedResponse
-from src.foundation.schemas.notification import NotificationOut, UnreadCountOut
+from src.foundation.schemas.notification import (
+    NotificationOut,
+    NotificationPreferenceIn,
+    NotificationPreferenceOut,
+    UnreadCountOut,
+)
 from src.foundation.services.notification import NotificationService
 
 router = APIRouter(prefix="/notifications")
@@ -39,3 +44,18 @@ async def mark_all_read(
     service: Annotated[NotificationService, Depends()],
 ) -> None:
     await service.mark_all_read()
+
+
+@router.get("/preferences", status_code=status.HTTP_200_OK)
+async def list_notification_preferences(
+    service: Annotated[NotificationService, Depends()],
+) -> list[NotificationPreferenceOut]:
+    return await service.list_preferences()
+
+
+@router.patch("/preferences", status_code=status.HTTP_200_OK)
+async def update_notification_preferences(
+    schema_in: list[NotificationPreferenceIn],
+    service: Annotated[NotificationService, Depends()],
+) -> list[NotificationPreferenceOut]:
+    return await service.update_preferences(schema_in)
