@@ -33,5 +33,11 @@ class BillingAccount(ResourceModelBase):
     trial_reminder_sent_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), default=None, nullable=True
     )
+    # The email the provider customer should get, waiting for the worker's
+    # customer sync - set where the change happens, so a provider outage never
+    # fails it (e.g. an ownership transfer).
+    pending_customer_email: Mapped[str | None] = mapped_column(
+        String, default=None, nullable=True
+    )
 
     organization: Mapped[Organization] = relationship(lazy="selectin")

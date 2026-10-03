@@ -176,22 +176,12 @@ def test_cannot_remove_owner_from_organization(admin_authenticated: TestClient) 
     assert rs["error_code"] == "owner_removal"
 
 
-@pytest.mark.billing
-async def test_transfer_ownership_success(
-    admin_authenticated: TestClient, mock_billing_provider: MagicMock
-) -> None:
-    await _seed_external_customer(organization_id=1, external_customer_id="cus_test123")
-
+async def test_transfer_ownership_success(admin_authenticated: TestClient) -> None:
     # Transfer ownership from user 1 (admin) to user 2 (standard)
     response = admin_authenticated.post(
         "/v1/organizations/1/transfer-ownership", json={"user_id": 2}
     )
     assert response.status_code == 204
-
-    # Stripe customer email updated to new owner's email
-    mock_billing_provider.update_customer.assert_called_once_with(
-        "cus_test123", email="standard@example.org"
-    )
 
     # Former owner (user 1) no longer has permissions
     # verify via 403 on org users endpoint

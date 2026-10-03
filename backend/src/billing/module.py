@@ -19,6 +19,7 @@ from src.billing.hooks import (
 from src.billing.routers import billing
 from src.billing.services.entitlements import PlanEntitlements
 from src.billing.services.maintenance import (
+    run_customer_sync_loop,
     run_stale_checkout_cleanup_loop,
     run_trial_reminder_loop,
 )
@@ -49,7 +50,11 @@ BILLING = ProductModule(
         HookEvent.ORGANIZATION_DELETING: [refuse_deleting_a_paying_organization],
         HookEvent.OWNERSHIP_TRANSFERRED: [bill_the_new_owner],
     },
-    worker_loops=[run_stale_checkout_cleanup_loop, run_trial_reminder_loop],
+    worker_loops=[
+        run_stale_checkout_cleanup_loop,
+        run_trial_reminder_loop,
+        run_customer_sync_loop,
+    ],
     email_subjects=BILLING_EMAIL_SUBJECTS,
     email_campaigns=BILLING_EMAIL_CAMPAIGNS,
     email_link_keys=["billing_url"],

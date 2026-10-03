@@ -8,7 +8,6 @@ Listed in `src.billing.module` and installed by the composition root
 import logging
 
 from src.billing.enums import BillingErrorCode
-from src.billing.provider.dependencies import get_billing_provider
 from src.billing.repositories.manager import BillingRepositoryManager
 from src.platform.core.exceptions import PermissionDeniedException
 from src.platform.repositories.repository_manager import RepositoryManager
@@ -62,12 +61,14 @@ async def refuse_deleting_a_paying_organization(
 async def bill_the_new_owner(
     *, repos: RepositoryManager, organization_id: int, user_id: int
 ) -> None:
-    """Point the provider customer's email at the new owner. The local billing
-    email is left as is - owners change it on the billing page."""
+    """Point the provider customer's email at the new owner - via the worker's
+    customer sync (`run_customer_sync_loop`), so a provider outage can't fail
+    the transfer. Stripe's `customer.updated` webhook then brings the email
+    into the local billing email."""
     billing = BillingRepositoryManager(repos.db)
     account = await billing.billing_account.get_for_organization(organization_id)
     if account and account.external_customer_id:
         new_owner = await repos.user.unscoped.get_one(user_id)
-        await get_billing_provider().update_customer(
-            account.external_customer_id, email=new_owner.email
+        await billing.billing_account.update(
+            account, pending_customer_email=new_owner.email
         )

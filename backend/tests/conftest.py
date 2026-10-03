@@ -327,8 +327,10 @@ def mock_billing_provider(mocker):
     )
 
     app.dependency_overrides[get_billing_provider] = lambda: mock
-    # Hook handlers call the factory directly, outside FastAPI's DI.
-    mocker.patch("src.billing.hooks.get_billing_provider", return_value=mock)
+    # Worker loops call the factory directly, outside FastAPI's DI.
+    mocker.patch(
+        "src.billing.services.maintenance.get_billing_provider", return_value=mock
+    )
     yield mock
     app.dependency_overrides.pop(get_billing_provider, None)
 

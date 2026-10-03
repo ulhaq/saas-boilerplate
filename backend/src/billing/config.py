@@ -25,6 +25,7 @@ class BillingSettings(EnvSettings):
     billing_cleanup_interval_seconds: int = 24 * 60 * 60
     billing_trial_reminder_delay_days: int = 3
     billing_trial_reminder_interval_seconds: int = 24 * 60 * 60
+    billing_customer_sync_interval_seconds: int = 60
 
     @model_validator(mode="after")
     def validate_billing_urls(self) -> Self:

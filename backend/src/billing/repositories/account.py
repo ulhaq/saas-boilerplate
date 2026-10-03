@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Select, and_, exists, or_, select
+from sqlalchemy import Select, and_, exists, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.billing.models.account import BillingAccount
@@ -49,6 +49,35 @@ class BillingAccountRepository(SQLResourceRepository[BillingAccount]):
             .join(Organization, Organization.id == self.model.organization_id)
             .filter(Organization.deleted_at.is_(None))
         )
+
+    async def get_pending_customer_syncs(
+        self, limit: int = 100
+    ) -> list[BillingAccount]:
+        """Accounts whose provider customer is waiting for an email update."""
+        stmt = (
+            self._live()
+            .filter(
+                self.model.pending_customer_email.is_not(None),
+                self.model.external_customer_id.is_not(None),
+            )
+            .order_by(self.model.updated_at)
+            .limit(limit)
+        )
+        rs = await self.db.execute(stmt)
+        return list(rs.unique().scalars().all())
+
+    async def clear_pending_customer_email(self, account_id: int, email: str) -> bool:
+        """Mark ``email`` as synced - unless a newer change replaced it meanwhile,
+        which then stays pending for the next sync."""
+        rs = await self.db.execute(
+            update(self.model)
+            .where(
+                self.model.id == account_id,
+                self.model.pending_customer_email == email,
+            )
+            .values(pending_customer_email=None)
+        )
+        return bool(rs.rowcount)
 
     async def get_trial_reminder_candidates(
         self, created_before: datetime, limit: int = 500

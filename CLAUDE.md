@@ -69,7 +69,7 @@ The backend runs as **two separate processes**:
 | Process    | Entry point             | What it does                                                                                                                      |
 | ---------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | **API**    | `src/main.py` (uvicorn) | Handles HTTP requests                                                                                                             |
-| **Worker** | `worker.py`             | Runs product loops (the example heartbeat), the email outbox, GDPR retention, billing cleanup, and trial reminder loops as concurrent asyncio tasks |
+| **Worker** | `worker.py`             | Runs product loops (the example heartbeat), the email outbox, GDPR retention, and billing's loops (stale checkout cleanup, trial reminders, customer sync) as concurrent asyncio tasks |
 
 Adding a new background loop: implement a `run_X_loop(session_factory)` coroutine and add it to `worker_loops` in the product's manifest (`src/example/product.py`); `worker.py` starts every listed loop. Wrap each iteration in `track_worker_run("x", interval)` (`backend/src/platform/core/telemetry.py`) so it shows up on the dashboard and in the overdue/failing alerts, and start the iteration's transaction with `if await try_job_lock(session, "x"):` (`backend/src/platform/core/database.py`) so it runs in one worker at a time even when workers overlap - skip that only for a job that is safe to run concurrently. Never start background tasks inside `main.py`'s lifespan - horizontal API scaling would cause duplicate runs.
 

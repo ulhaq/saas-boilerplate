@@ -306,26 +306,3 @@ async def test_patch_organization_duplicate_name_raises(mock_billing_provider):
                 await service.patch_organization(
                     1, OrganizationPatch(name="Globex Ltd")
                 )
-
-
-# ---------------------------------------------------------------------------
-# transfer_ownership - org has external_customer_id (line 259)
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.billing
-async def test_transfer_ownership_syncs_stripe_customer(mock_billing_provider):
-    """When org has external_customer_id, update_customer is called on transfer."""
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            repos = BillingRepositoryManager(session)
-            org = await repos.billing_account.get_for_organization(1)
-            assert org
-            await repos.billing_account.update(org, external_customer_id="cus_transfer")
-
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            service = _make_service(session, _admin_auth(user_id=1, org_id=1))
-            await service.transfer_ownership(1, TransferOwnershipIn(user_id=2))
-
-    mock_billing_provider.update_customer.assert_called()

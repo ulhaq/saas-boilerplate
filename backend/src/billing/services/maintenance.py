@@ -6,6 +6,8 @@ from typing import Annotated, Any
 from fastapi import Depends
 
 from src.billing.config import billing_settings
+from src.billing.provider.abc import BillingProviderABC
+from src.billing.provider.dependencies import get_billing_provider
 from src.billing.repositories.manager import BillingRepositoryManager
 from src.billing.services.base import BillingBaseService
 from src.billing.services.common import notify_subscription_managers
@@ -79,6 +81,56 @@ class BillingMaintenanceService(BillingBaseService):
             if recipients:
                 reminded += 1
         return reminded
+
+
+async def sync_customer_emails(
+    repos: BillingRepositoryManager, provider: BillingProviderABC
+) -> int:
+    """Push pending customer emails (`BillingAccount.pending_customer_email`)
+    to the provider. A failed push stays pending and is retried on the next
+    tick; a push is only marked done if no newer email replaced it meanwhile.
+    Returns how many were synced."""
+    synced = 0
+    for account in await repos.billing_account.get_pending_customer_syncs():
+        email = account.pending_customer_email
+        customer_id = account.external_customer_id
+        if email is None or customer_id is None:
+            continue
+        try:
+            await provider.update_customer(customer_id, email=email)
+        except Exception as exc:
+            log.warning(
+                "Customer sync failed, will retry [customer=%s]: %s", customer_id, exc
+            )
+            continue
+        if await repos.billing_account.clear_pending_customer_email(account.id, email):
+            synced += 1
+    return synced
+
+
+async def run_customer_sync_loop(session_factory: Any) -> None:
+    """
+    Background loop that pushes pending customer emails to the provider, every
+    ``billing_customer_sync_interval_seconds``. Changes are recorded where they
+    happen (an ownership transfer) and synced here, outside any request, so a
+    provider outage delays the update instead of failing the change.
+    """
+    interval = billing_settings.billing_customer_sync_interval_seconds
+    while True:
+        try:
+            with track_worker_run("customer_sync", interval):
+                async with session_factory() as session:
+                    async with session.begin():
+                        if await try_job_lock(session, "customer_sync"):
+                            count = await sync_customer_emails(
+                                BillingRepositoryManager(session),
+                                get_billing_provider(),
+                            )
+                            if count:
+                                log.info("Customer sync: %d customer(s)", count)
+        except Exception as exc:
+            log.error("Customer sync loop error: %s", exc, exc_info=True)
+        await asyncio.sleep(interval)
 
 
 async def run_trial_reminder_loop(session_factory: Any) -> None:
