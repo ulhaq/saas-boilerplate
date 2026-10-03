@@ -15,13 +15,18 @@ class PasswordResetToken(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("user.id", ondelete="CASCADE")
+        Integer,
+        ForeignKey("user.id", ondelete="CASCADE"),
     )
     token: Mapped[str] = mapped_column(String, unique=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
     )
 
     user: Mapped[User] = relationship(
-        "User", back_populates="password_reset_token", passive_deletes=True
+        "User",
+        back_populates="password_reset_token",
+        passive_deletes=True,
     )

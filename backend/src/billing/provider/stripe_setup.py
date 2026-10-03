@@ -25,7 +25,7 @@ setup_logging("stripe_setup")
 log = logging.getLogger(__name__)
 
 
-async def setup() -> None:
+async def setup() -> None:  # noqa: C901
     provider = StripeProvider(
         api_key=billing_settings.stripe_secret_key.get_secret_value(),
         webhook_secret=billing_settings.stripe_webhook_secret.get_secret_value(),
@@ -33,14 +33,15 @@ async def setup() -> None:
 
     async with ASYNC_SESSION_LOCAL() as session:
         result = await session.execute(
-            select(Plan).where(Plan.deleted_at.is_(None), Plan.is_active.is_(True))
+            select(Plan).where(Plan.deleted_at.is_(None), Plan.is_active.is_(True)),
         )
         plans = result.scalars().all()
 
         for plan in plans:
             if all(p.amount == 0 for p in plan.prices):
                 log.info(
-                    "Skipping free plan '%s' (no Stripe product needed)", plan.name
+                    "Skipping free plan '%s' (no Stripe product needed)",
+                    plan.name,
                 )
                 continue
 
@@ -57,7 +58,7 @@ async def setup() -> None:
                         select(Plan).where(
                             Plan.external_product_id == existing.external_id,
                             Plan.id != plan.id,
-                        )
+                        ),
                     )
                     if already_owned.scalars().first() is not None:
                         log.warning(
@@ -69,7 +70,8 @@ async def setup() -> None:
                         continue
                     if not existing.is_active:
                         product = await provider.create_product(
-                            plan.name, plan.description
+                            plan.name,
+                            plan.description,
                         )
                         plan.external_product_id = product.external_id
                         log.info(
@@ -96,7 +98,7 @@ async def setup() -> None:
 
             if plan.external_product_id is None:
                 raise BillingProviderException(
-                    f"Plan {plan.id} has no external product ID after sync"
+                    f"Plan {plan.id} has no external product ID after sync",
                 )
             plan_external_product_id = plan.external_product_id
 
@@ -110,7 +112,8 @@ async def setup() -> None:
                     continue
 
                 interval_literal = cast(
-                    Literal["day", "month", "week", "year"], price.interval
+                    Literal["day", "month", "week", "year"],
+                    price.interval,
                 )
                 existing_price = await provider.search_price(
                     external_product_id=plan_external_product_id,

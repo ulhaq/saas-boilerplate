@@ -83,7 +83,8 @@ def test_patch_authenticated_user_profile_with_partial_body(
 
 
 def test_change_authenticated_user_password(
-    admin_authenticated: TestClient, client: TestClient
+    admin_authenticated: TestClient,
+    client: TestClient,
 ) -> None:
     response = admin_authenticated.put(
         "/v1/users/me/change-password",
@@ -108,7 +109,8 @@ def test_change_authenticated_user_password(
     access_token = rs["access_token"]
 
     response = client.get(
-        "/v1/users/me", headers={"Authorization": f"Bearer {access_token}"}
+        "/v1/users/me",
+        headers={"Authorization": f"Bearer {access_token}"},
     )
     assert response.status_code == 200
     rs = response.json()
@@ -211,7 +213,8 @@ def test_cannot_invite_a_user_while_unauthorized(client: TestClient) -> None:
 
 def test_patch_a_user(admin_authenticated: TestClient) -> None:
     response = admin_authenticated.patch(
-        "/v1/users/2", json={"name": "Standard Patched"}
+        "/v1/users/2",
+        json={"name": "Standard Patched"},
     )
     assert response.status_code == 200
     rs = response.json()
@@ -234,7 +237,8 @@ def test_patch_a_user_with_partial_body(admin_authenticated: TestClient) -> None
 def test_admin_cannot_change_member_email(admin_authenticated: TestClient) -> None:
     # The email is the member's login across all their orgs - not org-editable.
     response = admin_authenticated.patch(
-        "/v1/users/2", json={"email": "patched@example.org"}
+        "/v1/users/2",
+        json={"email": "patched@example.org"},
     )
     assert response.status_code == 422
     member = admin_authenticated.get("/v1/users/2").json()
@@ -244,7 +248,8 @@ def test_admin_cannot_change_member_email(admin_authenticated: TestClient) -> No
 def test_cannot_patch_own_email_directly(admin_authenticated: TestClient) -> None:
     # Own email changes go through POST /users/me/email (re-auth + confirm).
     response = admin_authenticated.patch(
-        "/v1/users/me", json={"email": "patched@example.org"}
+        "/v1/users/me",
+        json={"email": "patched@example.org"},
     )
     assert response.status_code == 422
     assert admin_authenticated.get("/v1/users/me").json()["email"] == (
@@ -262,7 +267,8 @@ def test_cannot_patch_a_user_while_unauthorized(
 
 
 def test_cannot_remove_last_owner_via_manage_roles(
-    admin_authenticated: TestClient, client: TestClient
+    admin_authenticated: TestClient,
+    client: TestClient,
 ) -> None:
     # Get the MANAGE_USER_ROLE permission ID
     rs = admin_authenticated.get("/v1/permissions?page_size=50").json()
@@ -272,7 +278,8 @@ def test_cannot_remove_last_owner_via_manage_roles(
 
     # Create a role with only MANAGE_USER_ROLE (not Owner)
     rs = admin_authenticated.post(
-        "/v1/roles", json={"name": "Manager", "description": "Role manager"}
+        "/v1/roles",
+        json={"name": "Manager", "description": "Role manager"},
     ).json()
     manager_role_id = rs["id"]
     admin_authenticated.post(
@@ -319,7 +326,7 @@ def test_get_all_users(admin_authenticated: TestClient) -> None:
 
 
 @pytest.mark.parametrize(
-    "page_number, page_size, page_total, total",
+    ("page_number", "page_size", "page_total", "total"),
     [
         (1, 10, 3, 3),
         (2, 10, 0, 3),
@@ -333,14 +340,15 @@ def test_paginate_users(
     admin_authenticated: TestClient,
 ) -> None:
     response = admin_authenticated.get(
-        f"/v1/users?page_number={page_number}&page_size={page_size}"
+        f"/v1/users?page_number={page_number}&page_size={page_size}",
     )
     assert response.status_code == 200
     assert_pagination(response.json(), page_number, page_size, page_total, total)
 
 
 @pytest.mark.parametrize(
-    "sort", ["id", "-id", "name", "-name", "created_at", "-created_at"]
+    "sort",
+    ["id", "-id", "name", "-name", "created_at", "-created_at"],
 )
 def test_sort_users(sort: str, admin_authenticated: TestClient) -> None:
     response = admin_authenticated.get(f"/v1/users?sort={sort}&page_size=50")
@@ -349,7 +357,7 @@ def test_sort_users(sort: str, admin_authenticated: TestClient) -> None:
 
 
 @pytest.mark.parametrize(
-    "fields, values, operators, total",
+    ("fields", "values", "operators", "total"),
     [
         # Single field, single value
         (["name"], [["Alice Owner"]], ["eq"], 1),
@@ -387,7 +395,7 @@ def test_filter_users(
 
 
 @pytest.mark.parametrize(
-    "params, total",
+    ("params", "total"),
     [
         # AND: name ico "alice" AND email contains "admin" > 1 (Alice)
         ("name__ico=alice&email__ico=admin", 1),
@@ -408,7 +416,7 @@ def test_filter_users_multi_field(
 
 
 @pytest.mark.parametrize(
-    "q, expected_count, matched_field, matched_value",
+    ("q", "expected_count", "matched_field", "matched_value"),
     [
         ("alice", 1, "name", "Alice Owner"),
         ("ALICE", 1, "name", "Alice Owner"),
@@ -481,7 +489,8 @@ def test_cannot_assign_owner_role_via_manage_roles(
 
 
 def test_cannot_remove_owner_role_via_manage_roles(
-    admin_authenticated: TestClient, client: TestClient
+    admin_authenticated: TestClient,
+    client: TestClient,
 ) -> None:
     # Give user 2 a role with MANAGE_USER_ROLE so they can call manage_roles
     rs = admin_authenticated.get("/v1/permissions?page_size=50").json()
@@ -489,7 +498,8 @@ def test_cannot_remove_owner_role_via_manage_roles(
         p["id"] for p in rs["items"] if p["name"] == "manage:user_role"
     )
     rs = admin_authenticated.post(
-        "/v1/roles", json={"name": "Manager", "description": "Role manager"}
+        "/v1/roles",
+        json={"name": "Manager", "description": "Role manager"},
     ).json()
     manager_role_id = rs["id"]
     admin_authenticated.post(
@@ -529,7 +539,9 @@ def test_cannot_export_data_while_unauthorized(client: TestClient) -> None:
 
 def test_delete_my_account(standard_authenticated: TestClient) -> None:
     response = standard_authenticated.request(
-        "DELETE", "/v1/users/me", json={"current_password": "password"}
+        "DELETE",
+        "/v1/users/me",
+        json={"current_password": "password"},
     )
     assert response.status_code == 204
 
@@ -538,14 +550,18 @@ def test_cannot_delete_account_with_wrong_password(
     standard_authenticated: TestClient,
 ) -> None:
     response = standard_authenticated.request(
-        "DELETE", "/v1/users/me", json={"current_password": "wrongpassword"}
+        "DELETE",
+        "/v1/users/me",
+        json={"current_password": "wrongpassword"},
     )
     assert response.status_code == 401
 
 
 def test_owner_cannot_delete_account(admin_authenticated: TestClient) -> None:
     response = admin_authenticated.request(
-        "DELETE", "/v1/users/me", json={"current_password": "password"}
+        "DELETE",
+        "/v1/users/me",
+        json={"current_password": "password"},
     )
     assert response.status_code == 403
     assert response.json()["error_code"] == "owner_removal"
@@ -553,7 +569,9 @@ def test_owner_cannot_delete_account(admin_authenticated: TestClient) -> None:
 
 def test_cannot_delete_account_while_unauthorized(client: TestClient) -> None:
     response = client.request(
-        "DELETE", "/v1/users/me", json={"current_password": "password"}
+        "DELETE",
+        "/v1/users/me",
+        json={"current_password": "password"},
     )
     assert response.status_code == 401
 
@@ -588,7 +606,7 @@ async def test_deleted_user_excluded_from_organization_users() -> None:
         result = await session.execute(
             select(Organization)
             .where(Organization.id == 1)
-            .options(selectinload(Organization.users))
+            .options(selectinload(Organization.users)),
         )
         org = result.scalar_one()
         user_ids = {u.id for u in org.users}

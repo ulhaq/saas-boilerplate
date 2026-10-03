@@ -37,7 +37,9 @@ class ApiTokenRepository(RepositoryABC[ApiToken]):
         return instance
 
     async def list_for_user_org(
-        self, user_id: int, organization_id: int
+        self,
+        user_id: int,
+        organization_id: int,
     ) -> list[ApiToken]:
         stmt = (
             select(ApiToken)
@@ -81,7 +83,10 @@ class ApiTokenRepository(RepositoryABC[ApiToken]):
         return list(rs.scalars().all())
 
     async def get_by_id(
-        self, token_id: int, user_id: int, organization_id: int
+        self,
+        token_id: int,
+        user_id: int,
+        organization_id: int,
     ) -> ApiToken | None:
         stmt = select(ApiToken).where(
             ApiToken.id == token_id,

@@ -10,7 +10,8 @@ from tests.conftest import TestSessionLocal
 
 
 async def _seed_external_customer(
-    organization_id: int, external_customer_id: str
+    organization_id: int,
+    external_customer_id: str,
 ) -> None:
     async with TestSessionLocal() as session:
         account = await get_billing_account(session, organization_id)
@@ -31,7 +32,8 @@ def test_create_an_organization_creates_free_subscription(
 
 
 async def test_patch_organization_name_does_not_sync_to_stripe(
-    admin_authenticated: TestClient, mock_billing_provider: MagicMock
+    admin_authenticated: TestClient,
+    mock_billing_provider: MagicMock,
 ) -> None:
     # Org name is an app-only concept; the Stripe customer name is owned by
     # Stripe (set at checkout / editable via the customer portal) and must not
@@ -39,7 +41,8 @@ async def test_patch_organization_name_does_not_sync_to_stripe(
     await _seed_external_customer(organization_id=1, external_customer_id="cus_test123")
 
     response = admin_authenticated.patch(
-        "/v1/organizations/1", json={"name": "Renamed Org"}
+        "/v1/organizations/1",
+        json={"name": "Renamed Org"},
     )
 
     assert response.status_code == 200

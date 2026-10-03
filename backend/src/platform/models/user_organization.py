@@ -13,11 +13,17 @@ class UserOrganization(ResourceModelBase):
     )
 
     user_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("user.id", ondelete="CASCADE"), nullable=False
+        Integer,
+        ForeignKey("user.id", ondelete="CASCADE"),
+        nullable=False,
     )
     organization_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("organization.id", ondelete="CASCADE"), nullable=False
+        Integer,
+        ForeignKey("organization.id", ondelete="CASCADE"),
+        nullable=False,
     )
     last_active_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, default=None
+        DateTime(timezone=True),
+        nullable=True,
+        default=None,
     )

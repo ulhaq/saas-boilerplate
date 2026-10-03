@@ -14,7 +14,7 @@ from src.platform.services.base import ResourceService
 
 
 class ProjectService(
-    ResourceService[ProjectRepository, Project, ProjectIn | ProjectPatch, ProjectOut]
+    ResourceService[ProjectRepository, Project, ProjectIn | ProjectPatch, ProjectOut],
 ):
     current_user: Auth
 
@@ -29,7 +29,9 @@ class ProjectService(
         super().__init__(repos)
 
     async def _assert_name_available(
-        self, name: str, exclude_id: int | None = None
+        self,
+        name: str,
+        exclude_id: int | None = None,
     ) -> None:
         existing = await self.repo.get_by_name(name)
         if existing is not None and existing.id != exclude_id:
@@ -59,7 +61,9 @@ class ProjectService(
         return ProjectOut.model_validate(project)
 
     async def patch_project(
-        self, identifier: int, schema_in: ProjectPatch
+        self,
+        identifier: int,
+        schema_in: ProjectPatch,
     ) -> ProjectOut:
         async def validate() -> None:
             if schema_in.name is not None:

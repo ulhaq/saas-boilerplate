@@ -3,7 +3,8 @@ from fastapi.testclient import TestClient
 
 def test_join_waitlist(client: TestClient) -> None:
     response = client.post(
-        "/v1/waitlist", json={"email": "lead@example.org", "name": "Lead"}
+        "/v1/waitlist",
+        json={"email": "lead@example.org", "name": "Lead"},
     )
     assert response.status_code == 201
     assert "message" in response.json()

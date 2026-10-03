@@ -22,21 +22,19 @@ WORKER_TYPE = "example_heartbeat"
 
 async def _run_once(session_factory: Any) -> None:
     # Transaction 1: commit the run record so 'running' is immediately visible
-    async with session_factory() as session:
-        async with session.begin():
-            run_id = (await WorkerRunRepository(session).create(WORKER_TYPE)).id
+    async with session_factory() as session, session.begin():
+        run_id = (await WorkerRunRepository(session).create(WORKER_TYPE)).id
 
     # Transaction 2: do the work and write the final run status
-    async with session_factory() as session:
-        async with session.begin():
-            project_count = await ProjectRepository(session).unscoped.count()
-            await WorkerRunRepository(session).finish(
-                run_id=run_id,
-                status="success",
-                items_processed=project_count,
-                changes_detected=0,
-                error_count=0,
-            )
+    async with session_factory() as session, session.begin():
+        project_count = await ProjectRepository(session).unscoped.count()
+        await WorkerRunRepository(session).finish(
+            run_id=run_id,
+            status="success",
+            items_processed=project_count,
+            changes_detected=0,
+            error_count=0,
+        )
     log.info("Example heartbeat: %d active project(s)", project_count)
 
 
@@ -46,6 +44,6 @@ async def run_example_loop(session_factory: Any) -> None:
         try:
             with track_worker_run(WORKER_TYPE, interval):
                 await _run_once(session_factory)
-        except Exception as exc:
-            log.error("Example loop error: %s", exc, exc_info=True)
+        except Exception:
+            log.exception("Example loop error")
         await asyncio.sleep(interval)

@@ -132,9 +132,16 @@ class ErrorHandlingMiddleware:
 
         try:
             await self.app(scope, receive, send_wrapper)
+        except Exception as exc:  # noqa: BLE001 - last-resort error boundary
+            await self.process_exception(
+                scope,
+                receive,
+                send,
+                response_started=response_started,
+                exc=exc,
+            )
             return
-        except Exception as exc:
-            await self.process_exception(scope, receive, send, response_started, exc)
+        else:
             return
 
     async def process_exception(
@@ -142,6 +149,7 @@ class ErrorHandlingMiddleware:
         scope: Scope,
         receive: Receive,
         send: Send,
+        *,
         response_started: bool,
         exc: Exception,
     ) -> None:
@@ -166,7 +174,7 @@ class ErrorHandlingMiddleware:
                     Request(scope),
                     msg=ErrorCode.SERVER_ERROR.description,
                     error_code=ErrorCode.SERVER_ERROR,
-                )
+                ),
             ),
         )
 

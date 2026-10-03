@@ -5,7 +5,7 @@ from pydantic import AfterValidator, EmailStr, Field, StringConstraints
 
 
 def _reject_disposable_email(email: str) -> str:
-    domain = email.split("@")[-1]
+    domain = email.rsplit("@", maxsplit=1)[-1]
     if domain in blocklist:
         raise ValueError("Disposable email addresses are not allowed")
     return email

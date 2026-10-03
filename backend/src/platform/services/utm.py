@@ -62,7 +62,7 @@ def apply_utm(email_template: str, data: dict) -> dict:
     """
     installed = composition.current()
     medium = _MEDIUM_BY_TEMPLATE.get(email_template) or installed.email_campaigns.get(
-        email_template
+        email_template,
     )
     if medium is None:
         return data

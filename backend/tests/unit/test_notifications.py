@@ -30,7 +30,7 @@ async def test_create_stores_the_notification():
         created = await RepositoryManager(session).notification.create(
             user_id=ADMIN,
             organization_id=1,
-            type="billing.trial-available",
+            notification_type="billing.trial-available",
             payload=payload,
         )
         assert created.id is not None
@@ -39,7 +39,7 @@ async def test_create_stores_the_notification():
 
     [stored] = await _notifications()
     assert (stored.user_id, stored.organization_id) == (ADMIN, 1)
-    assert stored.type == "billing.trial-available"
+    assert stored.notification_type == "billing.trial-available"
     assert stored.payload == payload
 
 
@@ -48,7 +48,10 @@ async def test_a_notification_is_only_visible_to_its_user_and_organization():
         repo = RepositoryManager(session).notification
         for user_id, organization_id in [(ADMIN, 1), (STANDARD, 1), (ADMIN2, 2)]:
             await repo.create(
-                user_id=user_id, organization_id=organization_id, type="t", payload={}
+                user_id=user_id,
+                organization_id=organization_id,
+                notification_type="t",
+                payload={},
             )
 
     async with TestSessionLocal() as session:
@@ -65,6 +68,9 @@ async def test_create_rejects_an_unknown_user():
     with pytest.raises(IntegrityError):
         async with TestSessionLocal() as session, session.begin():
             await RepositoryManager(session).notification.create(
-                user_id=999_999, organization_id=1, type="t", payload={}
+                user_id=999_999,
+                organization_id=1,
+                notification_type="t",
+                payload={},
             )
     assert await _notifications() == []

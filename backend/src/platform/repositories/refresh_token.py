@@ -21,10 +21,17 @@ class RefreshTokenRepository:
         self.db = db
 
     async def create(
-        self, user: User, hashed_token: str, expires_at: datetime, jti: str
+        self,
+        user: User,
+        hashed_token: str,
+        expires_at: datetime,
+        jti: str,
     ) -> RefreshToken:
         instance = RefreshToken(
-            user_id=user.id, token=hashed_token, expires_at=expires_at, jti=jti
+            user_id=user.id,
+            token=hashed_token,
+            expires_at=expires_at,
+            jti=jti,
         )
         self.db.add(instance)
         await self.db.flush()

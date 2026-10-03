@@ -107,14 +107,88 @@ help = "Run the suite with a coverage report (terminal + htmlcov/)"
 exclude = ["src/platform/templates"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B", "C4", "ASYNC", "RUF", "ANN"]
+select = [
+    # Pycodestyle, pyflakes, imports, naming, modern syntax
+    "E",
+    "W",
+    "F",
+    "I",
+    "N",
+    "A",
+    "UP",
+    "FA",
+    "ICN",
+    "INT",
+    "TID",
+
+    # Bugs and correctness
+    "B",
+    "BLE",
+    "RUF",
+    "PL",
+    "C90",
+    "TRY",
+    "LOG",
+    "G",
+    "ASYNC",
+    "DTZ",
+    "PGH",
+    "YTT",
+    "AIR",
+    "FAST",
+
+    # Design: arguments, private access, slots
+    "ARG",
+    "FBT",
+    "SLF",
+    "SLOT",
+
+    # Simplification and style
+    "C4",
+    "COM",
+    "SIM",
+    "RET",
+    "PIE",
+    "PERF",
+    "FURB",
+    "PTH",
+    "FLY",
+    "ISC",
+    "Q",
+    "RSE",
+
+    # Typing and docs
+    "ANN",
+    "PYI",
+    "TC004",
+    "TC005",
+    "TC007",
+    "TC010",
+    "D419",
+
+    # Security, tests and tooling hygiene
+    "S",
+    "PT",
+    "T10",
+    "EXE",
+
+    # TODO/FIXME comments
+    "FIX",
+    "TD",
+]
 ignore = ["ANN401"]
+
+[tool.ruff.lint.pylint]
+max-args = 7
+max-branches = 15
 
 [tool.ruff.lint.flake8-annotations]
 mypy-init-return = true
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["ANN"]
+"*/*.py" = ["TRY003"]
+"tests/**" = ["ANN", "PL", "SLF", "S101", "S105", "S106", "S107"]
+"src/platform/enums.py" = ["S105"]
 
 [tool.ty.src]
 exclude = ["src/platform/templates"]

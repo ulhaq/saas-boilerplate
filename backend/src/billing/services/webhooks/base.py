@@ -25,7 +25,9 @@ class WebhookHandlerGroup(BillingBaseService):
     """
 
     def __init__(
-        self, repos: BillingRepositoryManager, provider: BillingProviderABC
+        self,
+        repos: BillingRepositoryManager,
+        provider: BillingProviderABC,
     ) -> None:
         self.provider = provider
         super().__init__(repos)
@@ -37,7 +39,9 @@ class WebhookHandlerGroup(BillingBaseService):
         """Notify domain modules (via hooks) that the org's plan state changed,
         so they can reconcile plan-limited resources."""
         await emit(
-            HookEvent.PLAN_CHANGED, repos=self.repos, organization_id=organization_id
+            HookEvent.PLAN_CHANGED,
+            repos=self.repos,
+            organization_id=organization_id,
         )
 
     async def _notify_subscription_managers(
@@ -50,7 +54,10 @@ class WebhookHandlerGroup(BillingBaseService):
         if not organization:
             return
         await notify_subscription_managers(
-            self.repos, organization, email_template, data
+            self.repos,
+            organization,
+            email_template,
+            data,
         )
 
     async def _notify_payment_uncollectible(self, sub: Subscription) -> None:
@@ -61,7 +68,10 @@ class WebhookHandlerGroup(BillingBaseService):
         )
 
     async def _downgrade_to_free(
-        self, sub: Subscription, *, cancel_remote: bool = True
+        self,
+        sub: Subscription,
+        *,
+        cancel_remote: bool = True,
     ) -> PlanPrice | None:
         """
         Cancels the Stripe subscription then downgrades the local record to the
@@ -91,7 +101,9 @@ class WebhookHandlerGroup(BillingBaseService):
                 # Allow BillingProviderException to propagate so Stripe retries.
                 await self.provider.delete_subscription(sub.external_subscription_id)
             await self.repos.subscription.update(
-                sub, status="canceled", canceled_at=datetime.now(UTC)
+                sub,
+                status="canceled",
+                canceled_at=datetime.now(UTC),
             )
             return None
 
@@ -120,7 +132,8 @@ class WebhookHandlerGroup(BillingBaseService):
 
     @staticmethod
     def _tracks_another_subscription(
-        sub: Subscription, external_subscription_id: str
+        sub: Subscription,
+        external_subscription_id: str,
     ) -> bool:
         """Whether the organization's row already follows a different live Stripe
         subscription - making `external_subscription_id` a duplicate (e.g. the
@@ -132,12 +145,14 @@ class WebhookHandlerGroup(BillingBaseService):
         )
 
     async def _cancel_duplicate_subscription(
-        self, organization_id: int, external_subscription_id: str
+        self,
+        organization_id: int,
+        external_subscription_id: str,
     ) -> None:
         """Refund and cancel a duplicate subscription, leaving the organization on
         the one it already has."""
         refunded = await self.provider.cancel_duplicate_subscription(
-            external_subscription_id
+            external_subscription_id,
         )
         log.warning(
             "Duplicate subscription refunded and canceled "

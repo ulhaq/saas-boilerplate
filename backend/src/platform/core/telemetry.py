@@ -45,7 +45,7 @@ _enabled = False
 def setup_telemetry(service: str) -> None:
     """Configure exporters for this process ("api" / "worker"). No-op when
     OTEL_EXPORTER_OTLP_ENDPOINT is unset."""
-    global _enabled
+    global _enabled  # noqa: PLW0603 - process-wide singleton
     endpoint = settings.otel_exporter_otlp_endpoint.rstrip("/")
     if not endpoint or _enabled:
         return
@@ -59,12 +59,12 @@ def setup_telemetry(service: str) -> None:
             "service.name": service,
             "service.namespace": re.sub(r"[^a-z0-9]+", "-", settings.app_name.lower()),
             "deployment.environment.name": settings.app_env,
-        }
+        },
     )
 
     tracer_provider = TracerProvider(resource=resource)
     tracer_provider.add_span_processor(
-        BatchSpanProcessor(OTLPSpanExporter(endpoint=f"{endpoint}/v1/traces"))
+        BatchSpanProcessor(OTLPSpanExporter(endpoint=f"{endpoint}/v1/traces")),
     )
     trace.set_tracer_provider(tracer_provider)
 
@@ -73,7 +73,7 @@ def setup_telemetry(service: str) -> None:
         export_interval_millis=15_000,
     )
     metrics.set_meter_provider(
-        MeterProvider(resource=resource, metric_readers=[reader])
+        MeterProvider(resource=resource, metric_readers=[reader]),
     )
 
     SQLAlchemyInstrumentor().instrument(engine=engine.sync_engine)
@@ -91,21 +91,25 @@ def instrument_app(app: FastAPI) -> None:
 # --- Worker loops ------------------------------------------------------------
 
 _worker_runs = _meter.create_counter(
-    "worker.runs", unit="{run}", description="Worker loop iterations by outcome"
+    "worker.runs",
+    unit="{run}",
+    description="Worker loop iterations by outcome",
 )
 _worker_duration = _meter.create_histogram(
-    "worker.run.duration", unit="s", description="Worker loop iteration duration"
+    "worker.run.duration",
+    unit="s",
+    description="Worker loop iteration duration",
 )
 _last_success: dict[str, float] = {}
 _intervals: dict[str, float] = {}
 
 
-def _observe_last_success(options: CallbackOptions) -> Iterable[Observation]:
+def _observe_last_success(_options: CallbackOptions) -> Iterable[Observation]:
     for worker, timestamp in _last_success.items():
         yield Observation(timestamp, {"worker": worker})
 
 
-def _observe_interval(options: CallbackOptions) -> Iterable[Observation]:
+def _observe_interval(_options: CallbackOptions) -> Iterable[Observation]:
     for worker, interval in _intervals.items():
         yield Observation(interval, {"worker": worker})
 
@@ -133,7 +137,8 @@ def track_worker_run(worker: str, interval_seconds: float) -> Iterator[None]:
     outcome = "success"
     start = time.perf_counter()
     with _tracer.start_as_current_span(
-        f"worker {worker}", attributes={"worker": worker}
+        f"worker {worker}",
+        attributes={"worker": worker},
     ):
         try:
             yield

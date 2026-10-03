@@ -28,37 +28,37 @@ export function useNotificationPresenter() {
   const { t } = useI18n()
 
   function getTitle(n: NotificationOut): string {
-    return registry.get(n.type)?.getTitle(n.payload, t) ?? t('notifications.title')
+    return registry.get(n.notification_type)?.getTitle(n.payload, t) ?? t('notifications.title')
   }
 
   function getDescription(n: NotificationOut): string | null {
-    return registry.get(n.type)?.getDescription?.(n.payload, t) ?? null
+    return registry.get(n.notification_type)?.getDescription?.(n.payload, t) ?? null
   }
 
   function getRoute(n: NotificationOut): string | null {
-    return registry.get(n.type)?.getRoute(n.payload) ?? null
+    return registry.get(n.notification_type)?.getRoute(n.payload) ?? null
   }
 
   function getCategories(n: NotificationOut): string[] {
-    return registry.get(n.type)?.getCategories?.(n.payload) ?? []
+    return registry.get(n.notification_type)?.getCategories?.(n.payload) ?? []
   }
 
   function getAvatarSeed(n: NotificationOut): string | null {
-    return registry.get(n.type)?.getAvatarSeed?.(n.payload) ?? null
+    return registry.get(n.notification_type)?.getAvatarSeed?.(n.payload) ?? null
   }
 
   function getCategoryLabel(n: NotificationOut, category: string): string {
-    return registry.get(n.type)?.getCategoryLabel?.(category, t) ?? category
+    return registry.get(n.notification_type)?.getCategoryLabel?.(category, t) ?? category
   }
 
   function getCategoryBadgeClass(n: NotificationOut, category: string): string {
     return (
-      registry.get(n.type)?.getCategoryBadgeClass?.(category) ?? 'bg-muted text-muted-foreground'
+      registry.get(n.notification_type)?.getCategoryBadgeClass?.(category) ?? 'bg-muted text-muted-foreground'
     )
   }
 
   function getCategoryDotClass(n: NotificationOut, category: string): string {
-    return registry.get(n.type)?.getCategoryDotClass?.(category) ?? 'bg-muted-foreground'
+    return registry.get(n.notification_type)?.getCategoryDotClass?.(category) ?? 'bg-muted-foreground'
   }
 
   return {

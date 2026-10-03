@@ -4,8 +4,6 @@ organization's billing account and free subscription), the mocked Stripe
 provider, and a paid plan for tests that need one. Delete it with the module.
 """
 
-from collections.abc import AsyncGenerator
-
 import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,16 +29,18 @@ from tests.conftest import TestSessionLocal
 
 
 @pytest.fixture(autouse=True)
-async def seed_billing(prepare_database: None) -> AsyncGenerator[None]:
+async def seed_billing(
+    prepare_database: None,  # noqa: ARG001 - orders this after the platform seed
+) -> None:
     """Runs after the platform seed (`prepare_database`)."""
     async with TestSessionLocal() as session, session.begin():
         organizations = list(
             (await session.execute(select(Organization).order_by(Organization.id)))
             .scalars()
-            .all()
+            .all(),
         )
         await _seed(session, organizations)
-    yield
+    return
 
 
 async def _seed(session: AsyncSession, organizations: list) -> None:
@@ -74,17 +74,22 @@ async def _seed(session: AsyncSession, organizations: list) -> None:
     # paid checkout. Tests that need a paid subscription activate it via
     # checkout + webhook helpers (which will stamp the ID).
     for data, organization in zip(
-        INIT_AUTH_DATA["organizations"], organizations, strict=True
+        INIT_AUTH_DATA["organizations"],
+        organizations,
+        strict=True,
     ):
         session.add(
-            BillingAccount(organization_id=organization.id, billing_email=data["owner"])
+            BillingAccount(
+                organization_id=organization.id,
+                billing_email=data["owner"],
+            ),
         )
         session.add(
             Subscription(
                 organization_id=organization.id,
                 plan_price_id=free_price.id,
                 status="active",
-            )
+            ),
         )
 
 
@@ -99,7 +104,7 @@ def mock_billing_provider(mocker):
     mock.create_price.return_value = ExternalPrice(external_id="price_test123")
     mock.archive_price.return_value = None
     _cus_ids = {1: "cus_test123", 2: "cus_test456"}
-    mock.get_or_create_customer.side_effect = lambda *, organization_id, **kw: (
+    mock.get_or_create_customer.side_effect = lambda *, organization_id, **_kwargs: (
         _cus_ids.get(organization_id, f"cus_{organization_id}")
     )
     mock.create_checkout_session.return_value = CheckoutResult(
@@ -140,7 +145,7 @@ def mock_billing_provider(mocker):
     mock.get_charge_customer.return_value = None
     mock.update_customer.return_value = None
     mock.get_customer_portal_url.return_value = CustomerPortalResult(
-        portal_url="https://billing.stripe.com/portal/test"
+        portal_url="https://billing.stripe.com/portal/test",
     )
     mock.create_subscription.return_value = ExternalSubscription(
         external_subscription_id="sub_trial123",
@@ -161,7 +166,8 @@ def mock_billing_provider(mocker):
     app.dependency_overrides[get_billing_provider] = lambda: mock
     # Worker loops call the factory directly, outside FastAPI's DI.
     mocker.patch(
-        "src.billing.services.maintenance.get_billing_provider", return_value=mock
+        "src.billing.services.maintenance.get_billing_provider",
+        return_value=mock,
     )
     yield mock
     app.dependency_overrides.pop(get_billing_provider, None)

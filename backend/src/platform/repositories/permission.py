@@ -22,9 +22,12 @@ class PermissionRepository(SoftDeleteRepository[Permission], PermissionRepositor
         super().__init__(Permission, db)
 
     async def get_by_name(
-        self, name: str, include_deleted: bool = False
+        self,
+        name: str,
+        *,
+        include_deleted: bool = False,
     ) -> Permission | None:
-        return await self._get_by_field("name", name, include_deleted)
+        return await self._get_by_field("name", name, include_deleted=include_deleted)
 
     async def sync_declared(self, declared: Mapping[str, str]) -> set[str]:
         """Make the table hold every ``declared`` permission (name ->
@@ -42,7 +45,7 @@ class PermissionRepository(SoftDeleteRepository[Permission], PermissionRepositor
                     "updated_at": now,
                 }
                 for name, description in declared.items()
-            ]
+            ],
         )
         stmt = stmt.on_conflict_do_update(
             index_elements=[Permission.name],
@@ -65,6 +68,6 @@ class PermissionRepository(SoftDeleteRepository[Permission], PermissionRepositor
                 Permission.name.not_in(list(declared)),
                 Permission.deleted_at.is_(None),
             )
-            .order_by(Permission.name)
+            .order_by(Permission.name),
         )
         return list(rs.scalars().all())

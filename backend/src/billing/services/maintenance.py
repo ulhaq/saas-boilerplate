@@ -6,6 +6,7 @@ from typing import Annotated, Any
 from fastapi import Depends
 
 from src.billing.config import billing_settings
+from src.billing.exceptions import BillingProviderException
 from src.billing.provider.abc import BillingProviderABC
 from src.billing.provider.dependencies import get_billing_provider
 from src.billing.repositories.manager import BillingRepositoryManager
@@ -55,10 +56,10 @@ class BillingMaintenanceService(BillingBaseService):
             return 0
 
         created_before = datetime.now(UTC) - timedelta(
-            days=billing_settings.billing_trial_reminder_delay_days
+            days=billing_settings.billing_trial_reminder_delay_days,
         )
         accounts = await self.repos.billing_account.get_trial_reminder_candidates(
-            created_before
+            created_before,
         )
 
         reminded = 0
@@ -76,7 +77,8 @@ class BillingMaintenanceService(BillingBaseService):
             # subscription manager has nobody to remind, and leaving it unstamped
             # would re-scan it on every tick forever.
             await self.repos.billing_account.update(
-                account, trial_reminder_sent_at=datetime.now(UTC)
+                account,
+                trial_reminder_sent_at=datetime.now(UTC),
             )
             if recipients:
                 reminded += 1
@@ -89,7 +91,8 @@ MAX_CUSTOMER_SYNC_ATTEMPTS = 8
 
 
 async def sync_customer_emails(
-    session_factory: Any, provider: BillingProviderABC
+    session_factory: Any,
+    provider: BillingProviderABC,
 ) -> int:
     """Push pending customer emails (`BillingAccount.pending_customer_email`)
     to the provider. A failed push is retried with exponential backoff, up to
@@ -105,7 +108,7 @@ async def sync_customer_emails(
     """
     async with session_factory() as session, session.begin():
         accounts = await BillingRepositoryManager(
-            session
+            session,
         ).billing_account.get_due_customer_syncs(MAX_CUSTOMER_SYNC_ATTEMPTS)
         pending = [
             (
@@ -123,9 +126,14 @@ async def sync_customer_emails(
             continue
         try:
             await provider.update_customer(customer_id, email=email)
-        except Exception as exc:
+        except BillingProviderException as exc:
             await _record_failure(
-                session_factory, account_id, customer_id, email, attempts, exc
+                session_factory,
+                account_id,
+                customer_id,
+                email,
+                attempts,
+                exc,
             )
             continue
         async with session_factory() as session, session.begin():
@@ -147,7 +155,7 @@ async def _record_failure(
     retry_at = datetime.now(UTC) + timedelta(minutes=2 ** (previous_attempts + 1))
     async with session_factory() as session, session.begin():
         attempts = await BillingRepositoryManager(
-            session
+            session,
         ).billing_account.record_customer_sync_failure(account_id, email, retry_at)
     if attempts is None:
         return  # a newer email replaced it; that one starts fresh
@@ -179,12 +187,13 @@ async def run_customer_sync_loop(session_factory: Any) -> None:
         try:
             with track_worker_run("customer_sync", interval):
                 count = await sync_customer_emails(
-                    session_factory, get_billing_provider()
+                    session_factory,
+                    get_billing_provider(),
                 )
                 if count:
                     log.info("Customer sync: %d customer(s)", count)
-        except Exception as exc:
-            log.error("Customer sync loop error: %s", exc, exc_info=True)
+        except Exception:
+            log.exception("Customer sync loop error")
         await asyncio.sleep(interval)
 
 
@@ -204,16 +213,17 @@ async def run_trial_reminder_loop(session_factory: Any) -> None:
                     async with session.begin():
                         if await try_job_lock(session, "trial_reminder"):
                             service = BillingMaintenanceService(
-                                BillingRepositoryManager(session)
+                                BillingRepositoryManager(session),
                             )
                             count = await service.send_trial_reminders()
                             log.info(
-                                "Trial reminder: %d organization(s) emailed", count
+                                "Trial reminder: %d organization(s) emailed",
+                                count,
                             )
                         else:
                             log.info("Trial reminder: running in another worker")
-        except Exception as exc:
-            log.error("Trial reminder loop error: %s", exc, exc_info=True)
+        except Exception:
+            log.exception("Trial reminder loop error")
         await asyncio.sleep(interval)
 
 
@@ -230,7 +240,7 @@ async def run_stale_checkout_cleanup_loop(session_factory: Any) -> None:
                     async with session.begin():
                         if await try_job_lock(session, "stale_checkout_cleanup"):
                             service = BillingMaintenanceService(
-                                BillingRepositoryManager(session)
+                                BillingRepositoryManager(session),
                             )
                             count = await service.cleanup_stale_checkouts()
                             log.info(
@@ -239,8 +249,8 @@ async def run_stale_checkout_cleanup_loop(session_factory: Any) -> None:
                             )
                         else:
                             log.info(
-                                "Stale checkout cleanup: running in another worker"
+                                "Stale checkout cleanup: running in another worker",
                             )
-        except Exception as exc:
-            log.error("Stale checkout cleanup loop error: %s", exc, exc_info=True)
+        except Exception:
+            log.exception("Stale checkout cleanup loop error")
         await asyncio.sleep(interval)

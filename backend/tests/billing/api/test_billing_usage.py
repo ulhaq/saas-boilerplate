@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Annotated
 
@@ -58,9 +58,9 @@ async def _add_usage(organization_id: int, metric: str, count: int) -> None:
             PlanUsage(
                 organization_id=organization_id,
                 metric=metric,
-                period_start=date.today().replace(day=1),
+                period_start=datetime.now(tz=UTC).date().replace(day=1),
                 count=count,
-            )
+            ),
         )
         await session.commit()
 
@@ -82,7 +82,7 @@ def test_get_usage_empty_when_no_limits_configured(
     assert response.status_code == 200
     rs = response.json()
     assert rs["usage"] == []
-    assert rs["period_start"] == date.today().replace(day=1).isoformat()
+    assert rs["period_start"] == datetime.now(tz=UTC).date().replace(day=1).isoformat()
 
 
 async def test_get_usage_returns_zero_count_when_no_records(
@@ -245,7 +245,7 @@ async def _count(organization_id: int) -> int:
             select(PlanUsage.count).where(
                 PlanUsage.organization_id == organization_id,
                 PlanUsage.metric == _Metric.API_CALLS,
-            )
+            ),
         )
         return rs.scalar_one_or_none() or 0
 

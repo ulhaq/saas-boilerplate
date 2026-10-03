@@ -26,18 +26,18 @@ class InvoiceWebhookHandlers(WebhookHandlerGroup):
         sub_id: str | None = sub_details.get("subscription") or obj.get("subscription")
         if sub_id:
             return await self.repos.subscription.get_by_external_subscription_id_locked(
-                sub_id
+                sub_id,
             )
         customer_id: str | None = obj.get("customer")
         if customer_id:
             account = (
                 await self.repos.billing_account.get_by_external_customer_id_locked(
-                    customer_id
+                    customer_id,
                 )
             )
             if account:
                 return await self.repos.subscription.get_active_for_organization_locked(
-                    account.organization_id
+                    account.organization_id,
                 )
         return None
 
@@ -101,12 +101,12 @@ class InvoiceWebhookHandlers(WebhookHandlerGroup):
         if not customer_id:
             return
         account = await self.repos.billing_account.get_by_external_customer_id_locked(
-            customer_id
+            customer_id,
         )
         if not account:
             return
         sub = await self.repos.subscription.get_active_for_organization_locked(
-            account.organization_id
+            account.organization_id,
         )
         if not sub:
             return

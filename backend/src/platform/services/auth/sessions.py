@@ -47,7 +47,9 @@ class SessionService(AuthBaseService):
     switching organization, and logout."""
 
     async def get_access_token(
-        self, username: str, password: str
+        self,
+        username: str,
+        password: str,
     ) -> Token | MfaChallengeOut:
         email = username.lower()
         # Checked before the password: a locked address is refused the same
@@ -104,13 +106,14 @@ class SessionService(AuthBaseService):
 
     def _mfa_challenge(self, user: User, organization_id: int) -> MfaChallengeOut:
         mfa_token = sign(
-            data={"uid": user.id, "oid": organization_id}, salt="mfa-challenge"
+            data={"uid": user.id, "oid": organization_id},
+            salt="mfa-challenge",
         )
         return MfaChallengeOut(mfa_token=mfa_token)
 
     async def verify_mfa(self, schema_in: MfaVerifyIn) -> Token:
         if not settings.mfa_enabled:
-            raise NotFoundException()
+            raise NotFoundException
 
         payload: dict = unsign(
             schema_in.mfa_token,
@@ -120,23 +123,27 @@ class SessionService(AuthBaseService):
         user = await self.repos.user.unscoped.get(int(payload["uid"]))
         if not user or not user.mfa_active or not user.mfa_secret:
             raise NotAuthenticatedException(
-                "Token invalid", error_code=ErrorCode.TOKEN_INVALID
+                "Token invalid",
+                error_code=ErrorCode.TOKEN_INVALID,
             )
 
         organization_id = int(payload["oid"])
         memberships = await self.repos.user_organization.get_all_for_user(user.id)
         membership = next(
-            (m for m in memberships if m.organization_id == organization_id), None
+            (m for m in memberships if m.organization_id == organization_id),
+            None,
         )
         if not membership:
             raise NotAuthenticatedException(
-                error_code=ErrorCode.LOGIN_FAILED, headers=BEARER_HEADERS
+                error_code=ErrorCode.LOGIN_FAILED,
+                headers=BEARER_HEADERS,
             )
 
         now = datetime.now(UTC)
         if user.mfa_locked_until and user.mfa_locked_until > now:
             raise NotAuthenticatedException(
-                "Two-factor verification locked", error_code=ErrorCode.MFA_LOCKED
+                "Two-factor verification locked",
+                error_code=ErrorCode.MFA_LOCKED,
             )
 
         secret = decrypt_secret(user.mfa_secret)
@@ -173,12 +180,15 @@ class SessionService(AuthBaseService):
             # The attempt count must persist although the request fails.
             await self.repos.commit_before_raise()
             raise NotAuthenticatedException(
-                "Invalid two-factor code", error_code=ErrorCode.MFA_CODE_INVALID
+                "Invalid two-factor code",
+                error_code=ErrorCode.MFA_CODE_INVALID,
             )
 
         if user.mfa_failed_attempts or user.mfa_locked_until:
             await self.repos.user.update(
-                user, mfa_failed_attempts=0, mfa_locked_until=None
+                user,
+                mfa_failed_attempts=0,
+                mfa_locked_until=None,
             )
         return await self._complete_login(user, membership)
 
@@ -202,7 +212,8 @@ class SessionService(AuthBaseService):
             raise NotAuthenticatedException(headers=BEARER_HEADERS)
 
         if stored_token.user_id != user.id or not verify_secret(
-            refresh_token, stored_token.token
+            refresh_token,
+            stored_token.token,
         ):
             raise NotAuthenticatedException(headers=BEARER_HEADERS)
 
@@ -231,7 +242,8 @@ class SessionService(AuthBaseService):
 
         # Rotate this session only - other devices keep their sessions.
         await self.repos.refresh_token.revoke_by_jti(
-            jti, RefreshTokenRevokeReason.ROTATED
+            jti,
+            RefreshTokenRevokeReason.ROTATED,
         )
 
         return await self._issue_tokens(user, membership.organization_id)
@@ -247,7 +259,8 @@ class SessionService(AuthBaseService):
             raise NotAuthenticatedException(headers=BEARER_HEADERS)
 
         membership = await self.repos.user_organization.get_by_user_and_organization(
-            current_user.id, organization_id
+            current_user.id,
+            organization_id,
         )
         if not membership:
             raise PermissionDeniedException("You are not a member of this organization")
@@ -259,7 +272,8 @@ class SessionService(AuthBaseService):
         session_jti = self._decode_session_jti(refresh_token, user_id=user.id)
         if session_jti:
             await self.repos.refresh_token.revoke_by_jti(
-                session_jti, RefreshTokenRevokeReason.ROTATED
+                session_jti,
+                RefreshTokenRevokeReason.ROTATED,
             )
 
         return await self._issue_tokens(user, organization_id)
@@ -269,5 +283,6 @@ class SessionService(AuthBaseService):
         session_jti = self._decode_session_jti(refresh_token)
         if session_jti:
             await self.repos.refresh_token.revoke_by_jti(
-                session_jti, RefreshTokenRevokeReason.LOGOUT
+                session_jti,
+                RefreshTokenRevokeReason.LOGOUT,
             )

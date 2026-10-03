@@ -76,7 +76,9 @@ def test_filters_query_valid_param_returns_filter_item():
     result = dep(req)
     assert len(result) == 1
     assert result[0] == FilterItem(
-        field="name", op=ComparisonOperator.EQUALS, values=["Admin"]
+        field="name",
+        op=ComparisonOperator.EQUALS,
+        values=["Admin"],
     )
 
 

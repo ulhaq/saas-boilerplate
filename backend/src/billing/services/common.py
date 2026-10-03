@@ -82,7 +82,7 @@ async def notify_subscription_managers(
         await repos.notification.create(
             user_id=user.id,
             organization_id=organization.id,
-            type=f"billing.{email_template}",
+            notification_type=f"billing.{email_template}",
             payload=_notification_payload(data),
         )
         sent += 1

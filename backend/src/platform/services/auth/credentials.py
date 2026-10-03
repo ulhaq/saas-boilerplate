@@ -35,13 +35,16 @@ class CredentialsService(AuthBaseService):
         """Apply a requested email change from the link sent to the new
         address, then sign the user out everywhere."""
         payload: dict = unsign(
-            token, salt="email-change", max_age=settings.email_change_expiry
+            token,
+            salt="email-change",
+            max_age=settings.email_change_expiry,
         )
         user = await self.repos.user.unscoped.get(int(payload["uid"]))
         # A changed current email means the link is stale or already used.
         if not user or user.email != payload["old"]:
             raise NotAuthenticatedException(
-                "Token invalid", error_code=ErrorCode.TOKEN_INVALID
+                "Token invalid",
+                error_code=ErrorCode.TOKEN_INVALID,
             )
 
         old_email: str = payload["old"]
@@ -76,18 +79,21 @@ class CredentialsService(AuthBaseService):
         )
 
     async def request_password_reset(
-        self, email_in: EmailIn, schedule_task: Callable
+        self,
+        email_in: EmailIn,
+        schedule_task: Callable,
     ) -> None:
         user = await self.repos.user.get_by_email(email_in.email)
         if not user:
             log.info("Password reset request failed. [email=%s]", email_in.email)
-            return None
+            return
 
         token = sign(data=email_in.email, salt="reset-password")
 
         await self.repos.user.delete_password_reset_token(user=user)
         await self.repos.user.create_password_reset_token(
-            user=user, token=hash_secret(token)
+            user=user,
+            token=hash_secret(token),
         )
 
         user_email, user_name, user_locale = user.email, user.name, user.locale
@@ -104,7 +110,7 @@ class CredentialsService(AuthBaseService):
             },
         )
 
-        return None
+        return
 
     async def reset_password(self, reset_password_in: ResetPasswordIn) -> None:
         email = unsign(
@@ -117,7 +123,8 @@ class CredentialsService(AuthBaseService):
 
             if not token or not verify_secret(reset_password_in.token, token.token):
                 raise NotAuthenticatedException(
-                    "Token invalid", error_code=ErrorCode.TOKEN_INVALID
+                    "Token invalid",
+                    error_code=ErrorCode.TOKEN_INVALID,
                 )
 
             await self.repos.user.delete_password_reset_token(user=user)
@@ -132,6 +139,6 @@ class CredentialsService(AuthBaseService):
                 user_id=user.id,
             )
 
-            return None
+            return
 
         raise NotFoundException(f"User not found. [{email=}]")

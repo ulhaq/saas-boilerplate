@@ -67,7 +67,7 @@ def filters_query(
                 )
             values = [v.strip() for v in raw_value.split(",")]
             result.append(
-                FilterItem(field=field, op=ComparisonOperator(op_str), values=values)
+                FilterItem(field=field, op=ComparisonOperator(op_str), values=values),
             )
 
         return result

@@ -6,6 +6,7 @@
 - Login auto-selects most-recently-active organization
 """
 
+import pytest
 from fastapi.testclient import TestClient
 
 # ---------------------------------------------------------------------------
@@ -43,9 +44,9 @@ def test_get_my_organizations_returns_own_organization(
     assert organizations[0]["name"] == "Acme Corp"
 
 
+@pytest.mark.usefixtures("admin_in_org2")
 def test_get_my_organizations_after_joining_second_organization(
     admin_authenticated: TestClient,
-    admin_in_org2: None,
 ) -> None:
     response = admin_authenticated.get("/v1/organizations")
     assert response.status_code == 200
@@ -120,9 +121,9 @@ def test_get_organization_users(admin_authenticated: TestClient) -> None:
     assert "no_roles@example.org" in emails
 
 
+@pytest.mark.usefixtures("admin_in_org2")
 def test_get_organization_users_shows_only_organization_roles(
     admin_authenticated: TestClient,
-    admin_in_org2: None,
 ) -> None:
     # Organization 1 user list: admin's roles should be Organization 1 roles only.
     response = admin_authenticated.get("/v1/organizations/1/users")
@@ -155,9 +156,9 @@ def test_cannot_get_organization_users_without_read_user_permission(
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.usefixtures("admin_in_org2")
 def test_switch_organization(
     client: TestClient,
-    admin_in_org2: None,
 ) -> None:
     # Login as admin (currently active in Organization 1)
     token = _login(client, "admin@example.org")
@@ -174,9 +175,9 @@ def test_switch_organization(
     assert new_token != token
 
 
+@pytest.mark.usefixtures("admin_in_org2")
 def test_switch_organization_context_changes(
     client: TestClient,
-    admin_in_org2: None,
 ) -> None:
     token = _login(client, "admin@example.org")
 
@@ -202,7 +203,8 @@ def test_cannot_switch_to_organization_not_a_member_of(
     admin_authenticated: TestClient,
 ) -> None:
     response = admin_authenticated.post(
-        "/v1/auth/switch-organization", json={"organization_id": 2}
+        "/v1/auth/switch-organization",
+        json={"organization_id": 2},
     )
     assert response.status_code == 403
 
@@ -212,9 +214,9 @@ def test_switch_organization_requires_auth(client: TestClient) -> None:
     assert response.status_code == 401
 
 
+@pytest.mark.usefixtures("admin_in_org2")
 def test_switch_organization_sets_refresh_token_cookie(
     client: TestClient,
-    admin_in_org2: None,
 ) -> None:
     token = _login(client, "admin@example.org")
 
@@ -227,9 +229,9 @@ def test_switch_organization_sets_refresh_token_cookie(
     assert "refresh_token=" in response.headers.get("set-cookie", "")
 
 
+@pytest.mark.usefixtures("admin_in_org2")
 def test_switch_organization_rotates_refresh_token(
     client: TestClient,
-    admin_in_org2: None,
 ) -> None:
     # Login to get initial tokens
     login_rs = client.post(
@@ -258,9 +260,9 @@ def test_switch_organization_rotates_refresh_token(
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.usefixtures("admin_in_org2")
 def test_login_auto_selects_most_recently_active_organization(
     client: TestClient,
-    admin_in_org2: None,
 ) -> None:
     # Login and switch to Organization 2 (updates last_active_at for Organization 2)
     first_token = _login(client, "admin@example.org")
@@ -295,9 +297,9 @@ def test_login_selects_first_organization_when_none_active(
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.usefixtures("admin_in_org2")
 def test_roles_shown_are_scoped_to_active_organization(
     client: TestClient,
-    admin_in_org2: None,
 ) -> None:
     # While active in Organization 1, /users/me shows Organization 1 roles
     token_o1 = _login(client, "admin@example.org")
@@ -320,29 +322,30 @@ def test_roles_shown_are_scoped_to_active_organization(
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.usefixtures("admin_in_org2")
 def test_cannot_update_organization_you_are_not_active_in(
     admin_authenticated: TestClient,
-    admin_in_org2: None,
 ) -> None:
     # admin is active in Organization 1 - cannot update Organization 2
     response = admin_authenticated.patch(
-        "/v1/organizations/2", json={"name": "Hijacked"}
+        "/v1/organizations/2",
+        json={"name": "Hijacked"},
     )
     assert response.status_code == 403
 
 
+@pytest.mark.usefixtures("admin_in_org2")
 def test_cannot_delete_organization_you_are_not_active_in(
     admin_authenticated: TestClient,
-    admin_in_org2: None,
 ) -> None:
     # admin is active in Organization 1 - cannot delete Organization 2
     response = admin_authenticated.delete("/v1/organizations/2")
     assert response.status_code == 403
 
 
+@pytest.mark.usefixtures("admin_in_org2")
 def test_cannot_transfer_ownership_of_organization_you_are_not_active_in(
     client: TestClient,
-    admin_in_org2: None,
 ) -> None:
     # Login as admin (active in Organization 1) and try to transfer ownership of Org 2
     token = _login(client, "admin@example.org")

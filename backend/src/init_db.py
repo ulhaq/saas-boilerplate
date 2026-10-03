@@ -1,8 +1,8 @@
 import asyncio
 import logging
-import os
 import sys
 from datetime import UTC, datetime
+from pathlib import Path
 
 from alembic.command import downgrade, upgrade
 from alembic.config import Config
@@ -27,7 +27,7 @@ setup_logging("init_db")
 log = logging.getLogger(__name__)
 
 
-alembic_cfg = Config(os.getcwd() + "/alembic.ini")
+alembic_cfg = Config(str(Path.cwd()) + "/alembic.ini")
 
 # Newly registered organizations are seeded with only the protected Owner role
 # (DEFAULT_ROLES is empty). The dev/test fixtures below additionally create one
@@ -122,65 +122,63 @@ async def up() -> None:
     await sync_permissions.run()
 
     async with ASYNC_SESSION_LOCAL() as session:
-        organizations = []
-        for organization in INIT_AUTH_DATA["organizations"]:
-            organizations.append(Organization(name=organization["name"]))
+        organizations = [
+            Organization(name=organization["name"])
+            for organization in INIT_AUTH_DATA["organizations"]
+        ]
         session.add_all(organizations)
 
         result = await session.execute(select(PermissionModel))
         permissions = list(result.scalars().all())
 
-        roles = []
-        for role in INIT_AUTH_DATA["roles"]:
-            roles.append(
-                Role(
-                    name=role["name"],
-                    description=role["description"],
-                    is_protected=role.get("is_protected", False),
-                    organization=organizations[role["organization"] - 1],
-                    permissions=[
-                        permission
-                        for permission in permissions
-                        if permission.name in role["permissions"]
-                    ],
-                )
+        roles = [
+            Role(
+                name=role["name"],
+                description=role["description"],
+                is_protected=role.get("is_protected", False),
+                organization=organizations[role["organization"] - 1],
+                permissions=[
+                    permission
+                    for permission in permissions
+                    if permission.name in role["permissions"]
+                ],
             )
+            for role in INIT_AUTH_DATA["roles"]
+        ]
         session.add_all(roles)
 
-        users = []
-        for user in INIT_AUTH_DATA["users"]:
-            users.append(
-                User(
-                    name=user["name"],
-                    email=user["email"],
-                    password=hash_secret(user["password"]),
-                    roles=[
-                        role
-                        for idx, role in enumerate(roles, 1)
-                        if idx in user["roles"]
-                    ],
-                )
+        users = [
+            User(
+                name=user["name"],
+                email=user["email"],
+                password=hash_secret(user["password"]),
+                roles=[
+                    role for idx, role in enumerate(roles, 1) if idx in user["roles"]
+                ],
             )
+            for user in INIT_AUTH_DATA["users"]
+        ]
         session.add_all(users)
 
         await session.flush()
 
-        user_organizations = []
-        for user_data, user in zip(INIT_AUTH_DATA["users"], users, strict=False):
-            user_organizations.append(
-                UserOrganization(
-                    user_id=user.id,
-                    organization_id=organizations[user_data["organization"] - 1].id,
-                    last_active_at=datetime.now(UTC),
-                )
+        user_organizations = [
+            UserOrganization(
+                user_id=user.id,
+                organization_id=organizations[user_data["organization"] - 1].id,
+                last_active_at=datetime.now(UTC),
             )
+            for user_data, user in zip(INIT_AUTH_DATA["users"], users, strict=False)
+        ]
         session.add_all(user_organizations)
 
         # What the installed modules set up for a new organization (billing:
         # its account and free subscription), as registration would.
         owners = {user.email: user for user in users}
         for data, organization in zip(
-            INIT_AUTH_DATA["organizations"], organizations, strict=True
+            INIT_AUTH_DATA["organizations"],
+            organizations,
+            strict=True,
         ):
             await emit(
                 HookEvent.ORGANIZATION_CREATED,
@@ -192,7 +190,7 @@ async def up() -> None:
         await session.commit()
 
 
-async def main(drop: bool = False) -> None:
+async def main(*, drop: bool = False) -> None:
     if not drop:
         log.info("Creating tables and initial data")
         await up()

@@ -21,7 +21,10 @@ from src.platform.repositories.base import (
 class UserRepositoryABC(SoftDeleteRepositoryABC[User], ABC):
     @abstractmethod
     async def get_by_email(
-        self, email: str, include_deleted: bool = False
+        self,
+        email: str,
+        *,
+        include_deleted: bool = False,
     ) -> User | None: ...
 
     @abstractmethod
@@ -32,12 +35,16 @@ class UserRepositoryABC(SoftDeleteRepositoryABC[User], ABC):
 
     @abstractmethod
     async def get_password_reset_token(
-        self, user: User
+        self,
+        user: User,
     ) -> PasswordResetToken | None: ...
 
     @abstractmethod
     async def create_password_reset_token(
-        self, *, user: User, token: str
+        self,
+        *,
+        user: User,
+        token: str,
     ) -> PasswordResetToken: ...
 
     @abstractmethod
@@ -45,12 +52,16 @@ class UserRepositoryABC(SoftDeleteRepositoryABC[User], ABC):
 
     @abstractmethod
     async def has_other_user_with_permission(
-        self, permission: str, exclude_user_id: int
+        self,
+        permission: str,
+        exclude_user_id: int,
     ) -> bool: ...
 
     @abstractmethod
     async def has_other_user_with_role(
-        self, role_id: int, exclude_user_id: int
+        self,
+        role_id: int,
+        exclude_user_id: int,
     ) -> bool: ...
 
     @abstractmethod
@@ -69,7 +80,7 @@ class UserRepository(OrganizationScopedRepository[User], UserRepositoryABC):
     def _scope_filter(self, stmt: Select, organization_id: int) -> Select:
         # User has no organization_id column - scope via membership join.
         return stmt.join(UserOrganization, UserOrganization.user_id == User.id).filter(
-            UserOrganization.organization_id == organization_id
+            UserOrganization.organization_id == organization_id,
         )
 
     async def create(self, **kwargs: Any) -> User:
@@ -77,10 +88,13 @@ class UserRepository(OrganizationScopedRepository[User], UserRepositoryABC):
         return await SQLResourceRepository.create(self, **kwargs)
 
     async def get_by_email(
-        self, email: str, include_deleted: bool = False
+        self,
+        email: str,
+        *,
+        include_deleted: bool = False,
     ) -> User | None:
         stmt = select(User).where(User.email == email)
-        stmt = self._include_deleted(stmt, include_deleted)
+        stmt = self._include_deleted(stmt, include_deleted=include_deleted)
         rs = await self.db.execute(stmt)
         return rs.unique().scalar_one_or_none()
 
@@ -97,10 +111,15 @@ class UserRepository(OrganizationScopedRepository[User], UserRepositoryABC):
         return rs.unique().scalar_one_or_none()
 
     async def create_password_reset_token(
-        self, *, user: User, token: str
+        self,
+        *,
+        user: User,
+        token: str,
     ) -> PasswordResetToken:
         instance = PasswordResetToken(
-            user_id=user.id, token=token, created_at=datetime.now(UTC)
+            user_id=user.id,
+            token=token,
+            created_at=datetime.now(UTC),
         )
 
         self.db.add(instance)
@@ -115,7 +134,9 @@ class UserRepository(OrganizationScopedRepository[User], UserRepositoryABC):
         await self.save()
 
     async def has_other_user_with_permission(
-        self, permission: str, exclude_user_id: int
+        self,
+        permission: str,
+        exclude_user_id: int,
     ) -> bool:
         stmt = (
             select(User)
@@ -129,7 +150,9 @@ class UserRepository(OrganizationScopedRepository[User], UserRepositoryABC):
         return rs.unique().scalar_one_or_none() is not None
 
     async def has_other_user_with_role(
-        self, role_id: int, exclude_user_id: int
+        self,
+        role_id: int,
+        exclude_user_id: int,
     ) -> bool:
         stmt = (
             select(User)

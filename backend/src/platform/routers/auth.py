@@ -60,7 +60,7 @@ def _delete_refresh_token_cookie(response: Response) -> None:
 @internal_router.post("/register", status_code=status.HTTP_202_ACCEPTED)
 @limiter.limit("5/minute")
 async def create_an_account(
-    request: Request,
+    request: Request,  # noqa: ARG001
     bg_tasks: BackgroundTasks,
     service: Annotated[RegistrationService, Depends()],
     register_in: RegisterIn,
@@ -71,7 +71,7 @@ async def create_an_account(
 @internal_router.post("/verify-email", status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")
 async def verify_email(
-    request: Request,
+    request: Request,  # noqa: ARG001
     service: Annotated[RegistrationService, Depends()],
     schema_in: VerifyEmailIn,
 ) -> SetupTokenOut:
@@ -84,7 +84,7 @@ async def verify_email(
 )
 @limiter.limit("5/minute")
 async def complete_registration(
-    request: Request,
+    request: Request,  # noqa: ARG001
     response: Response,
     bg_tasks: BackgroundTasks,
     service: Annotated[RegistrationService, Depends()],
@@ -98,7 +98,7 @@ async def complete_registration(
 @router.post("/token", status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")
 async def get_access_token(
-    request: Request,
+    request: Request,  # noqa: ARG001
     response: Response,
     auth_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     service: Annotated[SessionService, Depends()],
@@ -114,7 +114,7 @@ async def get_access_token(
 @router.post("/mfa/verify", status_code=status.HTTP_200_OK)
 @limiter.limit("5/minute")
 async def verify_mfa(
-    request: Request,
+    request: Request,  # noqa: ARG001
     response: Response,
     service: Annotated[SessionService, Depends()],
     schema_in: MfaVerifyIn,
@@ -151,7 +151,7 @@ async def logout(
 )
 @limiter.limit("5/minute")
 async def request_password_reset(
-    request: Request,
+    request: Request,  # noqa: ARG001
     bg_tasks: BackgroundTasks,
     service: Annotated[CredentialsService, Depends()],
     email_in: EmailIn,
@@ -162,7 +162,7 @@ async def request_password_reset(
 @internal_router.post("/reset-password", status_code=status.HTTP_204_NO_CONTENT)
 @limiter.limit("5/minute")
 async def reset_password(
-    request: Request,
+    request: Request,  # noqa: ARG001
     service: Annotated[CredentialsService, Depends()],
     reset_password_in: ResetPasswordIn,
 ) -> None:
@@ -172,7 +172,7 @@ async def reset_password(
 @internal_router.post("/invite-status", status_code=status.HTTP_200_OK)
 @limiter.limit("10/minute")
 async def get_invite_status(
-    request: Request,
+    request: Request,  # noqa: ARG001
     service: Annotated[InviteService, Depends()],
     schema_in: InviteStatusIn,
 ) -> InviteStatusOut:
@@ -182,15 +182,14 @@ async def get_invite_status(
 @internal_router.post("/complete-invite", status_code=status.HTTP_201_CREATED)
 @limiter.limit("5/minute")
 async def complete_invite(
-    request: Request,
+    request: Request,  # noqa: ARG001
     response: Response,
-    bg_tasks: BackgroundTasks,
     service: Annotated[InviteService, Depends()],
     schema_in: CompleteInviteIn,
 ) -> Token:
     """Accept an invite by creating a new account. Existing accounts get
     `invite_login_required` and must use POST /auth/accept-invite."""
-    token = await service.complete_invite(schema_in, bg_tasks.add_task)
+    token = await service.complete_invite(schema_in)
     _set_refresh_token_cookie(response, token.refresh_token)
     return token
 
@@ -223,7 +222,7 @@ async def accept_invite(
 )
 @limiter.limit("10/minute")
 async def confirm_email_change(
-    request: Request,
+    request: Request,  # noqa: ARG001
     response: Response,
     bg_tasks: BackgroundTasks,
     service: Annotated[CredentialsService, Depends()],

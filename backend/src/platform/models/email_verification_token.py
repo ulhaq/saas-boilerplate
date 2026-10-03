@@ -13,8 +13,11 @@ class EmailVerificationToken(Base):
     email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
     token: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     terms_accepted_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
+        DateTime(timezone=True),
+        nullable=True,
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
     )

@@ -32,8 +32,10 @@ class RolePermission(Base, TimestampMixin):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     role_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("role.id", ondelete="CASCADE")
+        Integer,
+        ForeignKey("role.id", ondelete="CASCADE"),
     )
     permission_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("permission.id", ondelete="CASCADE")
+        Integer,
+        ForeignKey("permission.id", ondelete="CASCADE"),
     )

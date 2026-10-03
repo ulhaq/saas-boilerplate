@@ -21,25 +21,34 @@ class Invitation(Base):
     __tablename__ = "invitation"
     __table_args__ = (
         UniqueConstraint(
-            "organization_id", "email", name="uq_invitation_organization_email"
+            "organization_id",
+            "email",
+            name="uq_invitation_organization_email",
         ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     organization_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("organization.id", ondelete="CASCADE"), nullable=False
+        Integer,
+        ForeignKey("organization.id", ondelete="CASCADE"),
+        nullable=False,
     )
     email: Mapped[str] = mapped_column(String, index=True, nullable=False)
     role_ids: Mapped[list[int]] = mapped_column(JSON, nullable=False, default=list)
     token_hash: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     invited_by_id: Mapped[int | None] = mapped_column(
-        Integer, ForeignKey("user.id", ondelete="SET NULL"), nullable=True
+        Integer,
+        ForeignKey("user.id", ondelete="SET NULL"),
+        nullable=True,
     )
     expires_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
+        DateTime(timezone=True),
+        nullable=False,
     )
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
     )
 
     invited_by: Mapped[User | None] = relationship("User", lazy="selectin")

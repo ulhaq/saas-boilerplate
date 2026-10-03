@@ -49,7 +49,7 @@ class SubscriptionService(BillingBaseService):
     # the provider's idempotency key, not by a lock.
     async def start_checkout(self, schema_in: CheckoutIn) -> CheckoutOut:
         price, external_price_id = await self._get_billable_price(
-            schema_in.plan_price_id
+            schema_in.plan_price_id,
         )
         await self._raise_if_subscribed()
         account = await self._get_account()
@@ -87,7 +87,7 @@ class SubscriptionService(BillingBaseService):
             )
 
         existing = await self.repos.subscription.get_active_for_organization(
-            self.current_user.organization_id
+            self.current_user.organization_id,
         )
         if existing and existing.status in ("trialing", "past_due", "paused"):
             raise AlreadyExistsException(
@@ -115,7 +115,7 @@ class SubscriptionService(BillingBaseService):
 
     async def get_current_subscription(self) -> SubscriptionOut:
         sub = await self.repos.subscription.get_active_for_organization(
-            self.current_user.organization_id
+            self.current_user.organization_id,
         )
         if not sub:
             raise NotFoundException(
@@ -124,18 +124,18 @@ class SubscriptionService(BillingBaseService):
             )
         result = SubscriptionOut.model_validate(sub)
         account = await self.repos.billing_account.get_for_organization(
-            self.current_user.organization_id
+            self.current_user.organization_id,
         )
         if account:
             result.billing_email = account.billing_email
             result.has_payment_method = account.has_payment_method
             result.trial_used = account.trial_used
         features = await self.repos.plan_feature.get_features_for_organization(
-            self.current_user.organization_id
+            self.current_user.organization_id,
         )
         result.features = sorted(features)
         plan_settings = await self.repos.plan_setting.get_settings_for_organization(
-            self.current_user.organization_id
+            self.current_user.organization_id,
         )
         result.plan_settings = [PlanSettingOut.model_validate(s) for s in plan_settings]
         return result
@@ -147,7 +147,8 @@ class SubscriptionService(BillingBaseService):
         account = await self._get_account()
 
         await self.repos.billing_account.update(
-            account, billing_email=schema_in.billing_email
+            account,
+            billing_email=schema_in.billing_email,
         )
 
         if account.external_customer_id:
@@ -199,7 +200,7 @@ class SubscriptionService(BillingBaseService):
             raise ValidationException("Subscription is not scheduled for cancellation.")
         if not sub.external_subscription_id:
             raise ValidationException(
-                "Subscription is not yet active in billing provider."
+                "Subscription is not yet active in billing provider.",
             )
 
         ext_sub = await self.provider.resume_subscription(sub.external_subscription_id)
@@ -223,7 +224,7 @@ class SubscriptionService(BillingBaseService):
         if not sub.external_subscription_id:
             raise ValidationException(
                 "Cannot switch plans from the free tier. "
-                "Use checkout to subscribe to a paid plan."
+                "Use checkout to subscribe to a paid plan.",
             )
 
         price, external_price_id = await self._get_billable_price(
@@ -275,11 +276,11 @@ class SubscriptionService(BillingBaseService):
 
     async def get_customer_portal_url(self) -> CustomerPortalOut:
         account = await self.repos.billing_account.get_for_organization(
-            self.current_user.organization_id
+            self.current_user.organization_id,
         )
         if not account or not account.external_customer_id:
             raise ValidationException(
-                "No billing customer found for this organization."
+                "No billing customer found for this organization.",
             )
 
         result = await self.provider.get_customer_portal_url(
@@ -289,7 +290,10 @@ class SubscriptionService(BillingBaseService):
         return CustomerPortalOut(portal_url=result.portal_url)
 
     async def _get_billable_price(
-        self, plan_price_id: int, *, free_price_error: str | None = None
+        self,
+        plan_price_id: int,
+        *,
+        free_price_error: str | None = None,
     ) -> tuple[PlanPrice, str]:
         """The active, provider-synced price, with its external price id.
 
@@ -299,7 +303,7 @@ class SubscriptionService(BillingBaseService):
         price = await self.repos.plan_price.get(plan_price_id)
         if not price or not price.is_active:
             raise NotFoundException(
-                f"Plan price not found or inactive. [id={plan_price_id}]"
+                f"Plan price not found or inactive. [id={plan_price_id}]",
             )
         if free_price_error is not None and price.amount == 0:
             raise ValidationException(free_price_error)
@@ -309,7 +313,7 @@ class SubscriptionService(BillingBaseService):
 
     async def _get_account(self) -> BillingAccount:
         account = await self.repos.billing_account.get_for_organization(
-            self.current_user.organization_id
+            self.current_user.organization_id,
         )
         if not account:
             raise NotFoundException("Organization not found.")
@@ -319,7 +323,7 @@ class SubscriptionService(BillingBaseService):
         """Checkout is for organizations without a paid subscription - an
         active free subscription doesn't count."""
         existing = await self.repos.subscription.get_active_for_organization(
-            self.current_user.organization_id
+            self.current_user.organization_id,
         )
         if (
             existing
@@ -350,7 +354,8 @@ class SubscriptionService(BillingBaseService):
                 email=account.billing_email,
             )
             await self.repos.billing_account.update(
-                account, external_customer_id=external_customer_id
+                account,
+                external_customer_id=external_customer_id,
             )
 
         metadata = {
@@ -377,7 +382,7 @@ class SubscriptionService(BillingBaseService):
 
     async def _get_active_subscription(self) -> Subscription:
         sub = await self.repos.subscription.get_active_for_organization_locked(
-            self.current_user.organization_id
+            self.current_user.organization_id,
         )
         if not sub:
             raise NotFoundException(

@@ -33,7 +33,10 @@ async def _notify(data: dict) -> int:
         organization = await repos.organization.get(1)
         assert organization
         return await notify_subscription_managers(
-            repos, organization, "trial-ending", data
+            repos,
+            organization,
+            "trial-ending",
+            data,
         )
 
 
@@ -42,7 +45,7 @@ async def test_only_subscription_managers_are_notified():
 
     [notification] = await _notifications()
     assert (notification.user_id, notification.organization_id) == (ADMIN, 1)
-    assert notification.type == "billing.trial-ending"
+    assert notification.notification_type == "billing.trial-ending"
 
 
 async def test_the_notification_payload_is_json_safe():
@@ -52,7 +55,7 @@ async def test_the_notification_payload_is_json_safe():
             "trial_days": 14,
             "has_payment_method": False,
             "billing_url": "https://app.test/settings/billing",
-        }
+        },
     )
 
     [notification] = await _notifications()
@@ -65,15 +68,18 @@ async def test_the_notification_payload_is_json_safe():
 
 
 async def test_a_rolled_back_change_creates_no_notification():
-    class Rollback(Exception):
+    class RollbackError(Exception):
         pass
 
-    with pytest.raises(Rollback):
+    async def notify_then_fail() -> None:
         async with TestSessionLocal() as session, session.begin():
             repos = BillingRepositoryManager(session)
             organization = await repos.organization.get(1)
             assert organization
             await notify_subscription_managers(repos, organization, "trial-ending", {})
-            raise Rollback
+            raise RollbackError
+
+    with pytest.raises(RollbackError):
+        await notify_then_fail()
 
     assert await _notifications() == []

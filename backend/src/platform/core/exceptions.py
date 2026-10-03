@@ -41,7 +41,10 @@ class NotAuthenticatedException(ClientException):
         headers: dict | None = None,
     ) -> None:
         super().__init__(
-            status.HTTP_401_UNAUTHORIZED, detail, error_code=error_code, headers=headers
+            status.HTTP_401_UNAUTHORIZED,
+            detail,
+            error_code=error_code,
+            headers=headers,
         )
 
 
@@ -55,7 +58,10 @@ class PermissionDeniedException(ClientException):
         headers: dict | None = None,
     ) -> None:
         super().__init__(
-            status.HTTP_403_FORBIDDEN, detail, error_code=error_code, headers=headers
+            status.HTTP_403_FORBIDDEN,
+            detail,
+            error_code=error_code,
+            headers=headers,
         )
 
 
@@ -69,7 +75,10 @@ class NotFoundException(ClientException):
         headers: dict | None = None,
     ) -> None:
         super().__init__(
-            status.HTTP_404_NOT_FOUND, detail, error_code=error_code, headers=headers
+            status.HTTP_404_NOT_FOUND,
+            detail,
+            error_code=error_code,
+            headers=headers,
         )
 
 
@@ -83,7 +92,10 @@ class AlreadyExistsException(ClientException):
         headers: dict | None = None,
     ) -> None:
         super().__init__(
-            status.HTTP_409_CONFLICT, detail, error_code=error_code, headers=headers
+            status.HTTP_409_CONFLICT,
+            detail,
+            error_code=error_code,
+            headers=headers,
         )
 
 

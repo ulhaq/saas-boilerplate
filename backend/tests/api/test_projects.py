@@ -19,14 +19,15 @@ async def _set_project_limit(limit_value: int | None) -> None:
                 plan_id=_FREE_PLAN_ID,
                 key=ExampleUsageMetric.PROJECTS,
                 value=limit_value,
-            )
+            ),
         )
         await session.commit()
 
 
 def _create(client: TestClient, name: str, description: str | None = None) -> dict:
     response = client.post(
-        "/v1/projects", json={"name": name, "description": description}
+        "/v1/projects",
+        json={"name": name, "description": description},
     )
     assert response.status_code == 201, response.text
     return response.json()
@@ -75,7 +76,8 @@ def test_patch_a_project(admin_authenticated: TestClient) -> None:
     created = _create(admin_authenticated, "Alpha", "old")
 
     response = admin_authenticated.patch(
-        f"/v1/projects/{created['id']}", json={"description": "new"}
+        f"/v1/projects/{created['id']}",
+        json={"description": "new"},
     )
     assert response.status_code == 200
     rs = response.json()
@@ -108,7 +110,8 @@ def test_cannot_rename_project_to_existing_name(
     beta = _create(admin_authenticated, "Beta")
 
     response = admin_authenticated.patch(
-        f"/v1/projects/{beta['id']}", json={"name": "Alpha"}
+        f"/v1/projects/{beta['id']}",
+        json={"name": "Alpha"},
     )
     assert response.status_code == 409
 

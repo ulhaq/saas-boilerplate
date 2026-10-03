@@ -33,7 +33,7 @@ class UserOut(UserBase, Timestamp, ResponseSchema):
     terms_accepted_at: datetime | None = None
     mfa_enabled: bool = False
     roles: Annotated[list[RoleOut], AfterValidator(sort_by_id)] = Field(
-        default_factory=list
+        default_factory=list,
     )
 
 
@@ -66,7 +66,7 @@ class RegisterIn(BaseModel):
 
     @field_validator("terms_accepted")
     @classmethod
-    def must_accept_terms(cls, v: bool) -> bool:
+    def must_accept_terms(cls, v: bool) -> bool:  # noqa: FBT001
         if not v:
             raise ValueError("You must accept the terms to continue")
         return v
@@ -128,7 +128,7 @@ class CompleteInviteIn(BaseModel):
 
     @field_validator("terms_accepted")
     @classmethod
-    def must_accept_terms(cls, v: bool | None) -> bool | None:
+    def must_accept_terms(cls, v: bool | None) -> bool | None:  # noqa: FBT001
         if v is False:
             raise ValueError("You must accept the terms to continue")
         return v

@@ -24,7 +24,10 @@ def _assert_single(response, name: str, value: str) -> None:
     ],
 )
 def test_base_security_headers_on_every_response(
-    client: TestClient, method: str, path: str, status: int
+    client: TestClient,
+    method: str,
+    path: str,
+    status: int,
 ) -> None:
     response = client.request(method, path, json={})
     assert response.status_code == status
@@ -39,12 +42,15 @@ def test_no_hsts_or_csp_locally(client: TestClient) -> None:
 
 
 def test_hsts_and_api_csp_outside_local(
-    client: TestClient, monkeypatch: pytest.MonkeyPatch
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(settings, "app_env", "production")
     response = client.get("/health")
     _assert_single(
-        response, "strict-transport-security", "max-age=31536000; includeSubDomains"
+        response,
+        "strict-transport-security",
+        "max-age=31536000; includeSubDomains",
     )
     _assert_single(response, "content-security-policy", API_CSP)
     for name, value in BASE_HEADERS.items():
@@ -52,7 +58,8 @@ def test_hsts_and_api_csp_outside_local(
 
 
 def test_docs_get_their_own_csp(
-    client: TestClient, monkeypatch: pytest.MonkeyPatch
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(settings, "app_env", "production")
     response = client.get("/docs")

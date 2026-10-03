@@ -36,7 +36,7 @@ class Module:
     audit_actions: Sequence[StrEnum] = ()
     # Extra grants and description overrides per platform default role name.
     default_role_permissions: Mapping[str, Sequence[StrEnum]] = field(
-        default_factory=dict
+        default_factory=dict,
     )
     default_role_descriptions: Mapping[str, str] = field(default_factory=dict)
     routers: Sequence[RouterMount] = ()

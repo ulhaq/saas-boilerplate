@@ -12,7 +12,7 @@ router = APIRouter(prefix="/contact")
 @router.post("", status_code=status.HTTP_202_ACCEPTED)
 @limiter.limit("3/minute")
 async def submit_contact_message(
-    request: Request,
+    request: Request,  # noqa: ARG001
     bg_tasks: BackgroundTasks,
     service: Annotated[ContactService, Depends()],
     schema_in: ContactMessageIn,

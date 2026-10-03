@@ -61,7 +61,7 @@ async def test_owners_get_permissions_they_were_never_granted():
         role = (
             (
                 await session.execute(
-                    select(Role).where(Role.organization_id == 2, Role.is_protected)
+                    select(Role).where(Role.organization_id == 2, Role.is_protected),
                 )
             )
             .unique()
@@ -78,7 +78,7 @@ async def test_descriptions_are_refreshed_and_soft_deleted_permissions_restored(
     async with TestSessionLocal() as session, session.begin():
         permission = (
             await session.execute(
-                select(Permission).where(Permission.name == "read:role")
+                select(Permission).where(Permission.name == "read:role"),
             )
         ).scalar_one()
         permission.description = "stale"
@@ -88,7 +88,8 @@ async def test_descriptions_are_refreshed_and_soft_deleted_permissions_restored(
 
     assert result.added == set()
     restored = await _permission("read:role")
-    assert restored and restored.deleted_at is None
+    assert restored
+    assert restored.deleted_at is None
     assert restored.description == DECLARED["read:role"]
 
 

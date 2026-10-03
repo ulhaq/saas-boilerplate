@@ -41,16 +41,19 @@ def test_ip_address_is_captured(admin_authenticated: TestClient) -> None:
 
 
 def test_invite_user_creates_audit_entry(
-    mocker: MockerFixture, admin_authenticated: TestClient
+    mocker: MockerFixture,
+    admin_authenticated: TestClient,
 ) -> None:
     mocker.patch("src.platform.services.user.send_email")
 
     admin_authenticated.post(
-        "/v1/users/invite", json={"email": "invited@test.com", "role_ids": [3]}
+        "/v1/users/invite",
+        json={"email": "invited@test.com", "role_ids": [3]},
     )
 
     response = admin_authenticated.get(
-        "/v1/audit-logs", params={"action": AuditAction.USER_INVITE}
+        "/v1/audit-logs",
+        params={"action": AuditAction.USER_INVITE},
     )
     assert response.status_code == 200
     rs = response.json()
@@ -64,11 +67,13 @@ def test_invite_user_creates_audit_entry(
 
 def test_role_create_creates_audit_entry(admin_authenticated: TestClient) -> None:
     admin_authenticated.post(
-        "/v1/roles", json={"name": "TestRole", "description": "Test"}
+        "/v1/roles",
+        json={"name": "TestRole", "description": "Test"},
     )
 
     response = admin_authenticated.get(
-        "/v1/audit-logs", params={"action": AuditAction.ROLE_CREATE}
+        "/v1/audit-logs",
+        params={"action": AuditAction.ROLE_CREATE},
     )
     rs = response.json()
 
@@ -81,14 +86,16 @@ def test_role_create_creates_audit_entry(admin_authenticated: TestClient) -> Non
 
 def test_role_delete_creates_audit_entry(admin_authenticated: TestClient) -> None:
     create_rs = admin_authenticated.post(
-        "/v1/roles", json={"name": "ToDelete", "description": "x"}
+        "/v1/roles",
+        json={"name": "ToDelete", "description": "x"},
     )
     role_id = create_rs.json()["id"]
 
     admin_authenticated.delete(f"/v1/roles/{role_id}")
 
     response = admin_authenticated.get(
-        "/v1/audit-logs", params={"action": AuditAction.ROLE_DELETE}
+        "/v1/audit-logs",
+        params={"action": AuditAction.ROLE_DELETE},
     )
     rs = response.json()
 
@@ -106,7 +113,8 @@ def test_api_token_create_creates_audit_entry(admin_authenticated: TestClient) -
     token_id = create_rs.json()["id"]
 
     response = admin_authenticated.get(
-        "/v1/audit-logs", params={"action": AuditAction.API_TOKEN_CREATE}
+        "/v1/audit-logs",
+        params={"action": AuditAction.API_TOKEN_CREATE},
     )
     rs = response.json()
 
@@ -128,7 +136,8 @@ def test_api_token_revoke_creates_audit_entry(admin_authenticated: TestClient) -
     admin_authenticated.delete(f"/v1/api-tokens/{token_id}")
 
     response = admin_authenticated.get(
-        "/v1/audit-logs", params={"action": AuditAction.API_TOKEN_DELETE}
+        "/v1/audit-logs",
+        params={"action": AuditAction.API_TOKEN_DELETE},
     )
     rs = response.json()
 
@@ -144,12 +153,14 @@ def test_audit_log_org_isolation(
 ) -> None:
     # Org 1 admin creates a role - generates a ROLE_CREATE log entry for org 1
     admin_authenticated.post(
-        "/v1/roles", json={"name": "OrgIsolatedRole", "description": "x"}
+        "/v1/roles",
+        json={"name": "OrgIsolatedRole", "description": "x"},
     )
 
     # Org 2 admin should see no ROLE_CREATE entries (none in their org)
     response = organization2_admin_authenticated.get(
-        "/v1/audit-logs", params={"action": AuditAction.ROLE_CREATE}
+        "/v1/audit-logs",
+        params={"action": AuditAction.ROLE_CREATE},
     )
     rs = response.json()
     assert rs["total"] == 0
@@ -165,7 +176,8 @@ def test_audit_log_action_filter(admin_authenticated: TestClient) -> None:
 
     # Filtered to role.create only: exactly 1
     filtered_rs = admin_authenticated.get(
-        "/v1/audit-logs", params={"action": AuditAction.ROLE_CREATE}
+        "/v1/audit-logs",
+        params={"action": AuditAction.ROLE_CREATE},
     ).json()
     assert filtered_rs["total"] == 1
     assert all(e["action"] == AuditAction.ROLE_CREATE for e in filtered_rs["items"])
@@ -178,7 +190,8 @@ def test_audit_log_pagination(admin_authenticated: TestClient) -> None:
 
     # Page 1 with size 10 (minimum)
     response = admin_authenticated.get(
-        "/v1/audit-logs", params={"page_size": 10, "page_number": 1}
+        "/v1/audit-logs",
+        params={"page_size": 10, "page_number": 1},
     )
     assert response.status_code == 200
     rs = response.json()

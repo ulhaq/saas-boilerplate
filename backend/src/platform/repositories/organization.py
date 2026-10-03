@@ -9,6 +9,9 @@ class OrganizationRepository(SoftDeleteRepository[Organization]):
         super().__init__(Organization, db)
 
     async def get_by_name(
-        self, name: str, include_deleted: bool = False
+        self,
+        name: str,
+        *,
+        include_deleted: bool = False,
     ) -> Organization | None:
-        return await self._get_by_field("name", name, include_deleted)
+        return await self._get_by_field("name", name, include_deleted=include_deleted)

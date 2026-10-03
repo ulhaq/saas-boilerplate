@@ -73,7 +73,7 @@ def test_get_all_roles(admin_authenticated: TestClient) -> None:
 
 
 @pytest.mark.parametrize(
-    "page_number, page_size, page_total, total",
+    ("page_number", "page_size", "page_total", "total"),
     [
         (1, 10, 2, 2),
         (2, 10, 0, 2),
@@ -87,7 +87,7 @@ def test_paginate_roles(
     admin_authenticated: TestClient,
 ) -> None:
     response = admin_authenticated.get(
-        f"/v1/roles?page_number={page_number}&page_size{page_size}"
+        f"/v1/roles?page_number={page_number}&page_size{page_size}",
     )
     assert response.status_code == 200
     rs = response.json()
@@ -123,7 +123,7 @@ def test_sort_roles(sort: str, admin_authenticated: TestClient) -> None:
 
 
 @pytest.mark.parametrize(
-    "fields, values, operators, total",
+    ("fields", "values", "operators", "total"),
     [
         # Single field, single value (org 1 has Owner id=1, Member id=2)
         (["id"], [[1]], ["eq"], 1),
@@ -168,7 +168,7 @@ def test_filter_roles(
 
 
 @pytest.mark.parametrize(
-    "params, total",
+    ("params", "total"),
     [
         # AND: name contains "n" (Owner) AND description contains "access"
         # (Owner) > 1 overlap
@@ -192,7 +192,7 @@ def test_filter_roles_multi_field(
 
 
 @pytest.mark.parametrize(
-    "q, expected_count",
+    ("q", "expected_count"),
     [
         ("owner", 1),
         ("OWNER", 1),
@@ -395,7 +395,8 @@ def test_cannot_manage_permissions_of_protected_role(
     admin_authenticated: TestClient,
 ) -> None:
     response = admin_authenticated.post(
-        "/v1/roles/1/permissions", json={"permission_ids": [1]}
+        "/v1/roles/1/permissions",
+        json={"permission_ids": [1]},
     )
     assert response.status_code == 403
     rs = response.json()
@@ -468,8 +469,8 @@ async def test_deleted_permission_excluded_from_role_permissions(
     async with TestSessionLocal() as session:
         result = await session.execute(
             select(PermissionModel).where(
-                PermissionModel.name == Permission.READ_USER.value
-            )
+                PermissionModel.name == Permission.READ_USER.value,
+            ),
         )
         permission = result.scalar_one()
         permission.deleted_at = datetime.now(UTC)

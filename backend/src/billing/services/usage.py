@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import Depends
@@ -20,12 +20,13 @@ class UsageService(BillingBaseService):
         super().__init__(repos)
 
     async def get_current_usage(self) -> UsageOut:
-        period_start = date.today().replace(day=1)
+        period_start = datetime.now(tz=UTC).date().replace(day=1)
         limits = await self.repos.plan_setting.get_settings_for_organization(
-            self.current_user.organization_id
+            self.current_user.organization_id,
         )
         records = await self.repos.plan_usage.get_for_organization(
-            self.current_user.organization_id, period_start
+            self.current_user.organization_id,
+            period_start,
         )
         count_by_metric = {r.metric: r.count for r in records}
         usage_items = [

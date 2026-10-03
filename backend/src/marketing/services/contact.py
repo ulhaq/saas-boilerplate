@@ -16,7 +16,9 @@ class ContactService:
     """
 
     async def submit(
-        self, schema_in: ContactMessageIn, schedule_task: Callable
+        self,
+        schema_in: ContactMessageIn,
+        schedule_task: Callable,
     ) -> ContactMessageOut:
         schedule_task(
             send_email,

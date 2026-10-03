@@ -59,7 +59,7 @@ bootstrap()
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
+async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
     yield
 
 
@@ -110,7 +110,10 @@ DOCS_PATHS = {
 
 
 app.add_middleware(
-    SecurityHeadersMiddleware, csp=API_CSP, docs_csp=DOCS_CSP, docs_paths=DOCS_PATHS
+    SecurityHeadersMiddleware,
+    csp=API_CSP,
+    docs_csp=DOCS_CSP,
+    docs_paths=DOCS_PATHS,
 )
 
 
@@ -129,10 +132,10 @@ async def handle_http_exception(request: Request, exc: HTTPException) -> JSONRes
             ErrorResponse(
                 request,
                 error_code=ErrorCode.SERVER_ERROR
-                if exc.status_code != 401
+                if exc.status_code != status.HTTP_401_UNAUTHORIZED
                 else ErrorCode.UNAUTHORIZED,
                 msg=exc.detail,
-            )
+            ),
         ),
         headers=exc.headers,
     )
@@ -140,14 +143,15 @@ async def handle_http_exception(request: Request, exc: HTTPException) -> JSONRes
 
 @app.exception_handler(ClientException)
 async def handle_client_exception(
-    request: Request, exc: ClientException
+    request: Request,
+    exc: ClientException,
 ) -> JSONResponse:
     log.info("%s: %s", exc, request.url, exc_info=settings.log_exc_info)
 
     return JSONResponse(
         status_code=exc.status_code,
         content=jsonable_encoder(
-            ErrorResponse(request, error_code=exc.error_code, msg=exc.detail)
+            ErrorResponse(request, error_code=exc.error_code, msg=exc.detail),
         ),
         headers=exc.headers,
     )
@@ -163,14 +167,15 @@ async def handle_integrity_error(request: Request, exc: IntegrityError) -> JSONR
                 request,
                 error_code=ErrorCode.RESOURCE_ALREADY_EXISTS,
                 msg=ErrorCode.RESOURCE_ALREADY_EXISTS.description,
-            )
+            ),
         ),
     )
 
 
 @app.exception_handler(ValidationError)
 async def handle_validation_error(
-    request: Request, exc: ValidationError
+    request: Request,
+    exc: ValidationError,
 ) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -180,7 +185,7 @@ async def handle_validation_error(
                 error_code=ErrorCode.VALIDATION_ERROR,
                 msg=ErrorCode.VALIDATION_ERROR.description,
                 errors=exc.errors(),
-            )
+            ),
         ),
         headers={},
     )
@@ -188,7 +193,8 @@ async def handle_validation_error(
 
 @app.exception_handler(RequestValidationError)
 async def handle_request_validation_error(
-    request: Request, exc: RequestValidationError
+    request: Request,
+    exc: RequestValidationError,
 ) -> JSONResponse:
     if any(
         error.get("type", None) == ErrorCode.JSON_INVALID.code for error in exc.errors()
@@ -200,7 +206,7 @@ async def handle_request_validation_error(
                     request,
                     error_code=ErrorCode.JSON_INVALID,
                     msg=ErrorCode.JSON_INVALID.description,
-                )
+                ),
             ),
             headers={},
         )
@@ -212,7 +218,7 @@ async def handle_request_validation_error(
                 error_code=ErrorCode.VALIDATION_ERROR,
                 msg=ErrorCode.VALIDATION_ERROR.description,
                 errors=exc.errors(),
-            )
+            ),
         ),
         headers={},
     )
@@ -223,7 +229,7 @@ async def handle_value_error(request: Request, exc: ValueError) -> JSONResponse:
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         content=jsonable_encoder(
-            ErrorResponse(request, error_code=ErrorCode.VALIDATION_ERROR, msg=str(exc))
+            ErrorResponse(request, error_code=ErrorCode.VALIDATION_ERROR, msg=str(exc)),
         ),
         headers={},
     )
@@ -237,7 +243,8 @@ async def health_check(session: DbSession) -> Response:
     except Exception:
         log.exception("Health check: database unreachable")
         return JSONResponse(
-            {"status": "error", "detail": "database unavailable"}, status_code=503
+            {"status": "error", "detail": "database unavailable"},
+            status_code=503,
         )
 
 
@@ -255,7 +262,9 @@ ROUTERS: list[RouterMount] = [
     RouterMount(router=role.router, tags=["Roles"], public=False),
     RouterMount(router=permission.router, tags=["Permissions"], public=False),
     RouterMount(
-        router=audit_log.build_router(AUDIT_ACTION), tags=["Audit Log"], public=False
+        router=audit_log.build_router(AUDIT_ACTION),
+        tags=["Audit Log"],
+        public=False,
     ),
     RouterMount(router=notification.router, tags=["Notifications"], public=False),
 ]
@@ -288,7 +297,7 @@ def _build_openapi(routes: list[BaseRoute]) -> dict[str, Any]:
 
     openapi_schema["components"]["schemas"]["ValidationErrorResponse"] = (
         ValidationErrorResponse.model_json_schema(
-            ref_template="#/components/schemas/{model}"
+            ref_template="#/components/schemas/{model}",
         )
     )
 
@@ -302,8 +311,8 @@ def _build_openapi(routes: list[BaseRoute]) -> dict[str, Any]:
                     "description": "Bad Request",
                     "content": {
                         "application/json": {
-                            "schema": {"$ref": "#/components/schemas/ErrorResponse"}
-                        }
+                            "schema": {"$ref": "#/components/schemas/ErrorResponse"},
+                        },
                     },
                 }
 
@@ -315,8 +324,8 @@ def _build_openapi(routes: list[BaseRoute]) -> dict[str, Any]:
                     "description": "Not Found",
                     "content": {
                         "application/json": {
-                            "schema": {"$ref": "#/components/schemas/ErrorResponse"}
-                        }
+                            "schema": {"$ref": "#/components/schemas/ErrorResponse"},
+                        },
                     },
                 }
 
@@ -326,9 +335,9 @@ def _build_openapi(routes: list[BaseRoute]) -> dict[str, Any]:
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/ValidationErrorResponse"
-                            }
-                        }
+                                "$ref": "#/components/schemas/ValidationErrorResponse",
+                            },
+                        },
                     },
                 }
 

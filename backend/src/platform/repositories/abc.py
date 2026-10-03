@@ -58,33 +58,55 @@ class ResourceRepositoryABC[ModelType](RepositoryABC[ModelType], ABC):
 
 
 class SoftDeleteRepositoryABC[ModelType: ResourceModel](
-    ResourceRepositoryABC[ModelType], ABC
+    ResourceRepositoryABC[ModelType],
+    ABC,
 ):
     @abstractmethod
     async def get_one(
-        self, identifier: int, include_deleted: bool = False
+        self,
+        identifier: int,
+        *,
+        include_deleted: bool = False,
     ) -> ModelType: ...
 
     @abstractmethod
     async def get(
-        self, identifier: int, include_deleted: bool = False
+        self,
+        identifier: int,
+        *,
+        include_deleted: bool = False,
     ) -> ModelType | None: ...
 
     @abstractmethod
-    async def get_all(self, include_deleted: bool = False) -> Sequence[ModelType]: ...
+    async def get_all(
+        self,
+        *,
+        include_deleted: bool = False,
+    ) -> Sequence[ModelType]: ...
 
     @abstractmethod
     async def filter_by(
-        self, include_deleted: bool = False, **kwargs: Any
+        self,
+        *,
+        include_deleted: bool = False,
+        **kwargs: Any,
     ) -> Sequence[ModelType]: ...
 
     @abstractmethod
     async def filter_by_ids(
-        self, identifiers: list[int], include_deleted: bool = False
+        self,
+        identifiers: list[int],
+        *,
+        include_deleted: bool = False,
     ) -> Sequence[ModelType]: ...
 
     @abstractmethod
-    async def exists(self, identifier: int, include_deleted: bool = False) -> bool: ...
+    async def exists(
+        self,
+        identifier: int,
+        *,
+        include_deleted: bool = False,
+    ) -> bool: ...
 
     @abstractmethod
     async def paginate(
@@ -94,12 +116,15 @@ class SoftDeleteRepositoryABC[ModelType: ResourceModel](
         page_size: int,
         page_number: int,
         search: str | None = None,
+        *,
         include_deleted: bool = False,
     ) -> tuple[Sequence[ModelType], int]: ...
 
     @abstractmethod
     async def get_total(
-        self, *filter_expressions: Any, include_deleted: bool = False
+        self,
+        *filter_expressions: Any,
+        include_deleted: bool = False,
     ) -> int: ...
 
     @abstractmethod

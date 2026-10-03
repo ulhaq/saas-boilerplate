@@ -22,37 +22,35 @@ async def test_purge_expired_tokens_removes_old_records():
 
     very_old = datetime.now(UTC) - timedelta(days=400)
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            # Seed old tokens directly
-            session.add(
-                EmailVerificationToken(
-                    email="old_ev@example.com",
-                    token=hash_secret("tok1"),
-                    created_at=very_old,
-                )
-            )
-            session.add(
-                PasswordResetToken(
-                    user_id=1,
-                    token=hash_secret("tok2"),
-                    created_at=very_old,
-                )
-            )
-            session.add(
-                Invitation(
-                    organization_id=1,
-                    email="old_inv@example.com",
-                    role_ids=[],
-                    token_hash="tok3-hash",
-                    expires_at=very_old,
-                    created_at=very_old,
-                )
-            )
+    async with TestSessionLocal() as session, session.begin():
+        # Seed old tokens directly
+        session.add(
+            EmailVerificationToken(
+                email="old_ev@example.com",
+                token=hash_secret("tok1"),
+                created_at=very_old,
+            ),
+        )
+        session.add(
+            PasswordResetToken(
+                user_id=1,
+                token=hash_secret("tok2"),
+                created_at=very_old,
+            ),
+        )
+        session.add(
+            Invitation(
+                organization_id=1,
+                email="old_inv@example.com",
+                role_ids=[],
+                token_hash="tok3-hash",
+                expires_at=very_old,
+                created_at=very_old,
+            ),
+        )
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            count = await purge_expired_tokens(session)
+    async with TestSessionLocal() as session, session.begin():
+        count = await purge_expired_tokens(session)
 
     assert count >= 3
 
@@ -60,23 +58,21 @@ async def test_purge_expired_tokens_removes_old_records():
 async def test_purge_expired_tokens_keeps_fresh_records():
     from src.platform.core.security import hash_secret
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            # A fresh email verification token should NOT be purged
-            from src.platform.models.email_verification_token import (
-                EmailVerificationToken,
-            )
+    async with TestSessionLocal() as session, session.begin():
+        # A fresh email verification token should NOT be purged
+        from src.platform.models.email_verification_token import (
+            EmailVerificationToken,
+        )
 
-            session.add(
-                EmailVerificationToken(
-                    email="fresh@example.com",
-                    token=hash_secret("fresh_tok"),
-                )
-            )
+        session.add(
+            EmailVerificationToken(
+                email="fresh@example.com",
+                token=hash_secret("fresh_tok"),
+            ),
+        )
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            count = await purge_expired_tokens(session)
+    async with TestSessionLocal() as session, session.begin():
+        count = await purge_expired_tokens(session)
 
     # The fresh token should not have been purged
     assert count == 0
@@ -90,21 +86,19 @@ async def test_purge_soft_deleted_users_removes_old():
 
     very_old = datetime.now(UTC) - timedelta(days=400)
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            user = User(
-                name="Deleted Old",
-                email="deleted_old@example.com",
-                password=hash_secret("pass"),
-                deleted_at=very_old,
-            )
-            session.add(user)
-            await session.flush()
-            user_id = user.id
+    async with TestSessionLocal() as session, session.begin():
+        user = User(
+            name="Deleted Old",
+            email="deleted_old@example.com",
+            password=hash_secret("pass"),
+            deleted_at=very_old,
+        )
+        session.add(user)
+        await session.flush()
+        user_id = user.id
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            count = await purge_soft_deleted_users(session)
+    async with TestSessionLocal() as session, session.begin():
+        count = await purge_soft_deleted_users(session)
 
     assert count >= 1
 
@@ -119,19 +113,17 @@ async def test_purge_soft_deleted_users_keeps_recent():
 
     recent = datetime.now(UTC) - timedelta(days=10)
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            user = User(
-                name="Deleted Recent",
-                email="deleted_recent@example.com",
-                password=hash_secret("pass"),
-                deleted_at=recent,
-            )
-            session.add(user)
+    async with TestSessionLocal() as session, session.begin():
+        user = User(
+            name="Deleted Recent",
+            email="deleted_recent@example.com",
+            password=hash_secret("pass"),
+            deleted_at=recent,
+        )
+        session.add(user)
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            count = await purge_soft_deleted_users(session)
+    async with TestSessionLocal() as session, session.begin():
+        count = await purge_soft_deleted_users(session)
 
     assert count == 0
 
@@ -143,25 +135,23 @@ async def test_purge_soft_deleted_orgs_removes_old():
 
     very_old = datetime.now(UTC) - timedelta(days=400)
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            org = Organization(
-                name="Old Deleted Org",
-                deleted_at=very_old,
-            )
-            session.add(org)
-            await session.flush()
-            org_id = org.id
+    async with TestSessionLocal() as session, session.begin():
+        org = Organization(
+            name="Old Deleted Org",
+            deleted_at=very_old,
+        )
+        session.add(org)
+        await session.flush()
+        org_id = org.id
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            count = await purge_soft_deleted_orgs(session)
+    async with TestSessionLocal() as session, session.begin():
+        count = await purge_soft_deleted_orgs(session)
 
     assert count >= 1
 
     async with TestSessionLocal() as session:
         result = await session.execute(
-            select(Organization).where(Organization.id == org_id)
+            select(Organization).where(Organization.id == org_id),
         )
         assert result.scalar_one_or_none() is None
 
@@ -171,17 +161,15 @@ async def test_purge_soft_deleted_orgs_keeps_recent():
 
     recent = datetime.now(UTC) - timedelta(days=10)
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            org = Organization(
-                name="Recent Deleted Org",
-                deleted_at=recent,
-            )
-            session.add(org)
+    async with TestSessionLocal() as session, session.begin():
+        org = Organization(
+            name="Recent Deleted Org",
+            deleted_at=recent,
+        )
+        session.add(org)
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            count = await purge_soft_deleted_orgs(session)
+    async with TestSessionLocal() as session, session.begin():
+        count = await purge_soft_deleted_orgs(session)
 
     assert count == 0
 
@@ -189,14 +177,12 @@ async def test_purge_soft_deleted_orgs_keeps_recent():
 async def test_purge_soft_deleted_orgs_ignores_active():
     from src.platform.models.organization import Organization
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            org = Organization(name="Active Org")
-            session.add(org)
+    async with TestSessionLocal() as session, session.begin():
+        org = Organization(name="Active Org")
+        session.add(org)
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            count = await purge_soft_deleted_orgs(session)
+    async with TestSessionLocal() as session, session.begin():
+        count = await purge_soft_deleted_orgs(session)
 
     assert count == 0
 
@@ -214,7 +200,7 @@ async def test_run_gdpr_retention_loop_runs_one_iteration(mocker):
         nonlocal call_count
         call_count += 1
         if call_count >= 2:
-            raise asyncio.CancelledError()
+            raise asyncio.CancelledError
 
     mocker.patch("src.platform.services.gdpr.asyncio.sleep", side_effect=mock_sleep)
 
@@ -232,7 +218,7 @@ async def test_run_gdpr_retention_loop_swallows_exceptions(mocker):
         nonlocal call_count
         call_count += 1
         if call_count >= 3:
-            raise asyncio.CancelledError()
+            raise asyncio.CancelledError
 
     mocker.patch("src.platform.services.gdpr.asyncio.sleep", side_effect=mock_sleep)
     mocker.patch(

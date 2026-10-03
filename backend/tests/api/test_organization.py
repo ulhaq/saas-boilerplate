@@ -134,7 +134,8 @@ def test_cannot_remove_owner_from_organization(admin_authenticated: TestClient) 
 async def test_transfer_ownership_success(admin_authenticated: TestClient) -> None:
     # Transfer ownership from user 1 (admin) to user 2 (standard)
     response = admin_authenticated.post(
-        "/v1/organizations/1/transfer-ownership", json={"user_id": 2}
+        "/v1/organizations/1/transfer-ownership",
+        json={"user_id": 2},
     )
     assert response.status_code == 204
 
@@ -147,7 +148,8 @@ async def test_transfer_ownership_to_self_rejected(
     admin_authenticated: TestClient,
 ) -> None:
     response = admin_authenticated.post(
-        "/v1/organizations/1/transfer-ownership", json={"user_id": 1}
+        "/v1/organizations/1/transfer-ownership",
+        json={"user_id": 1},
     )
     assert response.status_code == 403
 
@@ -157,14 +159,16 @@ async def test_transfer_ownership_non_member_rejected(
 ) -> None:
     # User 4 is in org 2, not org 1
     response = admin_authenticated.post(
-        "/v1/organizations/1/transfer-ownership", json={"user_id": 4}
+        "/v1/organizations/1/transfer-ownership",
+        json={"user_id": 4},
     )
     assert response.status_code == 404
 
 
 def test_transfer_ownership_requires_owner(standard_authenticated: TestClient) -> None:
     response = standard_authenticated.post(
-        "/v1/organizations/1/transfer-ownership", json={"user_id": 3}
+        "/v1/organizations/1/transfer-ownership",
+        json={"user_id": 3},
     )
     assert response.status_code == 403
 
@@ -185,7 +189,8 @@ async def test_a_deleted_organizations_name_creates_a_new_organization(
     assert new_id != 1
 
     switched = other.post(
-        "/v1/auth/switch-organization", json={"organization_id": new_id}
+        "/v1/auth/switch-organization",
+        json={"organization_id": new_id},
     )
     other.headers["Authorization"] = f"Bearer {switched.json()['access_token']}"
     assert other.get("/v1/projects").json()["items"] == []

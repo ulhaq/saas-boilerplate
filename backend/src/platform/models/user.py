@@ -22,22 +22,33 @@ class User(ResourceModel):
     password: Mapped[str] = mapped_column(String, nullable=False)
     locale: Mapped[str] = mapped_column(String(8), nullable=False, server_default="da")
     theme: Mapped[str] = mapped_column(
-        String(16), nullable=False, server_default="system"
+        String(16),
+        nullable=False,
+        server_default="system",
     )
     terms_accepted_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, default=None
+        DateTime(timezone=True),
+        nullable=True,
+        default=None,
     )
     mfa_secret: Mapped[str | None] = mapped_column(String, nullable=True)
     mfa_enabled_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, default=None
+        DateTime(timezone=True),
+        nullable=True,
+        default=None,
     )
     mfa_recovery_codes: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
     mfa_last_used_step: Mapped[int | None] = mapped_column(Integer, nullable=True)
     mfa_failed_attempts: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=0, server_default="0"
+        Integer,
+        nullable=False,
+        default=0,
+        server_default="0",
     )
     mfa_locked_until: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, default=None
+        DateTime(timezone=True),
+        nullable=True,
+        default=None,
     )
 
     organizations: Mapped[list[Organization]] = relationship(
@@ -56,13 +67,16 @@ class User(ResourceModel):
         passive_deletes=True,
     )
     password_reset_token: Mapped[PasswordResetToken] = relationship(
-        back_populates="user", cascade="all, delete-orphan"
+        back_populates="user",
+        cascade="all, delete-orphan",
     )
     refresh_tokens: Mapped[list[RefreshToken]] = relationship(
-        back_populates="user", cascade="all, delete-orphan"
+        back_populates="user",
+        cascade="all, delete-orphan",
     )
     api_tokens: Mapped[list[ApiToken]] = relationship(
-        back_populates="user", cascade="all, delete-orphan"
+        back_populates="user",
+        cascade="all, delete-orphan",
     )
 
     @property

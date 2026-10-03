@@ -11,7 +11,7 @@ registerBillingNotifications()
 function notification(type: string, payload: Record<string, unknown> = {}): NotificationOut {
   return {
     id: 1,
-    type,
+    notification_type: type,
     payload,
     read_at: null,
     created_at: '2026-10-01T00:00:00Z',

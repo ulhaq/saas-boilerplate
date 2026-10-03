@@ -51,7 +51,7 @@ _installed: Composition | None = None
 def install(composition: Composition) -> None:
     """Install the composition. Called once per process by the composition
     root; installing a different one later is an error."""
-    global _installed
+    global _installed  # noqa: PLW0603 - process-wide singleton
     if _installed is None:
         _installed = composition
     elif _installed != composition:
@@ -61,6 +61,6 @@ def install(composition: Composition) -> None:
 def current() -> Composition:
     if _installed is None:
         raise RuntimeError(
-            "No composition installed - call src.bootstrap.bootstrap() at startup"
+            "No composition installed - call src.bootstrap.bootstrap() at startup",
         )
     return _installed

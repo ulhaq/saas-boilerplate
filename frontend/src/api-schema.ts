@@ -1468,8 +1468,8 @@ export interface components {
       user_id: number
       /** Organization Id */
       organization_id: number
-      /** Type */
-      type: string
+      /** Notification Type */
+      notification_type: string
       /** Payload */
       payload: {
         [key: string]: unknown

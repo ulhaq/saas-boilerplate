@@ -34,7 +34,7 @@ _REDACTIONS: tuple[tuple[re.Pattern[str], str], ...] = (
     (
         re.compile(
             r"(?i)(\"?\b(?:password|secret|token|api[_-]?key)\"?\s*[=:]\s*)"
-            r"(\"[^\"]*\"|'[^']*'|[^\s,;]+)"
+            r"(\"[^\"]*\"|'[^']*'|[^\s,;]+)",
         ),
         r"\1<redacted>",
     ),
@@ -80,7 +80,7 @@ def _redact_nested(value: object) -> object:
     return value
 
 
-def redact(logger: WrappedLogger, name: str, event_dict: EventDict) -> EventDict:
+def redact(_logger: WrappedLogger, _name: str, event_dict: EventDict) -> EventDict:
     """
     Processor: scrub credentials from the message and from any field whose
     key looks sensitive, recursing into nested dicts/lists.
@@ -102,7 +102,9 @@ def redact(logger: WrappedLogger, name: str, event_dict: EventDict) -> EventDict
 
 
 def add_request_context(
-    logger: WrappedLogger, name: str, event_dict: EventDict
+    _logger: WrappedLogger,
+    _name: str,
+    event_dict: EventDict,
 ) -> EventDict:
     """Processor: stamp the service name and per-request context (request id,
     client ip, identity) onto every event. Reads the contextvars populated by
@@ -121,7 +123,9 @@ def add_request_context(
 
 
 def add_trace_context(
-    logger: WrappedLogger, name: str, event_dict: EventDict
+    _logger: WrappedLogger,
+    _name: str,
+    event_dict: EventDict,
 ) -> EventDict:
     """Processor: stamp the active OpenTelemetry trace/span id, so a log line
     links to its trace in Grafana. Absent when telemetry is off or no span is
@@ -158,7 +162,7 @@ def _shared_processors() -> list[Processor]:
                 CallsiteParameter.MODULE,
                 CallsiteParameter.FUNC_NAME,
                 CallsiteParameter.LINENO,
-            }
+            },
         ),
         # Last, so it sees the fully assembled event and every added field.
         redact,
@@ -175,7 +179,7 @@ def _render_processors() -> list[Processor]:
             # hold secrets and bypass the redact processor (which runs earlier,
             # on the message only).
             structlog.processors.ExceptionRenderer(
-                structlog.tracebacks.ExceptionDictTransformer(show_locals=False)
+                structlog.tracebacks.ExceptionDictTransformer(show_locals=False),
             ),
             structlog.processors.JSONRenderer(),
         ]
@@ -192,7 +196,7 @@ def setup_logging(service: str) -> None:
     processor chain via ProcessorFormatter, so existing `logging.getLogger()`
     call sites need no changes while new code can use `structlog.get_logger()`.
     """
-    global _service
+    global _service  # noqa: PLW0603 - process-wide singleton
     _service = service
 
     shared = _shared_processors()
@@ -258,5 +262,5 @@ def setup_logging(service: str) -> None:
                 "handlers": ["stdout"],
                 "level": _LEVEL,
             },
-        }
+        },
     )

@@ -17,6 +17,8 @@ class FilterValueType(Enum):
 
 
 # Mapping of field type to supported filter operators
+RANGE_BOUNDS = 2  # [start, end]
+
 FILTER_OPERATORS_BY_FIELD_TYPE = {
     str: [
         ComparisonOperator.EQUALS,
@@ -98,10 +100,11 @@ SQLA_OPERATORS: dict[ComparisonOperator, Callable[..., Any]] = {
     ComparisonOperator.GREATER_THAN: lambda field, val: field > val,
     ComparisonOperator.GREATER_THAN_OR_EQUAL_TO: lambda field, val: field >= val,
     ComparisonOperator.CONTAINS: lambda field, val: cast(field, String).like(
-        f"%{val}%"
+        f"%{val}%",
     ),
     ComparisonOperator.INSENSITIVE_CONTAINS: lambda field, val: cast(
-        field, String
+        field,
+        String,
     ).ilike(f"%{val}%"),
     ComparisonOperator.NOT_CONTAINS: lambda field, val: (
         ~cast(field, String).like(f"%{val}%")
@@ -116,7 +119,9 @@ SQLA_OPERATORS: dict[ComparisonOperator, Callable[..., Any]] = {
 
 
 def get_filter_expression(
-    operator: ComparisonOperator, values: list, field: InstrumentedAttribute
+    operator: ComparisonOperator,
+    values: list,
+    field: InstrumentedAttribute,
 ) -> list[Any] | Any:
     if operator in COMPARISON_OPERATORS_BY_FILTER_VALUE_TYPE[FilterValueType.SINGLE]:
         return [SQLA_OPERATORS[operator](field, value) for value in values]
@@ -125,9 +130,9 @@ def get_filter_expression(
         return SQLA_OPERATORS[operator](field, values)
 
     if operator in COMPARISON_OPERATORS_BY_FILTER_VALUE_TYPE[FilterValueType.RANGE]:
-        if len(values) != 2:
+        if len(values) != RANGE_BOUNDS:
             raise ValueError(
-                "Between operator expects exactly two values: [start, end]"
+                "Between operator expects exactly two values: [start, end]",
             )
         return SQLA_OPERATORS[operator](field, values[0], values[1])
 
@@ -135,7 +140,10 @@ def get_filter_expression(
 
 
 def cast_values_to_type(
-    values: list, field_type: type, field_name: str, operator: ComparisonOperator
+    values: list,
+    field_type: type,
+    field_name: str,
+    operator: ComparisonOperator,
 ) -> list:
     try:
         if (
@@ -150,9 +158,10 @@ def cast_values_to_type(
                 rs.append(field_type(value))
             else:
                 rs.append(parser.parse(value))
-        return rs
     except (ValueError, TypeError) as exc:
         raise ValueError(
             f"Values for the '{field_name}' field must be provided "
-            f"as a list of '{field_type.__name__}' types"
+            f"as a list of '{field_type.__name__}' types",
         ) from exc
+    else:
+        return rs

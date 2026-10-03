@@ -20,7 +20,7 @@ class InvitationRepository:
 
     async def get_by_token(self, token: str) -> Invitation | None:
         stmt = select(Invitation).where(
-            Invitation.token_hash == hash_invite_token(token)
+            Invitation.token_hash == hash_invite_token(token),
         )
         rs = await self.db.execute(stmt)
         return rs.scalar_one_or_none()
@@ -35,7 +35,9 @@ class InvitationRepository:
         return list(rs.scalars().all())
 
     async def get_for_organization(
-        self, invitation_id: int, organization_id: int
+        self,
+        invitation_id: int,
+        organization_id: int,
     ) -> Invitation | None:
         stmt = select(Invitation).where(
             Invitation.id == invitation_id,
@@ -60,7 +62,7 @@ class InvitationRepository:
             delete(Invitation).where(
                 Invitation.organization_id == organization_id,
                 Invitation.email == email,
-            )
+            ),
         )
         record = Invitation(
             organization_id=organization_id,
@@ -75,7 +77,10 @@ class InvitationRepository:
         return record
 
     async def count_pending(
-        self, organization_id: int, *, excluding_email: str | None = None
+        self,
+        organization_id: int,
+        *,
+        excluding_email: str | None = None,
     ) -> int:
         """Unexpired invitations to the organization - seats they will take."""
         stmt = (

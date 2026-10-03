@@ -44,15 +44,16 @@ class InvitationService(BaseService):
         return [
             InvitationOut.model_validate(i).model_copy(
                 update={
-                    "roles": [roles_by_id[r] for r in i.role_ids if r in roles_by_id]
-                }
+                    "roles": [roles_by_id[r] for r in i.role_ids if r in roles_by_id],
+                },
             )
             for i in invitations
         ]
 
     async def revoke_invitation(self, invitation_id: int) -> None:
         invitation = await self.repos.invitation.get_for_organization(
-            invitation_id, self.current_user.organization_id
+            invitation_id,
+            self.current_user.organization_id,
         )
         if not invitation:
             raise NotFoundException("Invitation not found")

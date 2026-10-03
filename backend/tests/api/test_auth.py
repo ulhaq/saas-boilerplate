@@ -16,7 +16,9 @@ def _do_register(client: TestClient, email: str = "new_user@example.org") -> Non
 
 
 def _do_verify(
-    mocker: MockerFixture, client: TestClient, email: str = "new_user@example.org"
+    mocker: MockerFixture,
+    client: TestClient,
+    email: str = "new_user@example.org",
 ) -> str:
     """Register, capture verification token, verify email, return setup_token."""
     mock_send = mocker.patch("src.platform.services.auth.registration.send_email")
@@ -107,13 +109,15 @@ def test_registered_user_can_login(mocker: MockerFixture, client: TestClient) ->
 
 
 def test_registered_user_has_owner_role_with_all_permissions(
-    mocker: MockerFixture, client: TestClient
+    mocker: MockerFixture,
+    client: TestClient,
 ) -> None:
     token_data = _do_complete(mocker, client, password="password1")
     access_token = token_data["access_token"]
 
     response = client.get(
-        "/v1/users/me", headers={"Authorization": f"Bearer {access_token}"}
+        "/v1/users/me",
+        headers={"Authorization": f"Bearer {access_token}"},
     )
     assert response.status_code == 200
     rs = response.json()
@@ -123,13 +127,15 @@ def test_registered_user_has_owner_role_with_all_permissions(
 
 
 def test_registration_creates_only_owner_role(
-    mocker: MockerFixture, client: TestClient
+    mocker: MockerFixture,
+    client: TestClient,
 ) -> None:
     token_data = _do_complete(mocker, client, password="password1")
     access_token = token_data["access_token"]
 
     response = client.get(
-        "/v1/roles", headers={"Authorization": f"Bearer {access_token}"}
+        "/v1/roles",
+        headers={"Authorization": f"Bearer {access_token}"},
     )
     assert response.status_code == 200
     roles = {r["name"]: r for r in response.json()["items"]}
@@ -149,7 +155,8 @@ def test_cannot_verify_email_with_invalid_token(client: TestClient) -> None:
 
 
 def test_cannot_verify_email_token_twice(
-    mocker: MockerFixture, client: TestClient
+    mocker: MockerFixture,
+    client: TestClient,
 ) -> None:
     mock_send = mocker.patch("src.platform.services.auth.registration.send_email")
     _do_register(client)
@@ -202,7 +209,8 @@ def test_refresh_access_token(client: TestClient) -> None:
         old_refresh_token = rs["refresh_token"]
 
         response = client.get(
-            "/v1/users/me", headers={"Authorization": f"Bearer {old_access_token}"}
+            "/v1/users/me",
+            headers={"Authorization": f"Bearer {old_access_token}"},
         )
         assert response.status_code == 200
 
@@ -217,11 +225,14 @@ def test_refresh_access_token(client: TestClient) -> None:
         assert response.status_code == 200
         rs = response.json()
         assert rs["token_type"] == "bearer"
-        assert rs["access_token"] and rs["access_token"] != old_access_token
-        assert rs["refresh_token"] and rs["refresh_token"] != old_refresh_token
+        assert rs["access_token"]
+        assert rs["access_token"] != old_access_token
+        assert rs["refresh_token"]
+        assert rs["refresh_token"] != old_refresh_token
 
         response = client.get(
-            "/v1/users/me", headers={"Authorization": f"Bearer {rs['access_token']}"}
+            "/v1/users/me",
+            headers={"Authorization": f"Bearer {rs['access_token']}"},
         )
         assert response.status_code == 200
 
@@ -242,7 +253,8 @@ def test_logout(client: TestClient) -> None:
 
 def test_request_password_reset(client: TestClient) -> None:
     response = client.post(
-        "v1/auth/reset-password/request", json={"email": "admin@example.org"}
+        "v1/auth/reset-password/request",
+        json={"email": "admin@example.org"},
     )
     assert response.status_code == 202
 
@@ -257,12 +269,14 @@ def test_reset_password(mocker: MockerFixture, client: TestClient) -> None:
     token = mock_send.call_args.kwargs["data"]["reset_url"].split("token=")[1]
 
     response = client.post(
-        "v1/auth/reset-password", json={"token": token, "password": "new password"}
+        "v1/auth/reset-password",
+        json={"token": token, "password": "new password"},
     )
     assert response.status_code == 204
 
     response = client.post(
-        "v1/auth/reset-password", json={"token": token, "password": "new password"}
+        "v1/auth/reset-password",
+        json={"token": token, "password": "new password"},
     )
     assert response.status_code == 401
     rs = response.json()
@@ -279,7 +293,8 @@ def test_reset_password(mocker: MockerFixture, client: TestClient) -> None:
 
 def test_request_password_reset_with_non_existent_email(client: TestClient) -> None:
     response = client.post(
-        "v1/auth/reset-password/request", json={"email": "non-existent@example.org"}
+        "v1/auth/reset-password/request",
+        json={"email": "non-existent@example.org"},
     )
     assert response.status_code == 202
 
@@ -306,7 +321,8 @@ def test_cannot_refresh_access_token_with_expired_token(client: TestClient) -> N
         rs = response.json()
 
         response = client.post(
-            "v1/auth/refresh", cookies={"refresh_token": rs["refresh_token"]}
+            "v1/auth/refresh",
+            cookies={"refresh_token": rs["refresh_token"]},
         )
         assert response.status_code == 401
         rs = response.json()
@@ -326,19 +342,22 @@ def test_cannot_reset_password_with_invalid_token(client: TestClient) -> None:
 
 
 def test_cannot_reset_password_with_expired_token(
-    mocker: MockerFixture, client: TestClient
+    mocker: MockerFixture,
+    client: TestClient,
 ) -> None:
     mock_send = mocker.patch("src.platform.services.auth.credentials.send_email")
 
     with patch("src.platform.core.config.settings.auth_password_reset_expiry", -1):
         client.post(
-            "v1/auth/reset-password/request", json={"email": "admin@example.org"}
+            "v1/auth/reset-password/request",
+            json={"email": "admin@example.org"},
         )
 
         token = mock_send.call_args.kwargs["data"]["reset_url"].split("token=")[1]
 
         response = client.post(
-            "v1/auth/reset-password", json={"token": token, "password": "new password"}
+            "v1/auth/reset-password",
+            json={"token": token, "password": "new password"},
         )
         assert response.status_code == 401
         rs = response.json()
@@ -477,7 +496,8 @@ def test_refresh_token_cannot_be_used_as_access_token(client: TestClient) -> Non
     refresh_token = response.json()["refresh_token"]
 
     response = client.get(
-        "v1/users/me", headers={"Authorization": f"Bearer {refresh_token}"}
+        "v1/users/me",
+        headers={"Authorization": f"Bearer {refresh_token}"},
     )
     assert response.status_code == 401
 
@@ -504,7 +524,7 @@ async def test_revoked_membership_invalidates_access_token(
 
     async with TestSessionLocal() as session:
         await session.execute(
-            delete(UserOrganization).where(UserOrganization.user_id == 1)
+            delete(UserOrganization).where(UserOrganization.user_id == 1),
         )
         await session.commit()
 
@@ -625,7 +645,7 @@ def test_logout_only_ends_current_session(client: TestClient) -> None:
 
 def test_register_rate_limit(client: TestClient) -> None:
     limiter._storage.reset()
-    with patch.object(limiter, "enabled", True):
+    with patch.object(limiter, "enabled", new=True):
         for _ in range(5):
             client.post(
                 "/v1/auth/register",
@@ -640,7 +660,7 @@ def test_register_rate_limit(client: TestClient) -> None:
 
 def test_token_rate_limit(client: TestClient) -> None:
     limiter._storage.reset()
-    with patch.object(limiter, "enabled", True):
+    with patch.object(limiter, "enabled", new=True):
         for _ in range(10):
             client.post(
                 "v1/auth/token",
@@ -657,7 +677,7 @@ def test_token_rate_limit(client: TestClient) -> None:
 
 def test_reset_password_request_rate_limit(client: TestClient) -> None:
     limiter._storage.reset()
-    with patch.object(limiter, "enabled", True):
+    with patch.object(limiter, "enabled", new=True):
         for _ in range(5):
             client.post(
                 "v1/auth/reset-password/request",
@@ -672,7 +692,7 @@ def test_reset_password_request_rate_limit(client: TestClient) -> None:
 
 def test_reset_password_rate_limit(client: TestClient) -> None:
     limiter._storage.reset()
-    with patch.object(limiter, "enabled", True):
+    with patch.object(limiter, "enabled", new=True):
         for _ in range(5):
             client.post(
                 "v1/auth/reset-password",
@@ -701,7 +721,9 @@ def _do_invite(
 
 
 def test_complete_invite(
-    mocker: MockerFixture, admin_authenticated: TestClient, client: TestClient
+    mocker: MockerFixture,
+    admin_authenticated: TestClient,
+    client: TestClient,
 ) -> None:
     token = _do_invite(mocker, admin_authenticated)
     response = client.post(
@@ -716,7 +738,9 @@ def test_complete_invite(
 
 
 def test_invited_user_can_login(
-    mocker: MockerFixture, admin_authenticated: TestClient, client: TestClient
+    mocker: MockerFixture,
+    admin_authenticated: TestClient,
+    client: TestClient,
 ) -> None:
     token = _do_invite(mocker, admin_authenticated)
     client.post(
@@ -733,7 +757,9 @@ def test_invited_user_can_login(
 
 
 def test_invited_user_is_added_to_organization_with_roles(
-    mocker: MockerFixture, admin_authenticated: TestClient, client: TestClient
+    mocker: MockerFixture,
+    admin_authenticated: TestClient,
+    client: TestClient,
 ) -> None:
     mock_send = mocker.patch("src.platform.services.user.send_email")
     admin_authenticated.post(
@@ -748,7 +774,8 @@ def test_invited_user_is_added_to_organization_with_roles(
     ).json()
 
     profile = client.get(
-        "/v1/users/me", headers={"Authorization": f"Bearer {rs['access_token']}"}
+        "/v1/users/me",
+        headers={"Authorization": f"Bearer {rs['access_token']}"},
     ).json()
     assert profile["email"] == "invited@example.org"
     role_names = {r["name"] for r in profile["roles"]}
@@ -769,7 +796,9 @@ def test_cannot_complete_invite_with_invalid_token(client: TestClient) -> None:
 
 
 def test_cannot_complete_invite_with_expired_token(
-    mocker: MockerFixture, admin_authenticated: TestClient, client: TestClient
+    mocker: MockerFixture,
+    admin_authenticated: TestClient,
+    client: TestClient,
 ) -> None:
     with patch("src.platform.core.config.settings.invite_expiry", -1):
         token = _do_invite(mocker, admin_authenticated)
@@ -783,7 +812,7 @@ def test_cannot_complete_invite_with_expired_token(
 
 def test_complete_invite_rate_limit(client: TestClient) -> None:
     limiter._storage.reset()
-    with patch.object(limiter, "enabled", True):
+    with patch.object(limiter, "enabled", new=True):
         for _ in range(5):
             client.post(
                 "/v1/auth/complete-invite",
@@ -800,7 +829,9 @@ def test_complete_invite_rate_limit(client: TestClient) -> None:
 
 
 def test_invite_status_valid_token(
-    mocker: MockerFixture, admin_authenticated: TestClient, client: TestClient
+    mocker: MockerFixture,
+    admin_authenticated: TestClient,
+    client: TestClient,
 ) -> None:
     token = _do_invite(mocker, admin_authenticated)
     response = client.post("/v1/auth/invite-status", json={"token": token})
@@ -811,7 +842,9 @@ def test_invite_status_valid_token(
 
 
 def test_invite_status_existing_user(
-    mocker: MockerFixture, admin_authenticated: TestClient, client: TestClient
+    mocker: MockerFixture,
+    admin_authenticated: TestClient,
+    client: TestClient,
 ) -> None:
     # admin2@example.org is in Org 2, not Org 1 - can be invited to Org 1
     token = _do_invite(mocker, admin_authenticated, email="admin2@example.org")
@@ -829,7 +862,9 @@ def test_invite_status_invalid_token(client: TestClient) -> None:
 
 
 def test_invite_status_expired_token(
-    mocker: MockerFixture, admin_authenticated: TestClient, client: TestClient
+    mocker: MockerFixture,
+    admin_authenticated: TestClient,
+    client: TestClient,
 ) -> None:
     with patch("src.platform.core.config.settings.invite_expiry", -1):
         token = _do_invite(mocker, admin_authenticated)
@@ -853,7 +888,8 @@ def test_invites_from_different_orgs_coexist(
     token_org1 = _do_invite(mocker, admin_authenticated, email=email)
     mock_send = mocker.patch("src.platform.services.user.send_email")
     organization2_admin_authenticated.post(
-        "/v1/users/invite", json={"email": email, "role_ids": [4]}
+        "/v1/users/invite",
+        json={"email": email, "role_ids": [4]},
     )
     token_org2 = mock_send.call_args.kwargs["data"]["invite_url"].split("token=")[1]
 
@@ -882,7 +918,9 @@ def test_invites_from_different_orgs_coexist(
 
 
 def test_reinvite_from_same_org_replaces_link(
-    mocker: MockerFixture, admin_authenticated: TestClient, client: TestClient
+    mocker: MockerFixture,
+    admin_authenticated: TestClient,
+    client: TestClient,
 ) -> None:
     old_token = _do_invite(mocker, admin_authenticated)
     new_token = _do_invite(mocker, admin_authenticated)
@@ -912,20 +950,24 @@ def admin2_client() -> Generator[TestClient]:
 
 
 def test_complete_invite_rejects_existing_user(
-    mocker: MockerFixture, admin_authenticated: TestClient
+    mocker: MockerFixture,
+    admin_authenticated: TestClient,
 ) -> None:
     # The invite link alone must not act on an existing account.
     token = _do_invite(mocker, admin_authenticated, email="admin2@example.org")
     with TestClient(app) as anonymous:
         response = anonymous.post(
-            "/v1/auth/complete-invite", json={"invite_token": token}
+            "/v1/auth/complete-invite",
+            json={"invite_token": token},
         )
     assert response.status_code == 403
     assert response.json()["error_code"] == "invite_login_required"
 
 
 def test_rejected_complete_invite_leaves_invite_usable(
-    mocker: MockerFixture, admin_authenticated: TestClient, admin2_client: TestClient
+    mocker: MockerFixture,
+    admin_authenticated: TestClient,
+    admin2_client: TestClient,
 ) -> None:
     mocker.patch("src.platform.services.auth.invites.send_email")
     token = _do_invite(mocker, admin_authenticated, email="admin2@example.org")
@@ -933,19 +975,23 @@ def test_rejected_complete_invite_leaves_invite_usable(
         anonymous.post("/v1/auth/complete-invite", json={"invite_token": token})
 
     response = admin2_client.post(
-        "/v1/auth/accept-invite", json={"invite_token": token}
+        "/v1/auth/accept-invite",
+        json={"invite_token": token},
     )
     assert response.status_code == 201
 
 
 def test_accept_invite_switches_session_to_new_org(
-    mocker: MockerFixture, admin_authenticated: TestClient, admin2_client: TestClient
+    mocker: MockerFixture,
+    admin_authenticated: TestClient,
+    admin2_client: TestClient,
 ) -> None:
     mocker.patch("src.platform.services.auth.invites.send_email")
     token = _do_invite(mocker, admin_authenticated, email="admin2@example.org")
 
     response = admin2_client.post(
-        "/v1/auth/accept-invite", json={"invite_token": token}
+        "/v1/auth/accept-invite",
+        json={"invite_token": token},
     )
     assert response.status_code == 201
     rs = response.json()
@@ -962,7 +1008,9 @@ def test_accept_invite_switches_session_to_new_org(
 
 
 def test_accept_invite_sends_added_to_org_email(
-    mocker: MockerFixture, admin_authenticated: TestClient, admin2_client: TestClient
+    mocker: MockerFixture,
+    admin_authenticated: TestClient,
+    admin2_client: TestClient,
 ) -> None:
     mock_send = mocker.patch("src.platform.services.auth.invites.send_email")
     token = _do_invite(mocker, admin_authenticated, email="admin2@example.org")
@@ -972,24 +1020,29 @@ def test_accept_invite_sends_added_to_org_email(
 
 
 def test_accept_invite_requires_authentication(
-    mocker: MockerFixture, admin_authenticated: TestClient
+    mocker: MockerFixture,
+    admin_authenticated: TestClient,
 ) -> None:
     token = _do_invite(mocker, admin_authenticated, email="admin2@example.org")
     with TestClient(app) as anonymous:
         response = anonymous.post(
-            "/v1/auth/accept-invite", json={"invite_token": token}
+            "/v1/auth/accept-invite",
+            json={"invite_token": token},
         )
     assert response.status_code == 401
 
 
 def test_accept_invite_rejects_other_users_invite(
-    mocker: MockerFixture, admin_authenticated: TestClient, admin2_client: TestClient
+    mocker: MockerFixture,
+    admin_authenticated: TestClient,
+    admin2_client: TestClient,
 ) -> None:
     mocker.patch("src.platform.services.auth.invites.send_email")
     token = _do_invite(mocker, admin_authenticated, email="invited@example.org")
 
     response = admin2_client.post(
-        "/v1/auth/accept-invite", json={"invite_token": token}
+        "/v1/auth/accept-invite",
+        json={"invite_token": token},
     )
     assert response.status_code == 403
     assert response.json()["error_code"] == "invite_email_mismatch"
@@ -1004,10 +1057,13 @@ def test_accept_invite_rejects_other_users_invite(
 
 
 def test_accept_invite_rejects_api_token(
-    mocker: MockerFixture, admin_authenticated: TestClient, admin2_client: TestClient
+    mocker: MockerFixture,
+    admin_authenticated: TestClient,
+    admin2_client: TestClient,
 ) -> None:
     rs = admin2_client.post(
-        "/v1/api-tokens", json={"name": "ci", "permissions": ["read:user"]}
+        "/v1/api-tokens",
+        json={"name": "ci", "permissions": ["read:user"]},
     )
     assert rs.status_code == 201, rs.text
     token = _do_invite(mocker, admin_authenticated, email="admin2@example.org")
@@ -1022,7 +1078,9 @@ def test_accept_invite_rejects_api_token(
 
 
 def test_cannot_invite_user_already_in_org(
-    mocker: MockerFixture, admin_authenticated: TestClient, admin2_client: TestClient
+    mocker: MockerFixture,
+    admin_authenticated: TestClient,
+    admin2_client: TestClient,
 ) -> None:
     # Accept first invite, then verify re-invite is blocked via invite_user
     mocker.patch("src.platform.services.auth.invites.send_email")
@@ -1040,7 +1098,9 @@ def test_cannot_invite_user_already_in_org(
 
 
 def test_complete_invite_new_user_missing_name_or_password(
-    mocker: MockerFixture, admin_authenticated: TestClient, client: TestClient
+    mocker: MockerFixture,
+    admin_authenticated: TestClient,
+    client: TestClient,
 ) -> None:
     token = _do_invite(mocker, admin_authenticated)
     response = client.post(

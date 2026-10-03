@@ -111,7 +111,7 @@ def test_send_email_with_starttls(mocker):
 
     mocker.patch("src.platform.services.mailer.SMTP", return_value=mock_smtp_instance)
     # Patch only email_tls so the rest of settings keeps real string values
-    mocker.patch("src.platform.services.mailer.settings.email_tls", True)
+    mocker.patch("src.platform.services.mailer.settings.email_tls", True)  # noqa: FBT003
 
     send_email(
         address="user@example.com",
@@ -167,7 +167,7 @@ def test_send_email_gives_up_on_a_stalled_mail_server(mocker):
 
     started = time.monotonic()
     try:
-        with pytest.raises(OSError):
+        with pytest.raises(OSError, match="timed out"):
             send_email(address="a@example.org", user_name="A", email_template="welcome")
     finally:
         server.close()

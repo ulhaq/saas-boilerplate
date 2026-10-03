@@ -25,13 +25,13 @@ class SubscriptionWebhookHandlers(WebhookHandlerGroup):
             "customer.subscription.resumed": self._handle_subscription_resumed,
         }
 
-    async def _handle_subscription_created(self, raw: dict) -> None:
+    async def _handle_subscription_created(self, raw: dict) -> None:  # noqa: C901
         obj = raw["data"]["object"]
         sub_id: str = obj["id"]
 
         account = None
         sub = await self.repos.subscription.get_by_external_subscription_id_locked(
-            sub_id
+            sub_id,
         )
         if not sub:
             # subscription.created fires before checkout.session.completed so
@@ -40,16 +40,17 @@ class SubscriptionWebhookHandlers(WebhookHandlerGroup):
             if customer_id:
                 account = (
                     await self.repos.billing_account.get_by_external_customer_id_locked(
-                        customer_id
+                        customer_id,
                     )
                 )
                 if account:
                     sub = await self.repos.subscription.get_active_for_organization_locked(  # noqa: E501
-                        account.organization_id
+                        account.organization_id,
                     )
                     if sub and self._tracks_another_subscription(sub, sub_id):
                         await self._cancel_duplicate_subscription(
-                            account.organization_id, sub_id
+                            account.organization_id,
+                            sub_id,
                         )
                         return
                     if not sub:
@@ -81,7 +82,7 @@ class SubscriptionWebhookHandlers(WebhookHandlerGroup):
             new_price_id: str | None = (items[0].get("price") or {}).get("id")
             if new_price_id:
                 new_price = await self.repos.plan_price.get_by_external_price_id(
-                    new_price_id
+                    new_price_id,
                 )
                 if new_price:
                     updates["plan_price_id"] = new_price.id
@@ -93,7 +94,7 @@ class SubscriptionWebhookHandlers(WebhookHandlerGroup):
             if account is None:
                 account = (
                     await self.repos.billing_account.get_by_external_customer_id_locked(
-                        obj.get("customer", "")
+                        obj.get("customer", ""),
                     )
                 )
             if account and not account.trial_used:
@@ -104,7 +105,7 @@ class SubscriptionWebhookHandlers(WebhookHandlerGroup):
         sub_id: str = obj["id"]
 
         sub = await self.repos.subscription.get_by_external_subscription_id_locked(
-            sub_id
+            sub_id,
         )
         if not sub:
             return
@@ -146,7 +147,7 @@ class SubscriptionWebhookHandlers(WebhookHandlerGroup):
                 and sub.plan_price.external_price_id != new_price_id
             ):
                 new_price = await self.repos.plan_price.get_by_external_price_id(
-                    new_price_id
+                    new_price_id,
                 )
                 if new_price:
                     updates["plan_price_id"] = new_price.id
@@ -165,7 +166,7 @@ class SubscriptionWebhookHandlers(WebhookHandlerGroup):
         sub_id: str = obj["id"]
 
         sub = await self.repos.subscription.get_by_external_subscription_id_locked(
-            sub_id
+            sub_id,
         )
         if not sub:
             log.debug(
@@ -208,7 +209,7 @@ class SubscriptionWebhookHandlers(WebhookHandlerGroup):
         trial_end_ts: int | None = obj.get("trial_end")
 
         sub = await self.repos.subscription.get_by_external_subscription_id_locked(
-            sub_id
+            sub_id,
         )
         if not sub:
             return
@@ -223,14 +224,15 @@ class SubscriptionWebhookHandlers(WebhookHandlerGroup):
         # recipient's locale. The calendar day is taken in the display timezone.
         trial_end_date: date | str = (
             datetime.fromtimestamp(
-                trial_end_ts, tz=ZoneInfo(settings.display_timezone)
+                trial_end_ts,
+                tz=ZoneInfo(settings.display_timezone),
             ).date()
             if trial_end_ts
             else "soon"
         )
 
         account = await self.repos.billing_account.get_for_organization(
-            sub.organization_id
+            sub.organization_id,
         )
         has_payment_method = account.has_payment_method if account else False
 
@@ -249,7 +251,7 @@ class SubscriptionWebhookHandlers(WebhookHandlerGroup):
         sub_id: str = obj["id"]
 
         sub = await self.repos.subscription.get_by_external_subscription_id_locked(
-            sub_id
+            sub_id,
         )
         if not sub:
             return
@@ -294,7 +296,7 @@ class SubscriptionWebhookHandlers(WebhookHandlerGroup):
         sub_id: str = obj["id"]
 
         sub = await self.repos.subscription.get_by_external_subscription_id_locked(
-            sub_id
+            sub_id,
         )
         if not sub:
             return

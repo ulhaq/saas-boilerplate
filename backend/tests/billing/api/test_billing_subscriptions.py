@@ -14,7 +14,8 @@ from tests.conftest import TestSessionLocal
 
 
 def test_start_checkout_returns_url(
-    admin_authenticated: TestClient, plan_with_price: dict
+    admin_authenticated: TestClient,
+    plan_with_price: dict,
 ) -> None:
     price_id = plan_with_price["price"]["id"]
     response = admin_authenticated.post(
@@ -38,7 +39,8 @@ async def test_checkout_and_trial_are_audited(
 ) -> None:
     price_id = plan_with_price["price"]["id"]
     response = admin_authenticated.post(
-        f"/v1/billing/subscriptions/{endpoint}", json={"plan_price_id": price_id}
+        f"/v1/billing/subscriptions/{endpoint}",
+        json={"plan_price_id": price_id},
     )
     assert response.status_code == 200
 
@@ -183,7 +185,8 @@ def test_cancel_subscription(
     # Patch the mock to simulate an active subscription with external_subscription_id
     # by setting it directly via mock webhook payload
     mock_billing_provider.construct_webhook_event.return_value = __import__(
-        "src.billing.provider.types", fromlist=["WebhookPayload"]
+        "src.billing.provider.types",
+        fromlist=["WebhookPayload"],
     ).WebhookPayload(
         external_event_id="evt_checkout_completed",
         event_type="checkout.session.completed",
@@ -193,8 +196,8 @@ def test_cancel_subscription(
                     "subscription": "sub_test123",
                     "customer": "cus_test123",
                     "metadata": {"plan_price_id": str(price_id)},
-                }
-            }
+                },
+            },
         },
     )
 
@@ -233,8 +236,8 @@ def test_resume_subscription(
                     "subscription": "sub_test123",
                     "customer": "cus_test123",
                     "metadata": {"plan_price_id": str(price_id)},
-                }
-            }
+                },
+            },
         },
     )
     admin_authenticated.post(
@@ -276,8 +279,8 @@ def test_portal_url_returned(
                     "subscription": "sub_test123",
                     "customer": "cus_test123",
                     "metadata": {"plan_price_id": str(price_id)},
-                }
-            }
+                },
+            },
         },
     )
     admin_authenticated.post(
@@ -314,12 +317,14 @@ def _activate_subscription(
                     "subscription": "sub_test123",
                     "customer": "cus_test123",
                     "metadata": {"plan_price_id": str(price_id)},
-                }
-            }
+                },
+            },
         },
     )
     client.post(
-        "/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "sig"}
+        "/v1/billing/webhook",
+        content=b"{}",
+        headers={"stripe-signature": "sig"},
     )
 
 
@@ -335,7 +340,9 @@ async def test_switch_plan_success(
     # Create a second plan + price directly in the DB
     async with TestSessionLocal() as session:
         plan2 = Plan(
-            name="Enterprise", external_product_id="prod_enterprise", is_active=True
+            name="Enterprise",
+            external_product_id="prod_enterprise",
+            is_active=True,
         )
         session.add(plan2)
         await session.flush()
@@ -363,7 +370,10 @@ async def test_switch_plan_success(
     rs = response.json()
     assert rs["plan_price_id"] == price2_id
     mock_billing_provider.switch_subscription_price.assert_called_once_with(
-        "sub_test123", "price_enterprise123", skip_proration=False, new_amount=2999
+        "sub_test123",
+        "price_enterprise123",
+        skip_proration=False,
+        new_amount=2999,
     )
     # The switch itself must trigger domain reconciliation - the subsequent
     # webhook sees no diff and stays silent.
@@ -386,7 +396,10 @@ def test_switch_plan_invalid_price(
 ) -> None:
     price_id = plan_with_price["price"]["id"]
     _activate_subscription(
-        admin_authenticated, price_id, mock_billing_provider, "evt_switch_inv"
+        admin_authenticated,
+        price_id,
+        mock_billing_provider,
+        "evt_switch_inv",
     )
 
     response = admin_authenticated.post(
@@ -403,7 +416,10 @@ def test_switch_plan_same_price_rejected(
 ) -> None:
     price_id = plan_with_price["price"]["id"]
     _activate_subscription(
-        admin_authenticated, price_id, mock_billing_provider, "evt_switch_same"
+        admin_authenticated,
+        price_id,
+        mock_billing_provider,
+        "evt_switch_same",
     )
 
     response = admin_authenticated.post(
@@ -414,7 +430,8 @@ def test_switch_plan_same_price_rejected(
 
 
 async def test_switch_plan_no_external_subscription_id(
-    admin_authenticated: TestClient, plan_with_price: dict
+    admin_authenticated: TestClient,
+    plan_with_price: dict,
 ) -> None:
     # Simulate an incomplete checkout (pending, never completed) - switching
     # plan while a checkout is in progress should be rejected.
@@ -426,7 +443,7 @@ async def test_switch_plan_no_external_subscription_id(
         # Update to incomplete (no INSERT, avoid unique constraint)
         sub = (
             await session.execute(
-                select(Subscription).where(Subscription.organization_id == 1)
+                select(Subscription).where(Subscription.organization_id == 1),
             )
         ).scalar_one()
         sub.plan_price_id = free_price.id
@@ -541,12 +558,14 @@ def test_start_trial_sets_trial_used_flag_on_subscription_created_webhook(
                     "trial_end": now_ts + 1209600,
                     "canceled_at": None,
                     "items": {"data": [{"price": {"id": "price_test123"}}]},
-                }
-            }
+                },
+            },
         },
     )
     admin_authenticated.post(
-        "/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "s"}
+        "/v1/billing/webhook",
+        content=b"{}",
+        headers={"stripe-signature": "s"},
     )
 
     response = admin_authenticated.get("/v1/billing/subscriptions/current")
@@ -601,7 +620,7 @@ async def test_start_trial_fails_when_already_trialing(
     async with TestSessionLocal() as session:
         sub = (
             await session.execute(
-                select(Subscription).where(Subscription.organization_id == 1)
+                select(Subscription).where(Subscription.organization_id == 1),
             )
         ).scalar_one()
         sub.status = "trialing"
@@ -616,7 +635,8 @@ async def test_start_trial_fails_when_already_trialing(
 
 
 def test_start_trial_requires_permission(
-    client: TestClient, plan_with_price: dict
+    client: TestClient,
+    plan_with_price: dict,
 ) -> None:
     rs = client.post(
         "/v1/auth/token",
@@ -641,12 +661,15 @@ def test_subscription_organization_isolation(
 
     # Activate a paid subscription for organization 1
     _activate_subscription(
-        admin_authenticated, price_id, mock_billing_provider, "evt_iso"
+        admin_authenticated,
+        price_id,
+        mock_billing_provider,
+        "evt_iso",
     )
 
     # Organization 2 should see only its own free subscription, not organization 1's.
     response = organization2_admin_authenticated.get(
-        "/v1/billing/subscriptions/current"
+        "/v1/billing/subscriptions/current",
     )
     assert response.status_code == 200
     sub = response.json()
@@ -688,7 +711,8 @@ def test_update_billing_email_syncs_to_provider_with_customer(
     )
     assert response.status_code == 200
     mock_billing_provider.update_customer.assert_called_once_with(
-        "cus_test123", email="finance@example.com"
+        "cus_test123",
+        email="finance@example.com",
     )
 
 
@@ -734,8 +758,8 @@ def test_customer_updated_webhook_syncs_billing_email(
                 "object": {
                     "id": "cus_test123",
                     "email": "portal-edit@example.com",
-                }
-            }
+                },
+            },
         },
     )
     response = admin_authenticated.post(

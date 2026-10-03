@@ -8,7 +8,9 @@ from src.platform.core.database import Base
 
 class TimestampMixin:
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -20,7 +22,9 @@ class TimestampMixin:
 
 class DeleteTimestampMixin:
     deleted_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), default=None, nullable=True
+        DateTime(timezone=True),
+        default=None,
+        nullable=True,
     )
 
 
@@ -29,7 +33,9 @@ class ResourceModelBase(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -43,5 +49,7 @@ class ResourceModel(ResourceModelBase):
     __abstract__ = True
 
     deleted_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), default=None, nullable=True
+        DateTime(timezone=True),
+        default=None,
+        nullable=True,
     )

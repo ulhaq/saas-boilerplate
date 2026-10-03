@@ -21,12 +21,13 @@ from src.platform.core.config import settings
 
 # Codes from the previous/next 30s step are accepted to absorb clock drift.
 _VALID_WINDOW = 1
+TOTP_DIGITS = 6
 _RECOVERY_CODE_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789"
 
 
 def _key(purpose: bytes) -> bytes:
     return hashlib.sha256(
-        purpose + settings.app_secret.get_secret_value().encode()
+        purpose + settings.app_secret.get_secret_value().encode(),
     ).digest()
 
 
@@ -63,7 +64,8 @@ def decrypt_secret(encrypted: str) -> str | None:
 
 def provisioning_uri(secret: str, email: str) -> str:
     return pyotp.TOTP(secret).provisioning_uri(
-        name=email, issuer_name=settings.app_name
+        name=email,
+        issuer_name=settings.app_name,
     )
 
 
@@ -75,7 +77,7 @@ def verify_totp(secret: str, code: str, last_used_step: int | None) -> int | Non
     """Return the matched time step, or None if the code is invalid or was
     already used (step <= last_used_step)."""
     code = _normalize(code)
-    if len(code) != 6 or not code.isdigit():
+    if len(code) != TOTP_DIGITS or not code.isdigit():
         return None
     totp = pyotp.TOTP(secret)
     now_step = int(time.time()) // totp.interval
@@ -98,7 +100,9 @@ def generate_recovery_codes(count: int | None = None) -> list[str]:
 
 def hash_recovery_code(code: str) -> str:
     return hmac.new(
-        _key(b"mfa-recovery:"), _normalize(code).encode(), hashlib.sha256
+        _key(b"mfa-recovery:"),
+        _normalize(code).encode(),
+        hashlib.sha256,
     ).hexdigest()
 
 

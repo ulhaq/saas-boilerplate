@@ -15,7 +15,8 @@ router = APIRouter(prefix="/invitations")
 async def list_invitations(
     service: Annotated[InvitationService, Depends()],
     _: Annotated[
-        Auth, Depends(require_permission(Permission.MANAGE_ORGANIZATION_USER))
+        Auth,
+        Depends(require_permission(Permission.MANAGE_ORGANIZATION_USER)),
     ],
 ) -> list[InvitationOut]:
     return await service.list_invitations()
@@ -25,7 +26,8 @@ async def list_invitations(
 async def revoke_invitation(
     service: Annotated[InvitationService, Depends()],
     _: Annotated[
-        Auth, Depends(require_permission(Permission.MANAGE_ORGANIZATION_USER))
+        Auth,
+        Depends(require_permission(Permission.MANAGE_ORGANIZATION_USER)),
     ],
     invitation_id: Annotated[int, Path()],
 ) -> None:

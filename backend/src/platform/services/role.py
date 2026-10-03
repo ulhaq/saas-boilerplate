@@ -43,6 +43,7 @@ class RoleService(ResourceService[RoleRepository, Role, RoleIn | RolePatch, Role
         self,
         schema_out: type[RoleOut],
         page_query_params: PageQueryParams,
+        *,
         include_deleted: bool = False,
     ) -> PaginatedResponse[RoleOut]:
         return await super().paginate(
@@ -78,7 +79,7 @@ class RoleService(ResourceService[RoleRepository, Role, RoleIn | RolePatch, Role
                 existing_role = await self.repo.get_by_name(schema_in.name)
                 if existing_role and existing_role.id != identifier:
                     raise AlreadyExistsException(
-                        f"Role already exists. [name={schema_in.name}]"
+                        f"Role already exists. [name={schema_in.name}]",
                     )
 
         updated = await super().patch(identifier, schema_in, validate)
@@ -91,12 +92,17 @@ class RoleService(ResourceService[RoleRepository, Role, RoleIn | RolePatch, Role
         )
         return RoleOut.model_validate(updated)
 
-    async def get_role(self, identifier: int, include_deleted: bool = False) -> RoleOut:
+    async def get_role(
+        self,
+        identifier: int,
+        *,
+        include_deleted: bool = False,
+    ) -> RoleOut:
         return RoleOut.model_validate(
-            await super().get(identifier, include_deleted=include_deleted)
+            await super().get(identifier, include_deleted=include_deleted),
         )
 
-    async def delete_role(self, identifier: int, force_delete: bool = False) -> None:
+    async def delete_role(self, identifier: int, *, force_delete: bool = False) -> None:
         role = await self._assert_not_protected_role(identifier)
         await self.log_audit(
             AuditAction.ROLE_DELETE,
@@ -109,7 +115,9 @@ class RoleService(ResourceService[RoleRepository, Role, RoleIn | RolePatch, Role
         await super().delete(identifier, force_delete=force_delete)
 
     async def manage_permissions(
-        self, identifier: int, schema_in: RolePermissionIn
+        self,
+        identifier: int,
+        schema_in: RolePermissionIn,
     ) -> RoleOut:
         role = await self._assert_not_protected_role(identifier)
 

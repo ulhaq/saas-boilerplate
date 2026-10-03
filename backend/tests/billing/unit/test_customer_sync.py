@@ -7,6 +7,7 @@ from datetime import UTC, datetime, timedelta
 from fastapi.testclient import TestClient
 from sqlalchemy import text
 
+from src.billing.exceptions import BillingProviderException
 from src.billing.services.maintenance import (
     MAX_CUSTOMER_SYNC_ATTEMPTS,
     sync_customer_emails,
@@ -52,13 +53,15 @@ async def _attempts(organization_id: int) -> int:
 
 def _transfer(client: TestClient) -> None:
     response = client.post(
-        "/v1/organizations/1/transfer-ownership", json={"user_id": 2}
+        "/v1/organizations/1/transfer-ownership",
+        json={"user_id": 2},
     )
     assert response.status_code == 204
 
 
 async def test_a_transfer_queues_the_new_owner_email_and_the_sync_pushes_it(
-    admin_authenticated: TestClient, mock_billing_provider
+    admin_authenticated: TestClient,
+    mock_billing_provider,
 ):
     await _set_customer("cus_transfer")
 
@@ -69,17 +72,19 @@ async def test_a_transfer_queues_the_new_owner_email_and_the_sync_pushes_it(
 
     assert await _sync(mock_billing_provider) == 1
     mock_billing_provider.update_customer.assert_called_once_with(
-        "cus_transfer", email="standard@example.org"
+        "cus_transfer",
+        email="standard@example.org",
     )
     assert await _pending() is None
     assert await _sync(mock_billing_provider) == 0
 
 
 async def test_a_provider_outage_does_not_fail_the_transfer_and_is_retried(
-    admin_authenticated: TestClient, mock_billing_provider
+    admin_authenticated: TestClient,
+    mock_billing_provider,
 ):
     await _set_customer("cus_transfer")
-    mock_billing_provider.update_customer.side_effect = ConnectionError("down")
+    mock_billing_provider.update_customer.side_effect = BillingProviderException("down")
 
     _transfer(admin_authenticated)
     assert await _sync(mock_billing_provider) == 0
@@ -93,7 +98,8 @@ async def test_a_provider_outage_does_not_fail_the_transfer_and_is_retried(
 
 
 async def test_a_newer_email_set_during_a_push_stays_pending(
-    admin_authenticated: TestClient, mock_billing_provider
+    admin_authenticated: TestClient,
+    mock_billing_provider,
 ):
     await _set_customer("cus_transfer")
     _transfer(admin_authenticated)
@@ -110,7 +116,8 @@ async def test_a_newer_email_set_during_a_push_stays_pending(
 
 
 async def test_no_provider_customer_means_nothing_to_sync(
-    admin_authenticated: TestClient, mock_billing_provider
+    admin_authenticated: TestClient,
+    mock_billing_provider,
 ):
     _transfer(admin_authenticated)
 
@@ -120,7 +127,8 @@ async def test_no_provider_customer_means_nothing_to_sync(
 
 
 async def test_no_transaction_is_open_while_the_provider_is_called(
-    admin_authenticated: TestClient, mock_billing_provider
+    admin_authenticated: TestClient,
+    mock_billing_provider,
 ):
     """A slow provider must not hold a database connection in a transaction."""
     await _set_customer("cus_transfer")
@@ -133,8 +141,8 @@ async def test_no_transaction_is_open_while_the_provider_is_called(
                 text(
                     "SELECT count(*) FROM pg_stat_activity"
                     " WHERE datname = current_database()"
-                    " AND state = 'idle in transaction'"
-                )
+                    " AND state = 'idle in transaction'",
+                ),
             )
             open_during_call.append(rs.scalar_one())
 
@@ -150,7 +158,7 @@ async def test_a_failing_account_does_not_hold_up_the_others(mock_billing_provid
 
     async def fail_for_the_broken_customer(customer_id, **_kwargs):
         if customer_id == "cus_broken":
-            raise ValueError("No such customer")
+            raise BillingProviderException("No such customer")
 
     mock_billing_provider.update_customer.side_effect = fail_for_the_broken_customer
 
@@ -161,7 +169,7 @@ async def test_a_failing_account_does_not_hold_up_the_others(mock_billing_provid
 
 async def test_a_failed_push_waits_for_its_backoff(mock_billing_provider):
     await _set_pending(1, "cus_one", "one@example.org")
-    mock_billing_provider.update_customer.side_effect = ConnectionError("down")
+    mock_billing_provider.update_customer.side_effect = BillingProviderException("down")
     await _sync(mock_billing_provider)
 
     # Not due yet: not even tried, though the provider is back.
@@ -175,13 +183,16 @@ async def test_a_failed_push_waits_for_its_backoff(mock_billing_provider):
 
 
 async def test_a_push_is_given_up_after_too_many_attempts(
-    mock_billing_provider, caplog
+    mock_billing_provider,
+    caplog,
 ):
     await _set_pending(1, "cus_one", "one@example.org")
     async with TestSessionLocal() as session, session.begin():
         account = await get_billing_account(session, 1)
         account.customer_sync_attempts = MAX_CUSTOMER_SYNC_ATTEMPTS - 1
-    mock_billing_provider.update_customer.side_effect = ValueError("No such customer")
+    mock_billing_provider.update_customer.side_effect = BillingProviderException(
+        "No such customer",
+    )
 
     assert await _sync(mock_billing_provider) == 0
     assert await _attempts(1) == MAX_CUSTOMER_SYNC_ATTEMPTS
@@ -196,7 +207,8 @@ async def test_a_push_is_given_up_after_too_many_attempts(
 
 
 async def test_a_new_email_starts_its_retries_fresh(
-    admin_authenticated: TestClient, mock_billing_provider
+    admin_authenticated: TestClient,
+    mock_billing_provider,
 ):
     await _set_customer("cus_transfer")
     async with TestSessionLocal() as session, session.begin():

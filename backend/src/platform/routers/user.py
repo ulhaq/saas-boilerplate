@@ -43,7 +43,8 @@ async def get_authenticated_user(service: Annotated[UserService, Depends()]) -> 
 
 @router.patch("/me", status_code=status.HTTP_200_OK)
 async def patch_profile_of_authenticated_user(
-    service: Annotated[UserService, Depends()], user_patch: UserPatch
+    service: Annotated[UserService, Depends()],
+    user_patch: UserPatch,
 ) -> UserOut:
     return await service.patch_profile(user_patch)
 
@@ -60,7 +61,7 @@ async def delete_my_account(
 @router.post("/me/email", status_code=status.HTTP_202_ACCEPTED)
 @limiter.limit("5/minute")
 async def request_email_change(
-    request: Request,
+    request: Request,  # noqa: ARG001
     bg_tasks: BackgroundTasks,
     service: Annotated[UserService, Depends()],
     schema_in: EmailChangeIn,
@@ -73,7 +74,8 @@ async def request_email_change(
 
 @router.put("/me/change-password", status_code=status.HTTP_200_OK)
 async def change_password_of_authenticated_user(
-    service: Annotated[UserService, Depends()], change_password_in: ChangePasswordIn
+    service: Annotated[UserService, Depends()],
+    change_password_in: ChangePasswordIn,
 ) -> UserOut:
     return await service.change_password(change_password_in)
 
@@ -93,7 +95,9 @@ async def start_mfa_setup(service: Annotated[MfaService, Depends()]) -> MfaSetup
 @router.post("/me/mfa/enable", status_code=status.HTTP_200_OK)
 @limiter.limit("5/minute")
 async def enable_mfa(
-    request: Request, service: Annotated[MfaService, Depends()], schema_in: MfaCodeIn
+    request: Request,  # noqa: ARG001
+    service: Annotated[MfaService, Depends()],
+    schema_in: MfaCodeIn,
 ) -> MfaRecoveryCodesOut:
     return await service.enable(schema_in)
 
@@ -101,7 +105,7 @@ async def enable_mfa(
 @router.post("/me/mfa/disable", status_code=status.HTTP_204_NO_CONTENT)
 @limiter.limit("5/minute")
 async def disable_mfa(
-    request: Request,
+    request: Request,  # noqa: ARG001
     service: Annotated[MfaService, Depends()],
     schema_in: MfaDisableIn,
 ) -> None:
@@ -111,7 +115,9 @@ async def disable_mfa(
 @router.post("/me/mfa/recovery-codes", status_code=status.HTTP_200_OK)
 @limiter.limit("5/minute")
 async def regenerate_mfa_recovery_codes(
-    request: Request, service: Annotated[MfaService, Depends()], schema_in: MfaCodeIn
+    request: Request,  # noqa: ARG001
+    service: Annotated[MfaService, Depends()],
+    schema_in: MfaCodeIn,
 ) -> MfaRecoveryCodesOut:
     return await service.regenerate_recovery_codes(schema_in)
 
@@ -144,7 +150,8 @@ async def invite_a_user(
     bg_tasks: BackgroundTasks,
     service: Annotated[UserService, Depends()],
     _: Annotated[
-        Auth, Depends(require_permission(Permission.MANAGE_ORGANIZATION_USER))
+        Auth,
+        Depends(require_permission(Permission.MANAGE_ORGANIZATION_USER)),
     ],
     invite_in: InviteUserIn,
 ) -> None:
@@ -155,7 +162,8 @@ async def invite_a_user(
 async def patch_a_user(
     service: Annotated[UserService, Depends()],
     _: Annotated[
-        Auth, Depends(require_permission(Permission.MANAGE_ORGANIZATION_USER))
+        Auth,
+        Depends(require_permission(Permission.MANAGE_ORGANIZATION_USER)),
     ],
     identifier: Annotated[int, Path()],
     user_patch: UserPatch,
@@ -176,7 +184,8 @@ async def get_a_user(
 async def remove_user_from_organization(
     service: Annotated[UserService, Depends()],
     _: Annotated[
-        Auth, Depends(require_permission(Permission.MANAGE_ORGANIZATION_USER))
+        Auth,
+        Depends(require_permission(Permission.MANAGE_ORGANIZATION_USER)),
     ],
     identifier: Annotated[int, Path()],
 ) -> None:

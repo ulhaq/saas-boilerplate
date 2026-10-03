@@ -17,12 +17,17 @@ class BillingProviderABC(ABC):
 
     @abstractmethod
     async def create_product(
-        self, name: str, description: str | None
+        self,
+        name: str,
+        description: str | None,
     ) -> ExternalProduct: ...
 
     @abstractmethod
     async def update_product(
-        self, external_product_id: str, name: str, description: str | None
+        self,
+        external_product_id: str,
+        name: str,
+        description: str | None,
     ) -> ExternalProduct: ...
 
     @abstractmethod
@@ -47,7 +52,10 @@ class BillingProviderABC(ABC):
 
     @abstractmethod
     async def get_or_create_customer(
-        self, organization_id: int, organization_name: str, email: str | None = None
+        self,
+        organization_id: int,
+        organization_name: str,
+        email: str | None = None,
     ) -> str: ...
 
     @abstractmethod
@@ -72,7 +80,8 @@ class BillingProviderABC(ABC):
 
     @abstractmethod
     async def cancel_subscription(
-        self, external_subscription_id: str
+        self,
+        external_subscription_id: str,
     ) -> ExternalSubscription: ...
 
     @abstractmethod
@@ -86,7 +95,8 @@ class BillingProviderABC(ABC):
 
     @abstractmethod
     async def resume_subscription(
-        self, external_subscription_id: str
+        self,
+        external_subscription_id: str,
     ) -> ExternalSubscription: ...
 
     @abstractmethod
@@ -94,13 +104,16 @@ class BillingProviderABC(ABC):
         self,
         external_subscription_id: str,
         new_external_price_id: str,
+        *,
         skip_proration: bool = False,
         new_amount: int = 0,
     ) -> ExternalSubscription: ...
 
     @abstractmethod
     async def get_customer_portal_url(
-        self, external_customer_id: str, return_url: str
+        self,
+        external_customer_id: str,
+        return_url: str,
     ) -> CustomerPortalResult: ...
 
     @abstractmethod
@@ -120,7 +133,9 @@ class BillingProviderABC(ABC):
 
     @abstractmethod
     def construct_webhook_event(
-        self, payload: bytes, sig_header: str
+        self,
+        payload: bytes,
+        sig_header: str,
     ) -> WebhookPayload:
         """
         Parse and verify a raw webhook payload.

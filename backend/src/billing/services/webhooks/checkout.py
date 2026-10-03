@@ -18,7 +18,8 @@ class CheckoutWebhookHandlers(WebhookHandlerGroup):
         }
 
     async def _get_account_from_checkout_event(
-        self, obj: dict
+        self,
+        obj: dict,
     ) -> BillingAccount | None:
         customer_id: str | None = obj.get("customer")
         metadata: dict = obj.get("metadata", {})
@@ -27,7 +28,7 @@ class CheckoutWebhookHandlers(WebhookHandlerGroup):
         if customer_id:
             account = (
                 await self.repos.billing_account.get_by_external_customer_id_locked(
-                    customer_id
+                    customer_id,
                 )
             )
         if not account:
@@ -35,7 +36,7 @@ class CheckoutWebhookHandlers(WebhookHandlerGroup):
             if organization_id_str:
                 try:
                     account = await self.repos.billing_account.get_for_organization(
-                        int(organization_id_str)
+                        int(organization_id_str),
                     )
                 except ValueError:
                     log.warning(
@@ -64,11 +65,12 @@ class CheckoutWebhookHandlers(WebhookHandlerGroup):
         # find the organization by customer ID.
         if not account.external_customer_id:
             await self.repos.billing_account.update(
-                account, external_customer_id=customer_id
+                account,
+                external_customer_id=customer_id,
             )
 
         sub = await self.repos.subscription.get_active_for_organization_locked(
-            account.organization_id
+            account.organization_id,
         )
         if not sub:
             return
@@ -101,7 +103,7 @@ class CheckoutWebhookHandlers(WebhookHandlerGroup):
         sub = None
         if account:
             sub = await self.repos.subscription.get_active_for_organization_locked(
-                account.organization_id
+                account.organization_id,
             )
 
         if not sub or sub.status != "incomplete":
@@ -124,5 +126,7 @@ class CheckoutWebhookHandlers(WebhookHandlerGroup):
             await self._plan_changed(sub.organization_id)
         else:
             await self.repos.subscription.update(
-                sub, status="canceled", canceled_at=datetime.now(UTC)
+                sub,
+                status="canceled",
+                canceled_at=datetime.now(UTC),
             )

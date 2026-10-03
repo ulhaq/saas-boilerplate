@@ -20,12 +20,14 @@ class Organization(ResourceModel):
         User,
         secondary="user_organization",
         secondaryjoin=and_(
-            UserOrganization.user_id == User.id, User.deleted_at.is_(None)
+            UserOrganization.user_id == User.id,
+            User.deleted_at.is_(None),
         ),
         back_populates="organizations",
         lazy="selectin",
         passive_deletes=True,
     )
     roles: Mapped[list[Role]] = relationship(
-        back_populates="organization", passive_deletes=True
+        back_populates="organization",
+        passive_deletes=True,
     )

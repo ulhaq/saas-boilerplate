@@ -1,7 +1,7 @@
 import secrets
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
-from typing import Annotated
+from typing import Annotated, override
 
 from fastapi import Depends
 
@@ -46,7 +46,7 @@ from src.platform.services.mfa import verify_user_mfa_code
 
 
 class UserService(
-    ResourceService[UserRepository, User, UserPatch | ChangePasswordIn, UserOut]
+    ResourceService[UserRepository, User, UserPatch | ChangePasswordIn, UserOut],
 ):
     current_user: Auth
 
@@ -77,7 +77,7 @@ class UserService(
                 "created_at": user.created_at,
                 "updated_at": user.updated_at,
                 "roles": organization_roles,
-            }
+            },
         )
 
     async def _assert_not_last_admin(self, user: User) -> None:
@@ -92,13 +92,15 @@ class UserService(
         if Permission.MANAGE_USER_ROLE.value not in user_permissions:
             return
         if not await self.repo.has_other_user_with_permission(
-            Permission.MANAGE_USER_ROLE.value, exclude_user_id=user.id
+            Permission.MANAGE_USER_ROLE.value,
+            exclude_user_id=user.id,
         ):
             raise PermissionDeniedException(
                 "Cannot perform this action: organization must retain at least one "
-                "user with role management access"
+                "user with role management access",
             )
 
+    @override
     async def paginate(
         self,
         schema_out: type[UserOut],
@@ -137,7 +139,9 @@ class UserService(
         return self._user_out(user)
 
     async def request_email_change(
-        self, schema_in: EmailChangeIn, schedule_task: Callable
+        self,
+        schema_in: EmailChangeIn,
+        schedule_task: Callable,
     ) -> None:
         """Re-authenticate (password + 2FA code if enabled), then email a
         confirmation link to the new address and a notice to the old one.
@@ -148,16 +152,21 @@ class UserService(
         )
         if not user:
             raise NotAuthenticatedException(
-                "Incorrect password", error_code=ErrorCode.LOGIN_FAILED
+                "Incorrect password",
+                error_code=ErrorCode.LOGIN_FAILED,
             )
 
         if mfa_required(user):
             if not schema_in.code:
                 raise ValidationException(
-                    "Two-factor code required", error_code=ErrorCode.MFA_CODE_REQUIRED
+                    "Two-factor code required",
+                    error_code=ErrorCode.MFA_CODE_REQUIRED,
                 )
             await verify_user_mfa_code(
-                self.repos, user, schema_in.code, allow_recovery=True
+                self.repos,
+                user,
+                schema_in.code,
+                allow_recovery=True,
             )
 
         new_email = schema_in.new_email
@@ -218,12 +227,14 @@ class UserService(
         auth = self.current_user
 
         user = authenticate_user(
-            schema_in.password, await self.repos.user.get_by_email(auth.email)
+            schema_in.password,
+            await self.repos.user.get_by_email(auth.email),
         )
 
         if not user:
             raise NotAuthenticatedException(
-                "Incorrect password", error_code=ErrorCode.LOGIN_FAILED
+                "Incorrect password",
+                error_code=ErrorCode.LOGIN_FAILED,
             )
 
         hashed_pw = hash_secret(schema_in.new_password)
@@ -252,13 +263,20 @@ class UserService(
 
         return self._user_out(updated)
 
-    async def get_user(self, identifier: int, include_deleted: bool = False) -> UserOut:
+    async def get_user(
+        self,
+        identifier: int,
+        *,
+        include_deleted: bool = False,
+    ) -> UserOut:
         return self._user_out(
-            await super().get(identifier, include_deleted=include_deleted)
+            await super().get(identifier, include_deleted=include_deleted),
         )
 
     async def invite_user(
-        self, invite_in: InviteUserIn, schedule_task: Callable
+        self,
+        invite_in: InviteUserIn,
+        schedule_task: Callable,
     ) -> None:
         organization_id = self.current_user.organization_id
 
@@ -267,7 +285,8 @@ class UserService(
             # it is accepted or expires (re-inviting an email replaces its own).
             members = await self.repos.user.count_for_org(organization_id)
             pending = await self.repos.invitation.count_pending(
-                organization_id, excluding_email=invite_in.email
+                organization_id,
+                excluding_email=invite_in.email,
             )
             return members + pending
 
@@ -282,11 +301,12 @@ class UserService(
                     error_code=ErrorCode.OWNER_ROLE_ASSIGNMENT,
                 )
             assert_can_grant(
-                self.current_user, (p.name for role in roles for p in role.permissions)
+                self.current_user,
+                (p.name for role in roles for p in role.permissions),
             )
 
         organization = await self.repos.organization.get(
-            self.current_user.organization_id
+            self.current_user.organization_id,
         )
         if not organization:
             raise NotFoundException("Organization not found.")
@@ -353,12 +373,13 @@ class UserService(
         await self._assert_not_last_admin(user)
 
         membership = await self.repos.user_organization.get_by_user_and_organization(
-            identifier, org_id
+            identifier,
+            org_id,
         )
         if membership:
             active = (
                 await self.repos.user_organization.get_active_organization_for_user(
-                    identifier
+                    identifier,
                 )
             )
             if active and active.organization_id == org_id:
@@ -387,7 +408,7 @@ class UserService(
     async def manage_roles(self, identifier: int, schema_in: UserRoleIn) -> UserOut:
         if self.current_user.id == identifier:
             raise PermissionDeniedException(
-                "You are not allowed to manage your own roles"
+                "You are not allowed to manage your own roles",
             )
 
         user = await self.get(identifier)
@@ -398,7 +419,7 @@ class UserService(
             new_roles = list(await self.repos.role.filter_by_ids(schema_in.role_ids))
             if len(new_roles) != len(schema_in.role_ids):
                 raise PermissionDeniedException(
-                    "One or more roles do not belong to your organization"
+                    "One or more roles do not belong to your organization",
                 )
 
         manage_permission = Permission.MANAGE_USER_ROLE.value
@@ -530,7 +551,7 @@ class UserService(
             notifications=[
                 {
                     "organization_id": n.organization_id,
-                    "type": n.type,
+                    "notification_type": n.notification_type,
                     "payload": n.payload,
                     "read_at": n.read_at.isoformat() if n.read_at else None,
                     "created_at": n.created_at.isoformat(),
@@ -547,7 +568,8 @@ class UserService(
         )
         if not user:
             raise NotAuthenticatedException(
-                "Incorrect password", error_code=ErrorCode.LOGIN_FAILED
+                "Incorrect password",
+                error_code=ErrorCode.LOGIN_FAILED,
             )
 
         owner_orgs = [
@@ -578,7 +600,8 @@ class UserService(
 
         for membership in memberships:
             await self.repos.api_token.revoke_all_for_user_org(
-                user.id, membership.organization_id
+                user.id,
+                membership.organization_id,
             )
             await emit(
                 HookEvent.MEMBER_REMOVED,

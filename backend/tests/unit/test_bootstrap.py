@@ -36,10 +36,12 @@ def _product(name: str, **kwargs) -> Module:
 def test_compose_default_roles_adds_each_products_grants():
     roles: list[RoleSpec] = [("Member", "Default member", [_Perm.READ_WIDGET])]
     widgets = _product(
-        "widgets", default_role_permissions={"Member": [_Perm.EDIT_WIDGET]}
+        "widgets",
+        default_role_permissions={"Member": [_Perm.EDIT_WIDGET]},
     )
     gadgets = _product(
-        "gadgets", default_role_permissions={"Member": [_Perm.READ_GADGET]}
+        "gadgets",
+        default_role_permissions={"Member": [_Perm.READ_GADGET]},
     )
 
     assert compose_default_roles(roles, [widgets, gadgets]) == [
@@ -47,7 +49,7 @@ def test_compose_default_roles_adds_each_products_grants():
             "Member",
             "Default member",
             [_Perm.READ_WIDGET, _Perm.EDIT_WIDGET, _Perm.READ_GADGET],
-        )
+        ),
     ]
 
 
@@ -68,7 +70,8 @@ def test_compose_default_roles_does_not_mutate_platform_roles():
     platform_grants: list[StrEnum] = [_Perm.READ_WIDGET]
     roles: list[RoleSpec] = [("Member", "Default member", platform_grants)]
     widgets = _product(
-        "widgets", default_role_permissions={"Member": [_Perm.EDIT_WIDGET]}
+        "widgets",
+        default_role_permissions={"Member": [_Perm.EDIT_WIDGET]},
     )
 
     compose_default_roles(roles, [widgets])
@@ -98,10 +101,10 @@ def test_compose_merges_hooks_subjects_and_templates_in_product_order(tmp_path):
     composed = compose([first, second])
 
     assert composed.hooks == {
-        HookEvent.PLAN_CHANGED: (_on_plan_changed, _on_plan_changed_too)
+        HookEvent.PLAN_CHANGED: (_on_plan_changed, _on_plan_changed_too),
     }
     assert composed.email_subjects == {
-        "en": {"widget-ready": "Widget ready", "gadget-ready": "Gadget ready"}
+        "en": {"widget-ready": "Widget ready", "gadget-ready": "Gadget ready"},
     }
     assert composed.template_directories == [tmp_path / "first"]
 
@@ -143,12 +146,12 @@ async def test_platform_code_uses_the_installed_composition(monkeypatch, tmp_pat
                     hooks={HookEvent.PLAN_CHANGED: [record]},
                     # Products can also override a platform subject.
                     email_subjects={
-                        "en": {"widget-ready": "{app_name} widget", "welcome": "Hi"}
+                        "en": {"widget-ready": "{app_name} widget", "welcome": "Hi"},
                     },
                     template_directory=tmp_path,
-                )
-            ]
-        )
+                ),
+            ],
+        ),
     )
 
     await emit(HookEvent.PLAN_CHANGED, organization_id=1)

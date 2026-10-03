@@ -33,7 +33,7 @@ class WorkerRunRepository:
                 items_processed=items_processed,
                 changes_detected=changes_detected,
                 error_count=error_count,
-            )
+            ),
         )
 
     async def get_latest(self, worker_type: str | None = None) -> WorkerRun | None:

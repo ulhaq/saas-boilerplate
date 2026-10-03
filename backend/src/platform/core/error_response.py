@@ -22,7 +22,11 @@ class ErrorResponse(BaseModel):
     msg: Annotated[str, Field()]
 
     def __init__(
-        self, request: Request, error_code: ErrorCodeEnum, msg: str, **kwargs: Any
+        self,
+        request: Request,
+        error_code: ErrorCodeEnum,
+        msg: str,
+        **kwargs: Any,
     ) -> None:
         super().__init__(
             time=datetime.now(UTC),
@@ -45,7 +49,11 @@ class ValidationErrorResponse(ErrorResponse):
     errors: Annotated[list[ValidationDetail], Field()]
 
     def __init__(
-        self, request: Request, error_code: ErrorCodeEnum, msg: str, **kwargs: Any
+        self,
+        request: Request,
+        error_code: ErrorCodeEnum,
+        msg: str,
+        **kwargs: Any,
     ) -> None:
         kwargs["errors"] = [
             ValidationDetail(

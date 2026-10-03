@@ -39,7 +39,9 @@ class RegistrationService(AuthBaseService):
     organization."""
 
     async def register_organization(
-        self, register_in: RegisterIn, schedule_task: Callable
+        self,
+        register_in: RegisterIn,
+        schedule_task: Callable,
     ) -> RegisterOut:
         if await self.repos.user.get_by_email(register_in.email):
             raise AlreadyExistsException(
@@ -88,7 +90,8 @@ class RegistrationService(AuthBaseService):
         record = await self.repos.email_verification_token.get_by_email(email)
         if not record or not verify_secret(schema_in.token, record.token):
             raise NotAuthenticatedException(
-                "Token invalid", error_code=ErrorCode.TOKEN_INVALID
+                "Token invalid",
+                error_code=ErrorCode.TOKEN_INVALID,
             )
 
         terms_accepted_at = record.terms_accepted_at
@@ -107,7 +110,9 @@ class RegistrationService(AuthBaseService):
         return SetupTokenOut(setup_token=setup_token)
 
     async def complete_registration(
-        self, schema_in: CompleteRegistrationIn, schedule_task: Callable
+        self,
+        schema_in: CompleteRegistrationIn,
+        schedule_task: Callable,
     ) -> Token:
         payload: dict = unsign(
             schema_in.setup_token,

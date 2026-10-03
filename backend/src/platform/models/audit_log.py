@@ -23,7 +23,10 @@ class AuditLog(Base):
         index=True,
     )
     user_id: Mapped[int | None] = mapped_column(
-        Integer, ForeignKey("user.id", ondelete="SET NULL"), nullable=True, index=True
+        Integer,
+        ForeignKey("user.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
     )
     action: Mapped[str] = mapped_column(String, nullable=False)
     resource_type: Mapped[str | None] = mapped_column(String, nullable=True)
@@ -38,6 +41,7 @@ class AuditLog(Base):
     )
 
     organization: Mapped[Organization | None] = relationship(
-        "Organization", passive_deletes=True
+        "Organization",
+        passive_deletes=True,
     )
     user: Mapped[User | None] = relationship("User", passive_deletes=True)

@@ -9,6 +9,7 @@ from pytest_mock import MockerFixture
 from sqlalchemy import func, select
 
 from src.billing.models.billing import PlanPrice, PlanSetting
+from src.platform.core.exceptions import ClientException
 from src.platform.enums import UsageMetric
 from src.platform.models.invitation import Invitation
 from src.platform.models.user import User
@@ -48,7 +49,8 @@ async def _pending_invitations() -> int:
 
 
 async def test_pending_invitations_hold_seats(
-    mocker: MockerFixture, admin_authenticated: TestClient
+    mocker: MockerFixture,
+    admin_authenticated: TestClient,
 ):
     await _set_seats(MEMBERS + 1)
 
@@ -65,7 +67,9 @@ async def test_pending_invitations_hold_seats(
 
 
 async def test_joining_a_full_organization_is_refused_and_the_invite_kept(
-    mocker: MockerFixture, admin_authenticated: TestClient, client: TestClient
+    mocker: MockerFixture,
+    admin_authenticated: TestClient,
+    client: TestClient,
 ):
     await _set_seats(MEMBERS + 1)
     _, token = _invite(mocker, admin_authenticated, "late@example.org")
@@ -95,7 +99,9 @@ async def test_concurrent_requests_cannot_both_take_the_last_seat():
                 async with session.begin():
                     repos = RepositoryManager(session)
                     await BaseService(repos)._require_capacity(
-                        UsageMetric.SEATS, 1, lambda: repos.user.count_for_org(1)
+                        UsageMetric.SEATS,
+                        1,
+                        lambda: repos.user.count_for_org(1),
                     )
                     user = User(name=email, email=email, password="x")
                     session.add(user)
@@ -105,7 +111,7 @@ async def test_concurrent_requests_cannot_both_take_the_last_seat():
                     # other request would still see the old count.
                     await asyncio.sleep(0.2)
                 results.append("joined")
-            except Exception as exc:
+            except ClientException as exc:
                 results.append(type(exc).__name__)
 
     await asyncio.gather(join("a@example.org"), join("b@example.org"))

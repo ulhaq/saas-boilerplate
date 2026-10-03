@@ -33,15 +33,14 @@ def _make_service(session, auth: Auth) -> ApiTokenService:
 
 
 async def test_create_token_success():
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            service = _make_service(session, _admin_auth())
-            result = await service.create_token(
-                ApiTokenCreate(
-                    name="My Token",
-                    permissions=[PermEnum.MANAGE_USER_ROLE.value],
-                )
-            )
+    async with TestSessionLocal() as session, session.begin():
+        service = _make_service(session, _admin_auth())
+        result = await service.create_token(
+            ApiTokenCreate(
+                name="My Token",
+                permissions=[PermEnum.MANAGE_USER_ROLE.value],
+            ),
+        )
 
     assert result.token.startswith("sk_")
     assert result.name == "My Token"
@@ -58,16 +57,15 @@ async def test_create_token_invalid_permissions_raises():
         permissions=[],  # no permissions
     )
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            service = _make_service(session, no_perm_auth)
-            with pytest.raises(ValidationException):
-                await service.create_token(
-                    ApiTokenCreate(
-                        name="Bad Token",
-                        permissions=[PermEnum.MANAGE_USER_ROLE.value],
-                    )
-                )
+    async with TestSessionLocal() as session, session.begin():
+        service = _make_service(session, no_perm_auth)
+        with pytest.raises(ValidationException):
+            await service.create_token(
+                ApiTokenCreate(
+                    name="Bad Token",
+                    permissions=[PermEnum.MANAGE_USER_ROLE.value],
+                ),
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -76,24 +74,23 @@ async def test_create_token_invalid_permissions_raises():
 
 
 async def test_list_tokens_returns_list():
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            service = _make_service(session, _admin_auth())
-            result = await service.list_tokens()
+    async with TestSessionLocal() as session, session.begin():
+        service = _make_service(session, _admin_auth())
+        result = await service.list_tokens()
 
     assert isinstance(result, list)
 
 
 async def test_list_tokens_includes_created_token():
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            service = _make_service(session, _admin_auth())
-            await service.create_token(
-                ApiTokenCreate(
-                    name="Listed", permissions=[PermEnum.MANAGE_USER_ROLE.value]
-                )
-            )
-            result = await service.list_tokens()
+    async with TestSessionLocal() as session, session.begin():
+        service = _make_service(session, _admin_auth())
+        await service.create_token(
+            ApiTokenCreate(
+                name="Listed",
+                permissions=[PermEnum.MANAGE_USER_ROLE.value],
+            ),
+        )
+        result = await service.list_tokens()
 
     assert any(t.name == "Listed" for t in result)
 
@@ -104,20 +101,19 @@ async def test_list_tokens_includes_created_token():
 
 
 async def test_revoke_token_success():
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            service = _make_service(session, _admin_auth())
-            created = await service.create_token(
-                ApiTokenCreate(
-                    name="To Revoke", permissions=[PermEnum.MANAGE_USER_ROLE.value]
-                )
-            )
-            await service.revoke_token(created.id)
+    async with TestSessionLocal() as session, session.begin():
+        service = _make_service(session, _admin_auth())
+        created = await service.create_token(
+            ApiTokenCreate(
+                name="To Revoke",
+                permissions=[PermEnum.MANAGE_USER_ROLE.value],
+            ),
+        )
+        await service.revoke_token(created.id)
 
 
 async def test_revoke_token_not_found_raises():
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            service = _make_service(session, _admin_auth())
-            with pytest.raises(NotFoundException):
-                await service.revoke_token(99999)
+    async with TestSessionLocal() as session, session.begin():
+        service = _make_service(session, _admin_auth())
+        with pytest.raises(NotFoundException):
+            await service.revoke_token(99999)

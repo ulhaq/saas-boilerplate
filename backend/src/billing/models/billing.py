@@ -27,18 +27,27 @@ class Plan(ResourceModel):
     name: Mapped[str] = mapped_column(String, index=True, nullable=False)
     description: Mapped[str | None] = mapped_column(String, nullable=True)
     external_product_id: Mapped[str | None] = mapped_column(
-        String, nullable=True, index=True, unique=True
+        String,
+        nullable=True,
+        index=True,
+        unique=True,
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     prices: Mapped[list[PlanPrice]] = relationship(
-        back_populates="plan", passive_deletes=True, lazy="selectin"
+        back_populates="plan",
+        passive_deletes=True,
+        lazy="selectin",
     )
     plan_features: Mapped[list[PlanFeature]] = relationship(
-        back_populates="plan", passive_deletes=True, lazy="selectin"
+        back_populates="plan",
+        passive_deletes=True,
+        lazy="selectin",
     )
     plan_settings: Mapped[list[PlanSetting]] = relationship(
-        back_populates="plan", passive_deletes=True, lazy="selectin"
+        back_populates="plan",
+        passive_deletes=True,
+        lazy="selectin",
     )
 
 
@@ -56,7 +65,10 @@ class PlanPrice(ResourceModel):
     interval: Mapped[str] = mapped_column(String, nullable=False)
     interval_count: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     external_price_id: Mapped[str | None] = mapped_column(
-        String, nullable=True, index=True, unique=True
+        String,
+        nullable=True,
+        index=True,
+        unique=True,
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
@@ -107,26 +119,36 @@ class Subscription(ResourceModel):
         nullable=True,
     )
     external_subscription_id: Mapped[str | None] = mapped_column(
-        String, nullable=True, index=True, unique=True
+        String,
+        nullable=True,
+        index=True,
+        unique=True,
     )
     status: Mapped[str] = mapped_column(String, nullable=False, default="incomplete")
     current_period_start: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
+        DateTime(timezone=True),
+        nullable=True,
     )
     current_period_end: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
+        DateTime(timezone=True),
+        nullable=True,
     )
     cancel_at_period_end: Mapped[bool] = mapped_column(
-        Boolean, default=False, nullable=False
+        Boolean,
+        default=False,
+        nullable=False,
     )
     canceled_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
+        DateTime(timezone=True),
+        nullable=True,
     )
     cancel_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
+        DateTime(timezone=True),
+        nullable=True,
     )
     trial_end: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
+        DateTime(timezone=True),
+        nullable=True,
     )
 
     organization: Mapped[Organization] = relationship()
@@ -179,11 +201,15 @@ class WebhookEvent(ResourceModel):
     __tablename__ = "billing_webhook_event"
 
     external_event_id: Mapped[str] = mapped_column(
-        String, unique=True, nullable=False, index=True
+        String,
+        unique=True,
+        nullable=False,
+        index=True,
     )
     event_type: Mapped[str] = mapped_column(String, nullable=False)
     status: Mapped[str] = mapped_column(String, nullable=False, default="received")
     error: Mapped[str | None] = mapped_column(String, nullable=True)
     processed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
+        DateTime(timezone=True),
+        nullable=True,
     )

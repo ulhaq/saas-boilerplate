@@ -9,7 +9,9 @@ def _do_register(client: TestClient, email: str = "new_user@example.org") -> Non
 
 
 def _do_verify(
-    mocker: MockerFixture, client: TestClient, email: str = "new_user@example.org"
+    mocker: MockerFixture,
+    client: TestClient,
+    email: str = "new_user@example.org",
 ) -> str:
     """Register, capture verification token, verify email, return setup_token."""
     mock_send = mocker.patch("src.platform.services.auth.registration.send_email")
@@ -43,7 +45,8 @@ def _do_complete(
 
 
 def test_registration_seeds_billing_email_from_owner(
-    mocker: MockerFixture, client: TestClient
+    mocker: MockerFixture,
+    client: TestClient,
 ) -> None:
     token_data = _do_complete(mocker, client, password="password1")
     access_token = token_data["access_token"]

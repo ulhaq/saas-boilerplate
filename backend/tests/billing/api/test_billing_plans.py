@@ -1,7 +1,9 @@
+import pytest
 from fastapi.testclient import TestClient
 
 
-def test_get_all_plans(admin_authenticated: TestClient, plan_with_price: dict) -> None:
+@pytest.mark.usefixtures("plan_with_price")
+def test_get_all_plans(admin_authenticated: TestClient) -> None:
     response = admin_authenticated.get("/v1/billing/plans")
     assert response.status_code == 200
     assert "public" in response.headers["cache-control"]

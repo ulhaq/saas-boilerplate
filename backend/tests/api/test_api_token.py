@@ -2,6 +2,7 @@ import hashlib
 import secrets
 from datetime import UTC, datetime, timedelta
 
+import pytest
 from fastapi.testclient import TestClient
 from httpx import Headers, Response
 from sqlalchemy import select
@@ -136,7 +137,8 @@ def test_cannot_manage_tokens_without_permission(
 
 
 def test_authenticate_with_api_token(
-    client: TestClient, admin_authenticated: TestClient
+    client: TestClient,
+    admin_authenticated: TestClient,
 ) -> None:
     plaintext = _create_token(admin_authenticated, "auth token").json()["token"]
     rs = _api_token_client(client, plaintext).get("/v1/users/me")
@@ -145,7 +147,8 @@ def test_authenticate_with_api_token(
 
 
 def test_revoked_token_rejected(
-    client: TestClient, admin_authenticated: TestClient
+    client: TestClient,
+    admin_authenticated: TestClient,
 ) -> None:
     created = _create_token(admin_authenticated, "to revoke").json()
     admin_authenticated.delete(f"/v1/api-tokens/{created['id']}")
@@ -180,7 +183,10 @@ async def test_is_expired_false_for_active_token(
 async def test_is_expired_true_for_past_expiry(admin_authenticated: TestClient) -> None:
     past = datetime.now(UTC) - timedelta(hours=1)
     _, _plaintext = await _seed_token(
-        user_id=1, organization_id=1, name="expired", expires_at=past
+        user_id=1,
+        organization_id=1,
+        name="expired",
+        expires_at=past,
     )
     # Use the plaintext to look up the token via list (seeded tokens appear in list)
     tokens = admin_authenticated.get("/v1/api-tokens").json()
@@ -195,7 +201,9 @@ async def test_removing_user_from_org_revokes_tokens(
     admin_authenticated: TestClient,
 ) -> None:
     _, plaintext = await _seed_token(
-        user_id=2, organization_id=1, name="standard token"
+        user_id=2,
+        organization_id=1,
+        name="standard token",
     )
 
     # Token works before removal
@@ -211,16 +219,21 @@ async def test_removing_user_from_org_revokes_tokens(
         assert _api_token_client(c, plaintext).get("/v1/users/me").status_code == 401
 
 
+@pytest.mark.usefixtures("client")
 async def test_tokens_in_other_orgs_unaffected_on_removal(
-    client: TestClient, admin_authenticated: TestClient
+    admin_authenticated: TestClient,
 ) -> None:
     """Removing user from org 1 must not revoke their tokens in org 2."""
     # Seed tokens for user 2 in both orgs; assert revoke is scoped to org 1 only.
     _, _plaintext_org2 = await _seed_token(
-        user_id=2, organization_id=2, name="org2 token"
+        user_id=2,
+        organization_id=2,
+        name="org2 token",
     )
     _, _plaintext_org1 = await _seed_token(
-        user_id=2, organization_id=1, name="org1 token"
+        user_id=2,
+        organization_id=1,
+        name="org1 token",
     )
 
     # Remove user 2 from org 1
@@ -234,7 +247,7 @@ async def test_tokens_in_other_orgs_unaffected_on_removal(
     # Org 2 token is untouched (check via DB directly)
     async with TestSessionLocal() as session:
         result = await session.execute(
-            select(ApiToken).where(ApiToken.name == "org2 token")
+            select(ApiToken).where(ApiToken.name == "org2 token"),
         )
         token = result.scalar_one()
         assert token.revoked_at is None

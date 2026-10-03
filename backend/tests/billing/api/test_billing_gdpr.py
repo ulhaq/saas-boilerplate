@@ -18,6 +18,6 @@ async def test_the_export_lists_organizations_billed_to_the_user(
 
     assert export["modules"]["billing"] == {
         "billed_organizations": [
-            {"organization_id": 1, "billing_email": "Admin@Example.org"}
-        ]
+            {"organization_id": 1, "billing_email": "Admin@Example.org"},
+        ],
     }

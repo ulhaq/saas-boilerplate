@@ -39,14 +39,15 @@ TEST_DATABASE_URL = _app_url.set(database=f"{_app_url.database}_test_{_worker}")
 test_engine = create_async_engine(TEST_DATABASE_URL, poolclass=NullPool)
 _sync_test_engine = create_engine(TEST_DATABASE_URL, poolclass=NullPool)
 TestSessionLocal = async_sessionmaker(
-    autocommit=False, autoflush=False, bind=test_engine
+    autocommit=False,
+    autoflush=False,
+    bind=test_engine,
 )
 
 
 async def db() -> AsyncGenerator[AsyncSession]:
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            yield session
+    async with TestSessionLocal() as session, session.begin():
+        yield session
 
 
 app.dependency_overrides[get_db] = db
@@ -107,56 +108,52 @@ def _truncate_all_tables() -> None:
         conn.execute(text(f"TRUNCATE {tables} RESTART IDENTITY CASCADE"))
 
 
-@pytest.fixture(scope="function", autouse=True)
+@pytest.fixture(autouse=True)
 async def prepare_database() -> AsyncGenerator[None]:
     hashed_password = hash_secret("password")
     async with TestSessionLocal() as session:
-        organizations = []
-        for organization in INIT_AUTH_DATA["organizations"]:
-            organizations.append(Organization(name=organization["name"]))
+        organizations = [
+            Organization(name=organization["name"])
+            for organization in INIT_AUTH_DATA["organizations"]
+        ]
         session.add_all(organizations)
 
-        permissions = []
-        for permission in ALL_PERMISSIONS:
-            permissions.append(
-                Permission(
-                    name=permission.value,
-                    description=PERMISSION_DESCRIPTIONS[permission],
-                )
+        permissions = [
+            Permission(
+                name=permission.value,
+                description=PERMISSION_DESCRIPTIONS[permission],
             )
+            for permission in ALL_PERMISSIONS
+        ]
         session.add_all(permissions)
 
-        roles = []
-        for role in INIT_AUTH_DATA["roles"]:
-            roles.append(
-                Role(
-                    name=role["name"],
-                    description=role["description"],
-                    is_protected=role.get("is_protected", False),
-                    organization=organizations[role["organization"] - 1],
-                    permissions=[
-                        permission
-                        for permission in permissions
-                        if permission.name in role["permissions"]
-                    ],
-                )
+        roles = [
+            Role(
+                name=role["name"],
+                description=role["description"],
+                is_protected=role.get("is_protected", False),
+                organization=organizations[role["organization"] - 1],
+                permissions=[
+                    permission
+                    for permission in permissions
+                    if permission.name in role["permissions"]
+                ],
             )
+            for role in INIT_AUTH_DATA["roles"]
+        ]
         session.add_all(roles)
 
-        users = []
-        for user in INIT_AUTH_DATA["users"]:
-            users.append(
-                User(
-                    name=user["name"],
-                    email=user["email"],
-                    password=hashed_password,
-                    roles=[
-                        role
-                        for idx, role in enumerate(roles, 1)
-                        if idx in user["roles"]
-                    ],
-                )
+        users = [
+            User(
+                name=user["name"],
+                email=user["email"],
+                password=hashed_password,
+                roles=[
+                    role for idx, role in enumerate(roles, 1) if idx in user["roles"]
+                ],
             )
+            for user in INIT_AUTH_DATA["users"]
+        ]
         session.add_all(users)
 
         await session.flush()
@@ -168,7 +165,7 @@ async def prepare_database() -> AsyncGenerator[None]:
                     user_id=user.id,
                     organization_id=organizations[user_data["organization"] - 1].id,
                     last_active_at=datetime.now(UTC),
-                )
+                ),
             )
         session.add_all(user_organizations)
 
@@ -255,7 +252,7 @@ def organization2_admin_authenticated() -> Generator[TestClient]:
         yield c
 
 
-def pytest_collection_modifyitems(config, items) -> None:
+def pytest_collection_modifyitems(items) -> None:
     for module in WITHOUT_MODULES:
         skip = pytest.mark.skip(reason=f"{module} is not installed")
         for item in items:

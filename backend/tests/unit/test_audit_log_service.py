@@ -24,23 +24,23 @@ def _admin_auth(user_id: int = 1, org_id: int = 1) -> Auth:
 
 
 async def test_paginate_returns_paginated_response():
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            repos = RepositoryManager(session)
-            service = AuditLogService(repos, _admin_auth())
-            result = await service.paginate(page_size=10, page_number=1)
+    async with TestSessionLocal() as session, session.begin():
+        repos = RepositoryManager(session)
+        service = AuditLogService(repos, _admin_auth())
+        result = await service.paginate(page_size=10, page_number=1)
 
     assert result.total >= 0
     assert isinstance(result.items, list)
 
 
 async def test_paginate_with_action_filter():
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            repos = RepositoryManager(session)
-            service = AuditLogService(repos, _admin_auth())
-            result = await service.paginate(
-                page_size=10, page_number=1, action_filter="auth.login"
-            )
+    async with TestSessionLocal() as session, session.begin():
+        repos = RepositoryManager(session)
+        service = AuditLogService(repos, _admin_auth())
+        result = await service.paginate(
+            page_size=10,
+            page_number=1,
+            action_filter="auth.login",
+        )
 
     assert isinstance(result.items, list)

@@ -26,7 +26,7 @@ class CustomerWebhookHandlers(WebhookHandlerGroup):
         if not customer_id or not email:
             return
         account = await self.repos.billing_account.get_by_external_customer_id_locked(
-            customer_id
+            customer_id,
         )
         if account and account.billing_email != email:
             await self.repos.billing_account.update(account, billing_email=email)
@@ -36,7 +36,7 @@ class CustomerWebhookHandlers(WebhookHandlerGroup):
         if not customer_id:
             return
         account = await self.repos.billing_account.get_by_external_customer_id_locked(
-            customer_id
+            customer_id,
         )
         if account:
             await self.repos.billing_account.update(account, has_payment_method=True)
@@ -46,15 +46,16 @@ class CustomerWebhookHandlers(WebhookHandlerGroup):
         # the previous attributes snapshot Stripe includes in the event.
         prev = raw["data"].get("previous_attributes", {})
         customer_id: str | None = raw["data"]["object"].get("customer") or prev.get(
-            "customer"
+            "customer",
         )
         if not customer_id:
             return
         account = await self.repos.billing_account.get_by_external_customer_id_locked(
-            customer_id
+            customer_id,
         )
         if account and account.has_payment_method:
             has_more = await self.provider.has_payment_method(customer_id)
             await self.repos.billing_account.update(
-                account, has_payment_method=has_more
+                account,
+                has_payment_method=has_more,
             )

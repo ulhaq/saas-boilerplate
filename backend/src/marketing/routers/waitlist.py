@@ -12,7 +12,7 @@ router = APIRouter(prefix="/waitlist")
 @router.post("", status_code=status.HTTP_201_CREATED)
 @limiter.limit("5/minute")
 async def join_waitlist(
-    request: Request,
+    request: Request,  # noqa: ARG001
     service: Annotated[WaitlistService, Depends()],
     schema_in: WaitlistJoinIn,
 ) -> WaitlistJoinOut:

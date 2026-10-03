@@ -17,7 +17,10 @@ class BillingProviderException(ClientException):
         headers: dict | None = None,
     ) -> None:
         super().__init__(
-            status.HTTP_502_BAD_GATEWAY, detail, error_code=error_code, headers=headers
+            status.HTTP_502_BAD_GATEWAY,
+            detail,
+            error_code=error_code,
+            headers=headers,
         )
 
 
@@ -31,5 +34,8 @@ class BillingWebhookException(ClientException):
         headers: dict | None = None,
     ) -> None:
         super().__init__(
-            status.HTTP_400_BAD_REQUEST, detail, error_code=error_code, headers=headers
+            status.HTTP_400_BAD_REQUEST,
+            detail,
+            error_code=error_code,
+            headers=headers,
         )

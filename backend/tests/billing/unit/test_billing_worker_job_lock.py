@@ -30,10 +30,9 @@ LOOPS = [
 ]
 
 
+@pytest.mark.usefixtures("job")
 @pytest.mark.parametrize(("job", "loop", "work"), LOOPS)
-async def test_an_iteration_runs_when_no_other_worker_holds_the_job(
-    job, loop, work, mocker
-):
+async def test_an_iteration_runs_when_no_other_worker_holds_the_job(loop, work, mocker):
     do_work = mocker.patch(work, return_value=0)
     await run_one_iteration(loop, mocker)
     do_work.assert_called_once()
@@ -41,7 +40,10 @@ async def test_an_iteration_runs_when_no_other_worker_holds_the_job(
 
 @pytest.mark.parametrize(("job", "loop", "work"), LOOPS)
 async def test_an_iteration_is_skipped_while_another_worker_runs_the_job(
-    job, loop, work, mocker
+    job,
+    loop,
+    work,
+    mocker,
 ):
     do_work = mocker.patch(work, return_value=0)
     async with TestSessionLocal() as other_worker, other_worker.begin():

@@ -9,7 +9,10 @@ retries. Emails sent from a request after it commits can keep using
 import asyncio
 import logging
 from datetime import UTC, datetime, timedelta
+from smtplib import SMTPException
 from typing import Any
+
+from jinja2 import TemplateError
 
 from src.platform.core.config import settings
 from src.platform.core.telemetry import track_worker_run
@@ -56,16 +59,15 @@ async def deliver_due_emails(repos: RepositoryManager) -> int:
                 locale=email.locale,
                 data=email.data,
             )
-        except Exception as exc:
+        except (SMTPException, OSError, TemplateError) as exc:
             retry_at = datetime.now(UTC) + timedelta(minutes=2**email.attempts)
             await repos.email_outbox.mark_failed(email, str(exc)[:1000], retry_at)
             if email.attempts >= MAX_ATTEMPTS:
-                log.error(
-                    "Email gave up after %d attempts [id=%s template=%s]: %s",
+                log.exception(
+                    "Email gave up after %d attempts [id=%s template=%s]",
                     email.attempts,
                     email.id,
                     email.email_template,
-                    exc,
                 )
             else:
                 log.warning(
@@ -87,11 +89,10 @@ async def run_email_outbox_loop(session_factory: Any) -> None:
     while True:
         try:
             with track_worker_run("email_outbox", interval):
-                async with session_factory() as session:
-                    async with session.begin():
-                        sent = await deliver_due_emails(RepositoryManager(session))
+                async with session_factory() as session, session.begin():
+                    sent = await deliver_due_emails(RepositoryManager(session))
                 if sent:
                     log.info("Email outbox: %d email(s) sent", sent)
-        except Exception as exc:
-            log.error("Email outbox loop error: %s", exc, exc_info=True)
+        except Exception:
+            log.exception("Email outbox loop error")
         await asyncio.sleep(interval)

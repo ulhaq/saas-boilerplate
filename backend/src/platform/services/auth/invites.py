@@ -56,11 +56,13 @@ class InviteService(AuthBaseService):
         if not invitation:
             # Unknown, already accepted, or replaced by a newer invite.
             raise NotAuthenticatedException(
-                "Invitation invalid", error_code=ErrorCode.INVITE_INVALID
+                "Invitation invalid",
+                error_code=ErrorCode.INVITE_INVALID,
             )
         if invitation.expires_at <= datetime.now(UTC):
             raise NotAuthenticatedException(
-                "Invitation expired", error_code=ErrorCode.INVITE_EXPIRED
+                "Invitation expired",
+                error_code=ErrorCode.INVITE_EXPIRED,
             )
         return invitation
 
@@ -69,12 +71,15 @@ class InviteService(AuthBaseService):
         if not organization or organization.deleted_at is not None:
             raise NotFoundException(
                 "Organization not found or has been deleted. "
-                f"[organization_id={organization_id}]"
+                f"[organization_id={organization_id}]",
             )
         return organization
 
     async def _add_to_organization(
-        self, user: User, organization_id: int, role_ids: list[int]
+        self,
+        user: User,
+        organization_id: int,
+        role_ids: list[int],
     ) -> User:
         """Create the membership, grant the invited roles, emit MEMBER_ADDED.
         Returns the user re-fetched with the new roles loaded.
@@ -95,7 +100,7 @@ class InviteService(AuthBaseService):
         if role_ids:
             self.repos.role.set_organization_scope(organization_id)
             valid_roles = _filter_assignable_roles(
-                await self.repos.role.filter_by_ids(role_ids)
+                await self.repos.role.filter_by_ids(role_ids),
             )
             if valid_roles:
                 await self.repos.user.add_roles(user, *[r.id for r in valid_roles])
@@ -108,9 +113,7 @@ class InviteService(AuthBaseService):
         )
         return await self.repos.user.unscoped.get_one(user.id)
 
-    async def complete_invite(
-        self, schema_in: CompleteInviteIn, schedule_task: Callable
-    ) -> Token:
+    async def complete_invite(self, schema_in: CompleteInviteIn) -> Token:
         """Accept an invite by creating a new account (unauthenticated).
 
         Existing accounts must sign in (password + 2FA) and use
@@ -133,7 +136,7 @@ class InviteService(AuthBaseService):
 
         if not schema_in.name or not schema_in.password:
             raise ValidationException(
-                "Name and password are required for new accounts."
+                "Name and password are required for new accounts.",
             )
 
         invite_now = datetime.now(UTC)
@@ -201,7 +204,8 @@ class InviteService(AuthBaseService):
         organization = await self._get_live_organization(organization_id)
 
         if await self.repos.user_organization.get_by_user_and_organization(
-            user_id=user.id, organization_id=organization_id
+            user_id=user.id,
+            organization_id=organization_id,
         ):
             raise AlreadyExistsException(
                 "User is already a member of this organization.",
@@ -226,7 +230,8 @@ class InviteService(AuthBaseService):
         session_jti = self._decode_session_jti(refresh_token, user_id=user.id)
         if session_jti:
             await self.repos.refresh_token.revoke_by_jti(
-                session_jti, RefreshTokenRevokeReason.ROTATED
+                session_jti,
+                RefreshTokenRevokeReason.ROTATED,
             )
 
         return await self._issue_tokens(user, organization_id)

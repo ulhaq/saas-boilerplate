@@ -43,7 +43,9 @@ BILLING = Module(
         ),
         RouterMount(router=billing.usage_router, tags=["Billing Usage"], public=False),
         RouterMount(
-            router=billing.webhook_router, tags=["Billing Webhooks"], public=False
+            router=billing.webhook_router,
+            tags=["Billing Webhooks"],
+            public=False,
         ),
     ],
     hooks={

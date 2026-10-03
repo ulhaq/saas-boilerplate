@@ -2,8 +2,6 @@
 permission - through a role's permissions, a user's roles or an invitation -
 needs the caller to hold it (`assert_can_grant`). Owners hold every one."""
 
-from collections.abc import Generator
-
 import pytest
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
@@ -26,7 +24,8 @@ MANAGER, OTHER_MEMBER = 2, 3  # seeded in organization 1
 def _login(email: str) -> TestClient:
     client = TestClient(app)
     token = client.post(
-        "/v1/auth/token", data={"username": email, "password": "password"}
+        "/v1/auth/token",
+        data={"username": email, "password": "password"},
     ).json()["access_token"]
     client.headers["Authorization"] = f"Bearer {token}"
     return client
@@ -48,7 +47,7 @@ def _refused(response) -> None:
 
 
 @pytest.fixture
-def setup() -> Generator[dict]:
+def setup() -> dict:
     owner = _login("admin@example.org")
     ids = {
         p["name"]: p["id"]
@@ -57,7 +56,7 @@ def setup() -> Generator[dict]:
     manager_role = _role(owner, "Manager", MANAGER_PERMISSIONS, ids)
     auditor_role = _role(owner, "Auditor", ["read:audit_log"], ids)
     owner.post(f"/v1/users/{MANAGER}/roles", json={"role_ids": [manager_role]})
-    yield {
+    return {
         "owner": owner,
         "manager": _login("standard@example.org"),
         "ids": ids,
@@ -78,7 +77,7 @@ def test_a_role_can_only_get_permissions_its_editor_holds(setup):
         manager.post(
             f"/v1/roles/{role_id}/permissions",
             json={"permission_ids": [ids["read:user"], ids["read:audit_log"]]},
-        )
+        ),
     )
 
     # The owner may: they hold every permission.
@@ -93,7 +92,7 @@ def test_a_role_can_only_get_permissions_its_editor_holds(setup):
         manager.post(
             f"/v1/roles/{role_id}/permissions",
             json={"permission_ids": [ids["read:user"]]},
-        )
+        ),
     )
 
 
@@ -103,14 +102,15 @@ def test_a_user_can_only_be_given_or_stripped_of_roles_the_caller_could_grant(
     manager, owner, auditor = setup["manager"], setup["owner"], setup["auditor_role"]
 
     _refused(
-        manager.post(f"/v1/users/{OTHER_MEMBER}/roles", json={"role_ids": [auditor]})
+        manager.post(f"/v1/users/{OTHER_MEMBER}/roles", json={"role_ids": [auditor]}),
     )
     owner.post(f"/v1/users/{OTHER_MEMBER}/roles", json={"role_ids": [auditor]})
     _refused(manager.post(f"/v1/users/{OTHER_MEMBER}/roles", json={"role_ids": []}))
 
 
 def test_an_invite_can_only_carry_roles_the_inviter_could_grant(
-    setup, mocker: MockerFixture
+    setup,
+    mocker: MockerFixture,
 ):
     mocker.patch("src.platform.services.user.send_email")
     manager, auditor = setup["manager"], setup["auditor_role"]
@@ -119,11 +119,12 @@ def test_an_invite_can_only_carry_roles_the_inviter_could_grant(
         manager.post(
             "/v1/users/invite",
             json={"email": "new@example.org", "role_ids": [auditor]},
-        )
+        ),
     )
     # A role within the manager's own permissions is fine.
     reader = _role(setup["owner"], "Reader", ["read:user"], setup["ids"])
     response = manager.post(
-        "/v1/users/invite", json={"email": "new@example.org", "role_ids": [reader]}
+        "/v1/users/invite",
+        json={"email": "new@example.org", "role_ids": [reader]},
     )
     assert response.status_code == 204

@@ -20,13 +20,15 @@ class BillingAccountRepository(SQLResourceRepository[BillingAccount]):
         return rs.unique().scalar_one_or_none()
 
     async def get_by_external_customer_id(
-        self, external_customer_id: str
+        self,
+        external_customer_id: str,
     ) -> BillingAccount | None:
         rs = await self.db.execute(self._by_customer(external_customer_id))
         return rs.unique().scalar_one_or_none()
 
     async def get_by_external_customer_id_locked(
-        self, external_customer_id: str
+        self,
+        external_customer_id: str,
     ) -> BillingAccount | None:
         """
         Like get_by_external_customer_id but acquires a row lock (SELECT FOR UPDATE).
@@ -39,7 +41,7 @@ class BillingAccountRepository(SQLResourceRepository[BillingAccount]):
 
     def _by_customer(self, external_customer_id: str) -> Select:
         return self._live().filter(
-            self.model.external_customer_id == external_customer_id
+            self.model.external_customer_id == external_customer_id,
         )
 
     def _live(self) -> Select:
@@ -55,12 +57,14 @@ class BillingAccountRepository(SQLResourceRepository[BillingAccount]):
         rs = await self.db.execute(
             select(self.model)
             .where(func.lower(self.model.billing_email) == email.lower())
-            .order_by(self.model.organization_id)
+            .order_by(self.model.organization_id),
         )
         return list(rs.unique().scalars().all())
 
     async def get_due_customer_syncs(
-        self, max_attempts: int, limit: int = 100
+        self,
+        max_attempts: int,
+        limit: int = 100,
     ) -> list[BillingAccount]:
         """Accounts whose provider customer is waiting for an email update and
         due for a try: never tried, or past their backoff - and not given up.
@@ -79,7 +83,8 @@ class BillingAccountRepository(SQLResourceRepository[BillingAccount]):
                 ),
             )
             .order_by(
-                self.model.customer_sync_next_at.asc().nulls_first(), self.model.id
+                self.model.customer_sync_next_at.asc().nulls_first(),
+                self.model.id,
             )
             .limit(limit)
         )
@@ -99,12 +104,15 @@ class BillingAccountRepository(SQLResourceRepository[BillingAccount]):
                 pending_customer_email=None,
                 customer_sync_attempts=0,
                 customer_sync_next_at=None,
-            )
+            ),
         )
         return bool(rs.rowcount)
 
     async def record_customer_sync_failure(
-        self, account_id: int, email: str, retry_at: datetime
+        self,
+        account_id: int,
+        email: str,
+        retry_at: datetime,
     ) -> int | None:
         """Count a failed push of ``email`` and schedule the next try. Returns
         the attempts so far - or None if a newer email replaced it meanwhile
@@ -119,12 +127,14 @@ class BillingAccountRepository(SQLResourceRepository[BillingAccount]):
                 customer_sync_attempts=self.model.customer_sync_attempts + 1,
                 customer_sync_next_at=retry_at,
             )
-            .returning(self.model.customer_sync_attempts)
+            .returning(self.model.customer_sync_attempts),
         )
         return rs.scalar_one_or_none()
 
     async def get_trial_reminder_candidates(
-        self, created_before: datetime, limit: int = 500
+        self,
+        created_before: datetime,
+        limit: int = 500,
     ) -> list[BillingAccount]:
         """Accounts eligible for the "trial still available" reminder.
 
@@ -147,7 +157,7 @@ class BillingAccountRepository(SQLResourceRepository[BillingAccount]):
                         PlanPrice.amount > 0,
                     ),
                 ),
-            )
+            ),
         )
         stmt = (
             select(self.model)

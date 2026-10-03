@@ -27,7 +27,8 @@ class CatalogWebhookHandlers(WebhookHandlerGroup):
         unlinked = await self.repos.plan.get_unlinked_by_name(name)
         if unlinked:
             await self.repos.plan.update(
-                unlinked, external_product_id=external_product_id
+                unlinked,
+                external_product_id=external_product_id,
             )
             return
 
@@ -60,7 +61,7 @@ class CatalogWebhookHandlers(WebhookHandlerGroup):
         external_price_id: str = obj["id"]
 
         existing = await self.repos.plan_price.get_by_external_price_id(
-            external_price_id
+            external_price_id,
         )
         if existing:
             return
@@ -88,7 +89,8 @@ class CatalogWebhookHandlers(WebhookHandlerGroup):
         )
         if unlinked:
             await self.repos.plan_price.update(
-                unlinked, external_price_id=external_price_id
+                unlinked,
+                external_price_id=external_price_id,
             )
             return
 

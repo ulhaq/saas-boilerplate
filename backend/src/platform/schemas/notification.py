@@ -10,7 +10,7 @@ class NotificationOut(BaseModel):
     id: int
     user_id: int
     organization_id: int
-    type: str
+    notification_type: str
     payload: dict[str, Any]
     read_at: datetime | None
     created_at: datetime

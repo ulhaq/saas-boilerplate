@@ -55,7 +55,10 @@ class EmailOutboxRepository:
         await self.db.flush()
 
     async def mark_failed(
-        self, email: EmailOutbox, error: str, retry_at: datetime
+        self,
+        email: EmailOutbox,
+        error: str,
+        retry_at: datetime,
     ) -> None:
         email.attempts += 1
         email.last_error = error

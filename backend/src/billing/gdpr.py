@@ -7,7 +7,10 @@ from src.platform.repositories.repository_manager import RepositoryManager
 
 
 async def export_user_data(
-    *, repos: RepositoryManager, user_id: int, email: str
+    *,
+    repos: RepositoryManager,
+    user_id: int,  # noqa: ARG001 - part of the exporter signature
+    email: str,
 ) -> dict[str, Any]:
     """The organizations billed to the user's email address."""
     billing = BillingRepositoryManager(repos.db)
@@ -18,5 +21,5 @@ async def export_user_data(
                 "billing_email": account.billing_email,
             }
             for account in await billing.billing_account.list_billed_to(email)
-        ]
+        ],
     }

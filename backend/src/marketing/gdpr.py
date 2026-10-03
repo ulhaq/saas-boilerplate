@@ -7,7 +7,10 @@ from src.platform.repositories.repository_manager import RepositoryManager
 
 
 async def export_user_data(
-    *, repos: RepositoryManager, user_id: int, email: str
+    *,
+    repos: RepositoryManager,
+    user_id: int,  # noqa: ARG001 - part of the exporter signature
+    email: str,
 ) -> dict[str, Any]:
     """The user's waitlist sign-up, if they made one."""
     marketing = MarketingRepositoryManager(repos.db)
@@ -21,5 +24,5 @@ async def export_user_data(
             }
             if entry
             else None
-        )
+        ),
     }

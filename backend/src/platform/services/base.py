@@ -45,7 +45,9 @@ class BaseService:
 
     async def _require_feature(self, feature: StrEnum, organization_id: int) -> None:
         if not await composition.current().entitlements.has_feature(
-            self.repos.db, organization_id, feature
+            self.repos.db,
+            organization_id,
+            feature,
         ):
             raise PlanFeatureUnavailableException
 
@@ -62,13 +64,15 @@ class BaseService:
         concurrent requests can't both take the last slot. Call it right before
         adding the resource, in the same transaction."""
         limit = await composition.current().entitlements.limit(
-            self.repos.db, organization_id, metric
+            self.repos.db,
+            organization_id,
+            metric,
         )
         if limit is None:
             return
         await lock_capacity(self.repos.db, organization_id, metric)
         if await count() >= limit:
-            raise CapacityExceededException()
+            raise CapacityExceededException
 
 
 class ResourceService[
@@ -79,21 +83,22 @@ class ResourceService[
 ](BaseService):
     repo: ResourceRepositoryType
 
-    async def get(self, identifier: int, include_deleted: bool = False) -> BaseType:
+    async def get(self, identifier: int, *, include_deleted: bool = False) -> BaseType:
         if rs := await self.repo.get(identifier, include_deleted=include_deleted):
             return rs
 
         raise NotFoundException(
-            f"{self.repo.model.__name__} not found. [{identifier=}]"
+            f"{self.repo.model.__name__} not found. [{identifier=}]",
         )
 
-    async def get_all(self, include_deleted: bool = False) -> Sequence[BaseType]:
+    async def get_all(self, *, include_deleted: bool = False) -> Sequence[BaseType]:
         return await self.repo.get_all(include_deleted=include_deleted)
 
     async def paginate(
         self,
         schema_out: type[SchemaOutType],
         page_query_params: PageQueryParams,
+        *,
         include_deleted: bool = False,
     ) -> PaginatedResponse[SchemaOutType]:
         items, total = await self.repo.paginate(
@@ -151,6 +156,7 @@ class ResourceService[
         self,
         identifier: int,
         validation_callback: Callable[[], Awaitable] | None = None,
+        *,
         force_delete: bool = False,
     ) -> None:
         model = await self.get(identifier)

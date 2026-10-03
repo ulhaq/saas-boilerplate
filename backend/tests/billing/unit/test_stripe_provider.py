@@ -34,6 +34,7 @@ def _fake_sub(
     cus_id: str = "cus_123",
     price_id: str = "price_123",
     status: str = "active",
+    *,
     cancel_at_period_end: bool = False,
     canceled_at: int | None = None,
     cancel_at: int | None = None,
@@ -69,7 +70,9 @@ async def test_search_product_by_name_found():
     search_result.data = [fake_product]
 
     with patch.object(
-        stripe.Product, "search_async", new=AsyncMock(return_value=search_result)
+        stripe.Product,
+        "search_async",
+        new=AsyncMock(return_value=search_result),
     ):
         result = await _provider().search_product_by_name("Pro Plan")
 
@@ -83,7 +86,9 @@ async def test_search_product_by_name_not_found():
     search_result.data = []
 
     with patch.object(
-        stripe.Product, "search_async", new=AsyncMock(return_value=search_result)
+        stripe.Product,
+        "search_async",
+        new=AsyncMock(return_value=search_result),
     ):
         result = await _provider().search_product_by_name("Ghost Plan")
 
@@ -97,7 +102,9 @@ async def test_search_product_by_name_escapes_single_quote():
     search_result.data = []
 
     with patch.object(
-        stripe.Product, "search_async", new=AsyncMock(return_value=search_result)
+        stripe.Product,
+        "search_async",
+        new=AsyncMock(return_value=search_result),
     ) as mock_search:
         await _provider().search_product_by_name("O'Brien Plan")
 
@@ -107,13 +114,15 @@ async def test_search_product_by_name_escapes_single_quote():
 
 @pytest.mark.asyncio
 async def test_search_product_by_name_stripe_error_raises():
-    with patch.object(
-        stripe.Product,
-        "search_async",
-        new=AsyncMock(side_effect=stripe.StripeError("err")),
+    with (
+        patch.object(
+            stripe.Product,
+            "search_async",
+            new=AsyncMock(side_effect=stripe.StripeError("err")),
+        ),
+        pytest.raises(BillingProviderException),
     ):
-        with pytest.raises(BillingProviderException):
-            await _provider().search_product_by_name("Any Plan")
+        await _provider().search_product_by_name("Any Plan")
 
 
 # ---------------------------------------------------------------------------
@@ -127,7 +136,9 @@ async def test_create_product_success():
     fake_product.id = "prod_new"
 
     with patch.object(
-        stripe.Product, "create_async", new=AsyncMock(return_value=fake_product)
+        stripe.Product,
+        "create_async",
+        new=AsyncMock(return_value=fake_product),
     ):
         result = await _provider().create_product("My Plan", "A description")
 
@@ -137,13 +148,15 @@ async def test_create_product_success():
 
 @pytest.mark.asyncio
 async def test_create_product_stripe_error_raises():
-    with patch.object(
-        stripe.Product,
-        "create_async",
-        new=AsyncMock(side_effect=stripe.StripeError("err")),
+    with (
+        patch.object(
+            stripe.Product,
+            "create_async",
+            new=AsyncMock(side_effect=stripe.StripeError("err")),
+        ),
+        pytest.raises(BillingProviderException),
     ):
-        with pytest.raises(BillingProviderException):
-            await _provider().create_product("X", None)
+        await _provider().create_product("X", None)
 
 
 @pytest.mark.asyncio
@@ -152,7 +165,9 @@ async def test_create_product_no_description():
     fake_product.id = "prod_no_desc"
 
     with patch.object(
-        stripe.Product, "create_async", new=AsyncMock(return_value=fake_product)
+        stripe.Product,
+        "create_async",
+        new=AsyncMock(return_value=fake_product),
     ):
         result = await _provider().create_product("No Desc Plan", None)
 
@@ -170,7 +185,9 @@ async def test_update_product_success():
     fake_product.id = "prod_upd"
 
     with patch.object(
-        stripe.Product, "modify_async", new=AsyncMock(return_value=fake_product)
+        stripe.Product,
+        "modify_async",
+        new=AsyncMock(return_value=fake_product),
     ):
         result = await _provider().update_product("prod_upd", "New Name", "New desc")
 
@@ -179,13 +196,15 @@ async def test_update_product_success():
 
 @pytest.mark.asyncio
 async def test_update_product_stripe_error_raises():
-    with patch.object(
-        stripe.Product,
-        "modify_async",
-        new=AsyncMock(side_effect=stripe.StripeError("err")),
+    with (
+        patch.object(
+            stripe.Product,
+            "modify_async",
+            new=AsyncMock(side_effect=stripe.StripeError("err")),
+        ),
+        pytest.raises(BillingProviderException),
     ):
-        with pytest.raises(BillingProviderException):
-            await _provider().update_product("prod_x", "N", None)
+        await _provider().update_product("prod_x", "N", None)
 
 
 # ---------------------------------------------------------------------------
@@ -196,20 +215,24 @@ async def test_update_product_stripe_error_raises():
 @pytest.mark.asyncio
 async def test_archive_product_success():
     with patch.object(
-        stripe.Product, "modify_async", new=AsyncMock(return_value=MagicMock())
+        stripe.Product,
+        "modify_async",
+        new=AsyncMock(return_value=MagicMock()),
     ):
         await _provider().archive_product("prod_arc")  # should not raise
 
 
 @pytest.mark.asyncio
 async def test_archive_product_stripe_error_raises():
-    with patch.object(
-        stripe.Product,
-        "modify_async",
-        new=AsyncMock(side_effect=stripe.StripeError("err")),
+    with (
+        patch.object(
+            stripe.Product,
+            "modify_async",
+            new=AsyncMock(side_effect=stripe.StripeError("err")),
+        ),
+        pytest.raises(BillingProviderException),
     ):
-        with pytest.raises(BillingProviderException):
-            await _provider().archive_product("prod_arc")
+        await _provider().archive_product("prod_arc")
 
 
 # ---------------------------------------------------------------------------
@@ -223,7 +246,9 @@ async def test_create_price_success():
     fake_price.id = "price_new"
 
     with patch.object(
-        stripe.Price, "create_async", new=AsyncMock(return_value=fake_price)
+        stripe.Price,
+        "create_async",
+        new=AsyncMock(return_value=fake_price),
     ):
         result = await _provider().create_price("prod_123", 999, "usd", "month", 1)
 
@@ -233,13 +258,15 @@ async def test_create_price_success():
 
 @pytest.mark.asyncio
 async def test_create_price_stripe_error_raises():
-    with patch.object(
-        stripe.Price,
-        "create_async",
-        new=AsyncMock(side_effect=stripe.StripeError("err")),
+    with (
+        patch.object(
+            stripe.Price,
+            "create_async",
+            new=AsyncMock(side_effect=stripe.StripeError("err")),
+        ),
+        pytest.raises(BillingProviderException),
     ):
-        with pytest.raises(BillingProviderException):
-            await _provider().create_price("prod_x", 100, "usd", "month", 1)
+        await _provider().create_price("prod_x", 100, "usd", "month", 1)
 
 
 # ---------------------------------------------------------------------------
@@ -250,20 +277,24 @@ async def test_create_price_stripe_error_raises():
 @pytest.mark.asyncio
 async def test_archive_price_success():
     with patch.object(
-        stripe.Price, "modify_async", new=AsyncMock(return_value=MagicMock())
+        stripe.Price,
+        "modify_async",
+        new=AsyncMock(return_value=MagicMock()),
     ):
         await _provider().archive_price("price_arc")
 
 
 @pytest.mark.asyncio
 async def test_archive_price_stripe_error_raises():
-    with patch.object(
-        stripe.Price,
-        "modify_async",
-        new=AsyncMock(side_effect=stripe.StripeError("err")),
+    with (
+        patch.object(
+            stripe.Price,
+            "modify_async",
+            new=AsyncMock(side_effect=stripe.StripeError("err")),
+        ),
+        pytest.raises(BillingProviderException),
     ):
-        with pytest.raises(BillingProviderException):
-            await _provider().archive_price("price_arc")
+        await _provider().archive_price("price_arc")
 
 
 # ---------------------------------------------------------------------------
@@ -279,10 +310,14 @@ async def test_get_or_create_customer_existing():
     search_result.data = [existing_cus]
 
     with patch.object(
-        stripe.Customer, "search_async", new=AsyncMock(return_value=search_result)
+        stripe.Customer,
+        "search_async",
+        new=AsyncMock(return_value=search_result),
     ):
         result = await _provider().get_or_create_customer(
-            1, "Acme Corp", email="owner@acme.com"
+            1,
+            "Acme Corp",
+            email="owner@acme.com",
         )
 
     assert result == "cus_existing"
@@ -297,10 +332,14 @@ async def test_get_or_create_customer_creates_new():
 
     with (
         patch.object(
-            stripe.Customer, "search_async", new=AsyncMock(return_value=search_result)
+            stripe.Customer,
+            "search_async",
+            new=AsyncMock(return_value=search_result),
         ),
         patch.object(
-            stripe.Customer, "create_async", new=AsyncMock(return_value=new_cus)
+            stripe.Customer,
+            "create_async",
+            new=AsyncMock(return_value=new_cus),
         ),
     ):
         result = await _provider().get_or_create_customer(2, "Globex", email=None)
@@ -318,14 +357,20 @@ async def test_get_or_create_customer_creates_new_with_email():
 
     with (
         patch.object(
-            stripe.Customer, "search_async", new=AsyncMock(return_value=search_result)
+            stripe.Customer,
+            "search_async",
+            new=AsyncMock(return_value=search_result),
         ),
         patch.object(
-            stripe.Customer, "create_async", new=AsyncMock(return_value=new_cus)
+            stripe.Customer,
+            "create_async",
+            new=AsyncMock(return_value=new_cus),
         ) as mock_create,
     ):
         result = await _provider().get_or_create_customer(
-            4, "Acme", email="owner@acme.com"
+            4,
+            "Acme",
+            email="owner@acme.com",
         )
 
     assert result == "cus_with_email"
@@ -335,13 +380,15 @@ async def test_get_or_create_customer_creates_new_with_email():
 
 @pytest.mark.asyncio
 async def test_get_or_create_customer_stripe_error_raises():
-    with patch.object(
-        stripe.Customer,
-        "search_async",
-        new=AsyncMock(side_effect=stripe.StripeError("err")),
+    with (
+        patch.object(
+            stripe.Customer,
+            "search_async",
+            new=AsyncMock(side_effect=stripe.StripeError("err")),
+        ),
+        pytest.raises(BillingProviderException),
     ):
-        with pytest.raises(BillingProviderException):
-            await _provider().get_or_create_customer(3, "X Corp")
+        await _provider().get_or_create_customer(3, "X Corp")
 
 
 # ---------------------------------------------------------------------------
@@ -352,20 +399,24 @@ async def test_get_or_create_customer_stripe_error_raises():
 @pytest.mark.asyncio
 async def test_update_customer_success():
     with patch.object(
-        stripe.Customer, "modify_async", new=AsyncMock(return_value=MagicMock())
+        stripe.Customer,
+        "modify_async",
+        new=AsyncMock(return_value=MagicMock()),
     ):
         await _provider().update_customer("cus_123", "new@email.com")
 
 
 @pytest.mark.asyncio
 async def test_update_customer_stripe_error_raises():
-    with patch.object(
-        stripe.Customer,
-        "modify_async",
-        new=AsyncMock(side_effect=stripe.StripeError("err")),
+    with (
+        patch.object(
+            stripe.Customer,
+            "modify_async",
+            new=AsyncMock(side_effect=stripe.StripeError("err")),
+        ),
+        pytest.raises(BillingProviderException),
     ):
-        with pytest.raises(BillingProviderException):
-            await _provider().update_customer("cus_x", "x@y.com")
+        await _provider().update_customer("cus_x", "x@y.com")
 
 
 # ---------------------------------------------------------------------------
@@ -449,20 +500,22 @@ async def test_create_checkout_session_free_plan():
 
 @pytest.mark.asyncio
 async def test_create_checkout_session_stripe_error_raises():
-    with patch.object(
-        stripe.checkout.Session,
-        "create_async",
-        new=AsyncMock(side_effect=stripe.StripeError("err")),
+    with (
+        patch.object(
+            stripe.checkout.Session,
+            "create_async",
+            new=AsyncMock(side_effect=stripe.StripeError("err")),
+        ),
+        pytest.raises(BillingProviderException),
     ):
-        with pytest.raises(BillingProviderException):
-            await _provider().create_checkout_session(
-                external_customer_id=None,
-                external_price_id="price_x",
-                amount=100,
-                success_url="https://x.com",
-                cancel_url="https://x.com",
-                metadata={},
-            )
+        await _provider().create_checkout_session(
+            external_customer_id=None,
+            external_price_id="price_x",
+            amount=100,
+            success_url="https://x.com",
+            cancel_url="https://x.com",
+            metadata={},
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -475,7 +528,9 @@ async def test_cancel_subscription_success():
     fake_sub = _fake_sub(cancel_at_period_end=True)
 
     with patch.object(
-        stripe.Subscription, "modify_async", new=AsyncMock(return_value=fake_sub)
+        stripe.Subscription,
+        "modify_async",
+        new=AsyncMock(return_value=fake_sub),
     ):
         result = await _provider().cancel_subscription("sub_123")
 
@@ -485,13 +540,15 @@ async def test_cancel_subscription_success():
 
 @pytest.mark.asyncio
 async def test_cancel_subscription_stripe_error_raises():
-    with patch.object(
-        stripe.Subscription,
-        "modify_async",
-        new=AsyncMock(side_effect=stripe.StripeError("err")),
+    with (
+        patch.object(
+            stripe.Subscription,
+            "modify_async",
+            new=AsyncMock(side_effect=stripe.StripeError("err")),
+        ),
+        pytest.raises(BillingProviderException),
     ):
-        with pytest.raises(BillingProviderException):
-            await _provider().cancel_subscription("sub_x")
+        await _provider().cancel_subscription("sub_x")
 
 
 # ---------------------------------------------------------------------------
@@ -502,20 +559,24 @@ async def test_cancel_subscription_stripe_error_raises():
 @pytest.mark.asyncio
 async def test_delete_subscription_success():
     with patch.object(
-        stripe.Subscription, "cancel_async", new=AsyncMock(return_value=MagicMock())
+        stripe.Subscription,
+        "cancel_async",
+        new=AsyncMock(return_value=MagicMock()),
     ):
         await _provider().delete_subscription("sub_123")
 
 
 @pytest.mark.asyncio
 async def test_delete_subscription_stripe_error_raises():
-    with patch.object(
-        stripe.Subscription,
-        "cancel_async",
-        new=AsyncMock(side_effect=stripe.StripeError("err")),
+    with (
+        patch.object(
+            stripe.Subscription,
+            "cancel_async",
+            new=AsyncMock(side_effect=stripe.StripeError("err")),
+        ),
+        pytest.raises(BillingProviderException),
     ):
-        with pytest.raises(BillingProviderException):
-            await _provider().delete_subscription("sub_x")
+        await _provider().delete_subscription("sub_x")
 
 
 # ---------------------------------------------------------------------------
@@ -531,10 +592,14 @@ async def test_resume_subscription_active():
 
     with (
         patch.object(
-            stripe.Subscription, "retrieve_async", new=AsyncMock(return_value=current)
+            stripe.Subscription,
+            "retrieve_async",
+            new=AsyncMock(return_value=current),
         ),
         patch.object(
-            stripe.Subscription, "modify_async", new=AsyncMock(return_value=resumed)
+            stripe.Subscription,
+            "modify_async",
+            new=AsyncMock(return_value=resumed),
         ),
     ):
         result = await _provider().resume_subscription("sub_123")
@@ -550,10 +615,14 @@ async def test_resume_subscription_paused():
 
     with (
         patch.object(
-            stripe.Subscription, "retrieve_async", new=AsyncMock(return_value=current)
+            stripe.Subscription,
+            "retrieve_async",
+            new=AsyncMock(return_value=current),
         ),
         patch.object(
-            stripe.Subscription, "resume_async", new=AsyncMock(return_value=resumed)
+            stripe.Subscription,
+            "resume_async",
+            new=AsyncMock(return_value=resumed),
         ),
     ):
         result = await _provider().resume_subscription("sub_123")
@@ -563,13 +632,15 @@ async def test_resume_subscription_paused():
 
 @pytest.mark.asyncio
 async def test_resume_subscription_stripe_error_raises():
-    with patch.object(
-        stripe.Subscription,
-        "retrieve_async",
-        new=AsyncMock(side_effect=stripe.StripeError("err")),
+    with (
+        patch.object(
+            stripe.Subscription,
+            "retrieve_async",
+            new=AsyncMock(side_effect=stripe.StripeError("err")),
+        ),
+        pytest.raises(BillingProviderException),
     ):
-        with pytest.raises(BillingProviderException):
-            await _provider().resume_subscription("sub_x")
+        await _provider().resume_subscription("sub_x")
 
 
 # ---------------------------------------------------------------------------
@@ -592,10 +663,14 @@ async def test_switch_subscription_price_success():
 
     with (
         patch.object(
-            stripe.Subscription, "retrieve_async", new=AsyncMock(return_value=current)
+            stripe.Subscription,
+            "retrieve_async",
+            new=AsyncMock(return_value=current),
         ),
         patch.object(
-            stripe.Subscription, "modify_async", new=AsyncMock(return_value=updated)
+            stripe.Subscription,
+            "modify_async",
+            new=AsyncMock(return_value=updated),
         ),
     ):
         result = await _provider().switch_subscription_price("sub_123", "price_new")
@@ -608,22 +683,28 @@ async def test_switch_subscription_price_no_items_raises():
     current = _fake_sub()
     current.items.data = []
 
-    with patch.object(
-        stripe.Subscription, "retrieve_async", new=AsyncMock(return_value=current)
+    with (
+        patch.object(
+            stripe.Subscription,
+            "retrieve_async",
+            new=AsyncMock(return_value=current),
+        ),
+        pytest.raises(BillingProviderException, match="no items"),
     ):
-        with pytest.raises(BillingProviderException, match="no items"):
-            await _provider().switch_subscription_price("sub_123", "price_new")
+        await _provider().switch_subscription_price("sub_123", "price_new")
 
 
 @pytest.mark.asyncio
 async def test_switch_subscription_price_stripe_error_raises():
-    with patch.object(
-        stripe.Subscription,
-        "retrieve_async",
-        new=AsyncMock(side_effect=stripe.StripeError("err")),
+    with (
+        patch.object(
+            stripe.Subscription,
+            "retrieve_async",
+            new=AsyncMock(side_effect=stripe.StripeError("err")),
+        ),
+        pytest.raises(BillingProviderException),
     ):
-        with pytest.raises(BillingProviderException):
-            await _provider().switch_subscription_price("sub_x", "price_y")
+        await _provider().switch_subscription_price("sub_x", "price_y")
 
 
 # ---------------------------------------------------------------------------
@@ -636,7 +717,9 @@ async def test_create_subscription_success():
     fake_sub = _fake_sub(status="active")
 
     with patch.object(
-        stripe.Subscription, "create_async", new=AsyncMock(return_value=fake_sub)
+        stripe.Subscription,
+        "create_async",
+        new=AsyncMock(return_value=fake_sub),
     ):
         result = await _provider().create_subscription("cus_123", "price_123")
 
@@ -649,10 +732,14 @@ async def test_create_subscription_with_trial():
     fake_sub = _fake_sub(status="trialing")
 
     with patch.object(
-        stripe.Subscription, "create_async", new=AsyncMock(return_value=fake_sub)
+        stripe.Subscription,
+        "create_async",
+        new=AsyncMock(return_value=fake_sub),
     ):
         result = await _provider().create_subscription(
-            "cus_123", "price_123", trial_period_days=14
+            "cus_123",
+            "price_123",
+            trial_period_days=14,
         )
 
     assert result.status == "trialing"
@@ -660,13 +747,15 @@ async def test_create_subscription_with_trial():
 
 @pytest.mark.asyncio
 async def test_create_subscription_stripe_error_raises():
-    with patch.object(
-        stripe.Subscription,
-        "create_async",
-        new=AsyncMock(side_effect=stripe.StripeError("err")),
+    with (
+        patch.object(
+            stripe.Subscription,
+            "create_async",
+            new=AsyncMock(side_effect=stripe.StripeError("err")),
+        ),
+        pytest.raises(BillingProviderException),
     ):
-        with pytest.raises(BillingProviderException):
-            await _provider().create_subscription("cus_x", "price_y")
+        await _provider().create_subscription("cus_x", "price_y")
 
 
 # ---------------------------------------------------------------------------
@@ -681,7 +770,9 @@ async def test_has_payment_method_true():
     pm_list.data = [pm]
 
     with patch.object(
-        stripe.PaymentMethod, "list_async", new=AsyncMock(return_value=pm_list)
+        stripe.PaymentMethod,
+        "list_async",
+        new=AsyncMock(return_value=pm_list),
     ):
         assert await _provider().has_payment_method("cus_123") is True
 
@@ -692,20 +783,24 @@ async def test_has_payment_method_false():
     pm_list.data = []
 
     with patch.object(
-        stripe.PaymentMethod, "list_async", new=AsyncMock(return_value=pm_list)
+        stripe.PaymentMethod,
+        "list_async",
+        new=AsyncMock(return_value=pm_list),
     ):
         assert await _provider().has_payment_method("cus_123") is False
 
 
 @pytest.mark.asyncio
 async def test_has_payment_method_stripe_error_raises():
-    with patch.object(
-        stripe.PaymentMethod,
-        "list_async",
-        new=AsyncMock(side_effect=stripe.StripeError("err")),
+    with (
+        patch.object(
+            stripe.PaymentMethod,
+            "list_async",
+            new=AsyncMock(side_effect=stripe.StripeError("err")),
+        ),
+        pytest.raises(BillingProviderException),
     ):
-        with pytest.raises(BillingProviderException):
-            await _provider().has_payment_method("cus_x")
+        await _provider().has_payment_method("cus_x")
 
 
 # ---------------------------------------------------------------------------
@@ -724,7 +819,8 @@ async def test_get_customer_portal_url_success():
         new=AsyncMock(return_value=fake_session),
     ):
         result = await _provider().get_customer_portal_url(
-            "cus_123", "https://app.com/return"
+            "cus_123",
+            "https://app.com/return",
         )
 
     assert isinstance(result, CustomerPortalResult)
@@ -733,13 +829,15 @@ async def test_get_customer_portal_url_success():
 
 @pytest.mark.asyncio
 async def test_get_customer_portal_url_stripe_error_raises():
-    with patch.object(
-        stripe.billing_portal.Session,
-        "create_async",
-        new=AsyncMock(side_effect=stripe.StripeError("err")),
+    with (
+        patch.object(
+            stripe.billing_portal.Session,
+            "create_async",
+            new=AsyncMock(side_effect=stripe.StripeError("err")),
+        ),
+        pytest.raises(BillingProviderException),
     ):
-        with pytest.raises(BillingProviderException):
-            await _provider().get_customer_portal_url("cus_x", "https://app.com")
+        await _provider().get_customer_portal_url("cus_x", "https://app.com")
 
 
 # ---------------------------------------------------------------------------
@@ -761,23 +859,27 @@ def test_construct_webhook_event_valid():
 
 
 def test_construct_webhook_event_invalid_signature_raises():
-    with patch.object(
-        stripe.Webhook,
-        "construct_event",
-        side_effect=stripe.SignatureVerificationError("bad sig", "sig"),
+    with (
+        patch.object(
+            stripe.Webhook,
+            "construct_event",
+            side_effect=stripe.SignatureVerificationError("bad sig", "sig"),
+        ),
+        pytest.raises(BillingWebhookException),
     ):
-        with pytest.raises(BillingWebhookException):
-            _provider().construct_webhook_event(b"payload", "bad_sig")
+        _provider().construct_webhook_event(b"payload", "bad_sig")
 
 
 def test_construct_webhook_event_stripe_error_raises():
-    with patch.object(
-        stripe.Webhook,
-        "construct_event",
-        side_effect=stripe.StripeError("parse error"),
+    with (
+        patch.object(
+            stripe.Webhook,
+            "construct_event",
+            side_effect=stripe.StripeError("parse error"),
+        ),
+        pytest.raises(BillingProviderException),
     ):
-        with pytest.raises(BillingProviderException):
-            _provider().construct_webhook_event(b"payload", "sig")
+        _provider().construct_webhook_event(b"payload", "sig")
 
 
 def test_construct_webhook_event_unknown_type_passthrough():
@@ -833,7 +935,7 @@ def unresponsive_stripe() -> Generator[None]:
         def do_GET(self) -> None:
             time.sleep(3)
 
-        def log_message(self, format: str, *args: Any) -> None:
+        def log_message(self, format: str, *args: Any) -> None:  # noqa: A002
             pass
 
     server = ThreadingHTTPServer(("127.0.0.1", 0), Slow)
@@ -849,15 +951,15 @@ def unresponsive_stripe() -> Generator[None]:
     )
 
 
-async def test_a_hanging_stripe_call_fails_at_the_timeout(
-    unresponsive_stripe: None,
-) -> None:
+@pytest.mark.usefixtures("unresponsive_stripe")
+async def test_a_hanging_stripe_call_fails_at_the_timeout() -> None:
     configure_stripe(timeout_seconds=0.3, max_network_retries=0)
     assert stripe.max_network_retries == 0
     started = time.monotonic()
     with pytest.raises(BillingProviderException):
         await _provider().get_or_create_customer(
-            organization_id=1, organization_name="Acme"
+            organization_id=1,
+            organization_name="Acme",
         )
     assert time.monotonic() - started < 2
 
@@ -877,7 +979,8 @@ async def test_get_or_create_customer_is_idempotent_per_organization() -> None:
         ) as create,
     ):
         customer_id = await provider.get_or_create_customer(
-            organization_id=42, organization_name="Acme"
+            organization_id=42,
+            organization_name="Acme",
         )
 
     assert customer_id == "cus_new"
@@ -908,7 +1011,7 @@ async def _cancel_duplicate(status: str, payments: list[MagicMock]):
         patch(
             "stripe.Refund.create_async",
             new=AsyncMock(
-                side_effect=lambda **_: MagicMock(amount=next(refund_amounts))
+                side_effect=lambda **_: MagicMock(amount=next(refund_amounts)),
             ),
         ) as refund,
         patch("stripe.Subscription.cancel_async", new=AsyncMock()) as cancel,
@@ -919,7 +1022,8 @@ async def _cancel_duplicate(status: str, payments: list[MagicMock]):
 
 async def test_cancel_duplicate_refunds_each_paid_payment_and_cancels() -> None:
     refunded, list_payments, refund, cancel = await _cancel_duplicate(
-        "active", [_invoice_payment("pi_1", None), _invoice_payment(None, "ch_2")]
+        "active",
+        [_invoice_payment("pi_1", None), _invoice_payment(None, "ch_2")],
     )
 
     assert refunded == 9900 + 500

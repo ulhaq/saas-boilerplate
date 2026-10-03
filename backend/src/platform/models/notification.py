@@ -28,10 +28,12 @@ class Notification(Base):
         nullable=False,
         index=True,
     )
-    type: Mapped[str] = mapped_column(String(64), nullable=False)
+    notification_type: Mapped[str] = mapped_column(String(64), nullable=False)
     payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     read_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True, default=None
+        DateTime(timezone=True),
+        nullable=True,
+        default=None,
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -42,5 +44,6 @@ class Notification(Base):
 
     user: Mapped[User] = relationship("User", passive_deletes=True)
     organization: Mapped[Organization] = relationship(
-        "Organization", passive_deletes=True
+        "Organization",
+        passive_deletes=True,
     )

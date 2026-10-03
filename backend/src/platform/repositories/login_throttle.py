@@ -21,7 +21,11 @@ class LoginThrottleRepository:
         return rs.scalar_one_or_none()
 
     async def record_failure(
-        self, email: str, *, max_attempts: int, window: timedelta
+        self,
+        email: str,
+        *,
+        max_attempts: int,
+        window: timedelta,
     ) -> datetime | None:
         """Count a failed sign-in; failures older than `window` start the count
         over. Locks the address for `window` once `max_attempts` is reached and
@@ -50,7 +54,7 @@ class LoginThrottleRepository:
         await self.db.execute(
             update(LoginThrottle)
             .where(LoginThrottle.email == email)
-            .values(failed_attempts=0, locked_until=locked_until)
+            .values(failed_attempts=0, locked_until=locked_until),
         )
         return locked_until
 
@@ -68,6 +72,6 @@ class LoginThrottleRepository:
                     LoginThrottle.locked_until.is_(None),
                     LoginThrottle.locked_until <= now,
                 ),
-            )
+            ),
         )
         return rs.rowcount  # ty: ignore[unresolved-attribute]

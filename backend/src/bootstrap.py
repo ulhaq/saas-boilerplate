@@ -47,12 +47,14 @@ AUDIT_ACTION: type[StrEnum] = StrEnum(
 
 
 def compose_default_roles(
-    roles: Sequence[RoleSpec], products: Sequence[Module]
+    roles: Sequence[RoleSpec],
+    products: Sequence[Module],
 ) -> list[RoleSpec]:
     """Add each product's grants to the platform default roles, and apply its
     description overrides (a later product wins)."""
     composed = []
-    for name, description, permissions in roles:
+    for name, base_description, permissions in roles:
+        description = base_description
         grants = [*permissions]
         for product in products:
             description = product.default_role_descriptions.get(name, description)

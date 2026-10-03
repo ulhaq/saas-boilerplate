@@ -28,9 +28,12 @@ class RoleRepository(OrganizationScopedRepository[Role], RoleRepositoryABC):
         super().__init__(Role, db)
 
     async def get_by_name(
-        self, name: str, include_deleted: bool = False
+        self,
+        name: str,
+        *,
+        include_deleted: bool = False,
     ) -> Role | None:
-        return await self._get_by_field("name", name, include_deleted)
+        return await self._get_by_field("name", name, include_deleted=include_deleted)
 
     async def add_permissions(self, role: Role, *permission_ids: int) -> None:
         await self.add_relationship(role, Permission, "permissions", *permission_ids)
@@ -39,7 +42,9 @@ class RoleRepository(OrganizationScopedRepository[Role], RoleRepositoryABC):
         await self.remove_relationship(role, "permissions", *permission_ids)
 
     async def grant_to_protected_roles(
-        self, role_name: str, permission_names: Iterable[str]
+        self,
+        role_name: str,
+        permission_names: Iterable[str],
     ) -> int:
         """Grant every named permission to every organization's protected
         ``role_name`` role (the Owner) that lacks it - across all organizations.
@@ -63,7 +68,8 @@ class RoleRepository(OrganizationScopedRepository[Role], RoleRepositoryABC):
         stmt = (
             pg_insert(RolePermission)
             .from_select(
-                ["role_id", "permission_id", "created_at", "updated_at"], pairs
+                ["role_id", "permission_id", "created_at", "updated_at"],
+                pairs,
             )
             .on_conflict_do_nothing(constraint="uq_role_permission")
             .returning(RolePermission.id)

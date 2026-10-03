@@ -19,8 +19,11 @@ class LoginThrottle(Base):
     email: Mapped[str] = mapped_column(String, primary_key=True)
     failed_attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     last_failed_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, index=True
+        DateTime(timezone=True),
+        nullable=False,
+        index=True,
     )
     locked_until: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
+        DateTime(timezone=True),
+        nullable=True,
     )

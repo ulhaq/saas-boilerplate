@@ -27,11 +27,15 @@ class Role(ResourceModel):
         nullable=False,
     )
     is_protected: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=False, server_default="0"
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="0",
     )
 
     organization: Mapped[Organization] = relationship(
-        "Organization", back_populates="roles"
+        "Organization",
+        back_populates="roles",
     )
     permissions: Mapped[list[Permission]] = relationship(
         Permission,
@@ -45,7 +49,10 @@ class Role(ResourceModel):
         passive_deletes=True,
     )
     users: Mapped[list[User]] = relationship(
-        "User", secondary="user_role", back_populates="roles", passive_deletes=True
+        "User",
+        secondary="user_role",
+        back_populates="roles",
+        passive_deletes=True,
     )
 
 
@@ -55,8 +62,10 @@ class UserRole(Base, TimestampMixin):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     user_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("user.id", ondelete="CASCADE")
+        Integer,
+        ForeignKey("user.id", ondelete="CASCADE"),
     )
     role_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("role.id", ondelete="CASCADE")
+        Integer,
+        ForeignKey("role.id", ondelete="CASCADE"),
     )

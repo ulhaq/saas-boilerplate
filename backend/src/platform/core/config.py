@@ -15,7 +15,9 @@ class EnvSettings(BaseSettings):
     settings class (e.g. `ExampleSettings` with `env_prefix="example_"`)."""
 
     model_config = SettingsConfigDict(
-        env_file="./.env", env_file_encoding="utf-8", extra="ignore"
+        env_file="./.env",
+        env_file_encoding="utf-8",
+        extra="ignore",
     )
 
 
@@ -57,7 +59,8 @@ class Settings(EnvSettings):
     login_lockout_seconds: int = 15 * 60
 
     raw_allow_origins: str = Field(
-        default="http://localhost:5173", validation_alias="allow_origins"
+        default="http://localhost:5173",
+        validation_alias="allow_origins",
     )
 
     @computed_field
@@ -127,7 +130,7 @@ class Settings(EnvSettings):
     def validate_allow_origins_and_credentials(self) -> Self:
         if self.allow_credentials is True and "*" in self.allow_origins:
             raise ValueError(
-                "ALLOW_ORIGINS must not contain '*' when ALLOW_CREDENTIALS is True"
+                "ALLOW_ORIGINS must not contain '*' when ALLOW_CREDENTIALS is True",
             )
         return self
 

@@ -40,7 +40,7 @@ def test_get_all_permissions(admin_authenticated: TestClient) -> None:
 
 
 @pytest.mark.parametrize(
-    "page_number, page_size, page_total, total",
+    ("page_number", "page_size", "page_total", "total"),
     [
         (1, 10, 10, TOTAL),
         (2, 10, TOTAL - 10, TOTAL),
@@ -55,7 +55,7 @@ def test_paginate_permissions(
     admin_authenticated: TestClient,
 ) -> None:
     response = admin_authenticated.get(
-        f"/v1/permissions?page_number={page_number}&page_size{page_size}"
+        f"/v1/permissions?page_number={page_number}&page_size{page_size}",
     )
     assert response.status_code == 200
     rs = response.json()
@@ -91,7 +91,7 @@ def test_sort_permissions(sort: str, admin_authenticated: TestClient) -> None:
 
 
 @pytest.mark.parametrize(
-    "fields, values, operators, total",
+    ("fields", "values", "operators", "total"),
     [
         # Single field, single value
         (["id"], [[1]], ["eq"], 1),
@@ -136,7 +136,7 @@ def test_filter_permissions(
 
 
 @pytest.mark.parametrize(
-    "params, total",
+    ("params", "total"),
     [
         ("id__lte=5&name__ico=read", _count(lambda n, i: i <= 5 and "read" in n)),
         (

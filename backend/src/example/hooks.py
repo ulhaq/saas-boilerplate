@@ -18,13 +18,17 @@ log = logging.getLogger(__name__)
 
 
 async def log_projects_over_plan_limit(
-    *, repos: RepositoryManager, organization_id: int
+    *,
+    repos: RepositoryManager,
+    organization_id: int,
 ) -> None:
     """After a plan change, report organizations holding more projects than the
     new plan allows. Existing projects are kept; creating more is blocked by
     the capacity check in ``ProjectService``."""
     limit = await composition.current().entitlements.limit(
-        repos.db, organization_id, ExampleUsageMetric.PROJECTS
+        repos.db,
+        organization_id,
+        ExampleUsageMetric.PROJECTS,
     )
     if limit is None:
         return

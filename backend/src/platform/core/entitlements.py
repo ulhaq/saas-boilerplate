@@ -6,43 +6,64 @@ plans - `src.billing` - provides an `Entitlements` in its manifest; without one,
 every organization gets every feature with no limits (`UNLIMITED`).
 """
 
-from typing import Protocol
+from typing import Protocol, override
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class Entitlements(Protocol):
     async def has_feature(
-        self, db: AsyncSession, organization_id: int, feature: str
+        self,
+        db: AsyncSession,
+        organization_id: int,
+        feature: str,
     ) -> bool: ...
 
     async def limit(
-        self, db: AsyncSession, organization_id: int, metric: str
+        self,
+        db: AsyncSession,
+        organization_id: int,
+        metric: str,
     ) -> int | None:
         """The organization's cap for ``metric``; ``None`` means unlimited."""
         ...
 
     async def consume(
-        self, db: AsyncSession, organization_id: int, metric: str
+        self,
+        db: AsyncSession,
+        organization_id: int,
+        metric: str,
     ) -> bool:
         """Count one use of a per-period ``metric`` if the limit allows it,
         atomically; False when the period's limit is reached."""
         ...
 
 
-class _Unlimited:
+class _Unlimited(Entitlements):
+    @override
     async def has_feature(
-        self, db: AsyncSession, organization_id: int, feature: str
+        self,
+        db: AsyncSession,
+        organization_id: int,
+        feature: str,
     ) -> bool:
         return True
 
+    @override
     async def limit(
-        self, db: AsyncSession, organization_id: int, metric: str
+        self,
+        db: AsyncSession,
+        organization_id: int,
+        metric: str,
     ) -> int | None:
         return None
 
+    @override
     async def consume(
-        self, db: AsyncSession, organization_id: int, metric: str
+        self,
+        db: AsyncSession,
+        organization_id: int,
+        metric: str,
     ) -> bool:
         return True
 

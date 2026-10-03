@@ -69,7 +69,8 @@ async def delete_an_organization(
 
 
 @router.post(
-    "/{organization_id}/transfer-ownership", status_code=status.HTTP_204_NO_CONTENT
+    "/{organization_id}/transfer-ownership",
+    status_code=status.HTTP_204_NO_CONTENT,
 )
 async def transfer_organization_ownership(
     service: Annotated[OrganizationService, Depends()],

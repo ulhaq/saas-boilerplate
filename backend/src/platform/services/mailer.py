@@ -50,20 +50,24 @@ def send_email(
     msg = EmailMessage()
     msg["Subject"] = subject
     msg["From"] = Address(
-        settings.email_from_name, addr_spec=settings.email_from_address
+        settings.email_from_name,
+        addr_spec=settings.email_from_address,
     )
     msg["To"] = Address(user_name, addr_spec=address)
     if reply_to:
         msg["Reply-To"] = reply_to
 
     msg.set_content(
-        "This is an HTML email. Please view it in an HTML-compatible client."
+        "This is an HTML email. Please view it in an HTML-compatible client.",
     )
     msg.add_alternative(_render_email(email_template, loc, data), subtype="html")
 
     _smtp_send(msg)
     log.info(
-        "Email sent. [template=%s, locale=%s, address=%s]", email_template, loc, address
+        "Email sent. [template=%s, locale=%s, address=%s]",
+        email_template,
+        loc,
+        address,
     )
 
 
@@ -103,7 +107,6 @@ def _smtp_send(msg: EmailMessage) -> None:
                 if settings.email_user and settings.email_password:
                     smtp.login(settings.email_user, settings.email_password)
                 smtp.send_message(msg)
-            return
         except (SMTPException, OSError) as exc:
             if attempt == _MAX_EMAIL_ATTEMPTS:
                 raise
@@ -116,3 +119,5 @@ def _smtp_send(msg: EmailMessage) -> None:
                 delay,
             )
             time.sleep(delay)
+        else:
+            return

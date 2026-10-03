@@ -6,6 +6,7 @@ from uuid import uuid4
 from fastapi import Depends
 
 from src.platform.core.config import settings
+from src.platform.core.exceptions import NotAuthenticatedException
 from src.platform.core.security import (
     Token,
     create_token,
@@ -45,7 +46,9 @@ class AuthBaseService(BaseService):
         via revoke_by_jti / delete_by_user.
         """
         access_token = create_token(
-            user, settings.auth_access_token_expiry, organization_id=organization_id
+            user,
+            settings.auth_access_token_expiry,
+            organization_id=organization_id,
         )
         jti = str(uuid4())
         refresh_token = create_token(
@@ -53,18 +56,23 @@ class AuthBaseService(BaseService):
             settings.auth_refresh_token_expiry,
             include_user_claims=False,
             jti=jti,
-            token_type="refresh",
+            token_type="refresh",  # noqa: S106 - JWT kind, not a secret
         )
         expires_at = datetime.now(UTC) + timedelta(
-            seconds=settings.auth_refresh_token_expiry
+            seconds=settings.auth_refresh_token_expiry,
         )
         await self.repos.refresh_token.create(
-            user, hash_secret(refresh_token), expires_at, jti=jti
+            user,
+            hash_secret(refresh_token),
+            expires_at,
+            jti=jti,
         )
         return Token(access_token=access_token, refresh_token=refresh_token)
 
     def _decode_session_jti(
-        self, refresh_token: str | None, user_id: int | None = None
+        self,
+        refresh_token: str | None,
+        user_id: int | None = None,
     ) -> str | None:
         """Best-effort extraction of the session jti from a refresh token.
         Returns None for missing/invalid/expired tokens or a user mismatch."""
@@ -72,7 +80,7 @@ class AuthBaseService(BaseService):
             return None
         try:
             payload = decode_token(refresh_token, expected_type="refresh")
-        except Exception:
+        except NotAuthenticatedException:
             return None
         if user_id is not None and int(payload.get("sub", 0)) != user_id:
             return None

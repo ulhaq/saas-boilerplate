@@ -46,7 +46,8 @@ def assert_sorting_of_items_list(items: list[dict], sort_fields: list[str]) -> N
 
 
 def assert_filtering_of_items_list(
-    items: list, filter_data: Iterable[tuple[str, list, str]]
+    items: list,
+    filter_data: Iterable[tuple[str, list, str]],
 ) -> None:
     op_checks = {
         "eq": lambda field_val, vals: field_val == vals[0],
@@ -79,7 +80,11 @@ def assert_filtering_of_items_list(
 
 
 def assert_pagination(
-    rs: dict, page_number: int, page_size: int, page_total: int, total: int
+    rs: dict,
+    page_number: int,
+    page_size: int,
+    page_total: int,
+    total: int,
 ) -> None:
     assert len(rs["items"]) == page_total
     assert rs["page_number"] == page_number

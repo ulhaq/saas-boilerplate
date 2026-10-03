@@ -10,7 +10,8 @@ def test_the_export_includes_the_users_waitlist_sign_up(
     assert export["modules"]["marketing"] == {"waitlist": None}
 
     joined = admin_authenticated.post(
-        "/v1/waitlist", json={"email": "admin@example.org", "name": "Alice"}
+        "/v1/waitlist",
+        json={"email": "admin@example.org", "name": "Alice"},
     )
     assert joined.status_code == 201
 

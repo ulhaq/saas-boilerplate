@@ -31,7 +31,8 @@ async def _manager_ids() -> set[int]:
 
 
 async def test_a_webhook_queues_its_email_instead_of_sending_it(
-    mocker, mock_billing_provider
+    mocker,
+    mock_billing_provider,
 ):
     send = mocker.patch("src.platform.services.email_outbox.send_email")
     async with TestSessionLocal() as session, session.begin():
@@ -42,7 +43,8 @@ async def test_a_webhook_queues_its_email_instead_of_sending_it(
 
     async with TestSessionLocal() as session, session.begin():
         service = WebhookService(
-            BillingRepositoryManager(session), mock_billing_provider
+            BillingRepositoryManager(session),
+            mock_billing_provider,
         )
         raw = {"data": {"object": {"subscription": "sub_paid"}}}
         await service._dispatch("invoice.payment_failed", raw)
@@ -61,5 +63,5 @@ async def test_a_webhook_queues_its_email_instead_of_sending_it(
     assert {(n.user_id, n.organization_id) for n in notifications} == {
         (e_user_id, 1) for e_user_id in await _manager_ids()
     }
-    assert {n.type for n in notifications} == {"billing.payment-failed"}
+    assert {n.notification_type for n in notifications} == {"billing.payment-failed"}
     assert all("billing_url" not in n.payload for n in notifications)

@@ -40,7 +40,8 @@ webhook_router = APIRouter(prefix="/billing")
 
 @plan_router.get("", status_code=status.HTTP_200_OK)
 async def list_plans(
-    response: Response, service: Annotated[PlanService, Depends()]
+    response: Response,
+    service: Annotated[PlanService, Depends()],
 ) -> list[PlanOut]:
     set_cache_control(response, settings.plans_cache_max_age, private=False)
     return await service.get_all_plans()
@@ -64,10 +65,11 @@ async def retrieve_a_plan(
 @subscription_router.post("/checkout", status_code=status.HTTP_200_OK)
 @limiter.limit("5/minute")
 async def start_checkout(
-    request: Request,
+    request: Request,  # noqa: ARG001
     service: Annotated[SubscriptionService, Depends()],
     _: Annotated[
-        Auth, Depends(require_permission(BillingPermission.MANAGE_SUBSCRIPTION))
+        Auth,
+        Depends(require_permission(BillingPermission.MANAGE_SUBSCRIPTION)),
     ],
     checkout_in: CheckoutIn,
 ) -> CheckoutOut:
@@ -77,10 +79,11 @@ async def start_checkout(
 @subscription_router.post("/trial", status_code=status.HTTP_200_OK)
 @limiter.limit("3/minute")
 async def start_trial(
-    request: Request,
+    request: Request,  # noqa: ARG001
     service: Annotated[SubscriptionService, Depends()],
     _: Annotated[
-        Auth, Depends(require_permission(BillingPermission.MANAGE_SUBSCRIPTION))
+        Auth,
+        Depends(require_permission(BillingPermission.MANAGE_SUBSCRIPTION)),
     ],
     trial_in: StartTrialIn,
 ) -> CheckoutOut:
@@ -98,10 +101,11 @@ async def get_current_subscription(
 @subscription_router.post("/current/cancel", status_code=status.HTTP_200_OK)
 @limiter.limit("5/minute")
 async def cancel_subscription(
-    request: Request,
+    request: Request,  # noqa: ARG001
     service: Annotated[SubscriptionService, Depends()],
     _: Annotated[
-        Auth, Depends(require_permission(BillingPermission.MANAGE_SUBSCRIPTION))
+        Auth,
+        Depends(require_permission(BillingPermission.MANAGE_SUBSCRIPTION)),
     ],
 ) -> SubscriptionOut:
     return await service.cancel_subscription()
@@ -110,10 +114,11 @@ async def cancel_subscription(
 @subscription_router.post("/current/resume", status_code=status.HTTP_200_OK)
 @limiter.limit("5/minute")
 async def resume_subscription(
-    request: Request,
+    request: Request,  # noqa: ARG001
     service: Annotated[SubscriptionService, Depends()],
     _: Annotated[
-        Auth, Depends(require_permission(BillingPermission.MANAGE_SUBSCRIPTION))
+        Auth,
+        Depends(require_permission(BillingPermission.MANAGE_SUBSCRIPTION)),
     ],
 ) -> SubscriptionOut:
     return await service.resume_subscription()
@@ -122,10 +127,11 @@ async def resume_subscription(
 @subscription_router.post("/current/switch-plan", status_code=status.HTTP_200_OK)
 @limiter.limit("5/minute")
 async def switch_plan(
-    request: Request,
+    request: Request,  # noqa: ARG001
     service: Annotated[SubscriptionService, Depends()],
     _: Annotated[
-        Auth, Depends(require_permission(BillingPermission.MANAGE_SUBSCRIPTION))
+        Auth,
+        Depends(require_permission(BillingPermission.MANAGE_SUBSCRIPTION)),
     ],
     switch_in: SwitchPlanIn,
 ) -> SubscriptionOut:
@@ -135,10 +141,11 @@ async def switch_plan(
 @subscription_router.put("/current", status_code=status.HTTP_200_OK)
 @limiter.limit("5/minute")
 async def update_billing_email(
-    request: Request,
+    request: Request,  # noqa: ARG001
     service: Annotated[SubscriptionService, Depends()],
     _: Annotated[
-        Auth, Depends(require_permission(BillingPermission.MANAGE_SUBSCRIPTION))
+        Auth,
+        Depends(require_permission(BillingPermission.MANAGE_SUBSCRIPTION)),
     ],
     billing_email_in: UpdateBillingEmailIn,
 ) -> SubscriptionOut:
@@ -150,7 +157,8 @@ async def update_billing_email(
 async def get_customer_portal(
     service: Annotated[SubscriptionService, Depends()],
     _: Annotated[
-        Auth, Depends(require_permission(BillingPermission.MANAGE_SUBSCRIPTION))
+        Auth,
+        Depends(require_permission(BillingPermission.MANAGE_SUBSCRIPTION)),
     ],
 ) -> CustomerPortalOut:
     return await service.get_customer_portal_url()
@@ -176,7 +184,8 @@ async def get_current_usage(
 
 @webhook_router.post("/webhook", status_code=status.HTTP_200_OK)
 async def billing_webhook(
-    request: Request, service: Annotated[WebhookService, Depends()]
+    request: Request,
+    service: Annotated[WebhookService, Depends()],
 ) -> dict:
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature", "")

@@ -32,7 +32,7 @@ def _fail(client: TestClient, email: str, times: int) -> None:
 async def _throttle(email: str) -> LoginThrottle | None:
     async with TestSessionLocal() as session:
         rs = await session.execute(
-            select(LoginThrottle).where(LoginThrottle.email == email)
+            select(LoginThrottle).where(LoginThrottle.email == email),
         )
         return rs.scalar_one_or_none()
 
@@ -82,8 +82,8 @@ async def test_failures_older_than_the_window_do_not_count(client: TestClient) -
             .where(LoginThrottle.email == ADMIN)
             .values(
                 last_failed_at=datetime.now(UTC)
-                - timedelta(seconds=settings.login_lockout_seconds + 1)
-            )
+                - timedelta(seconds=settings.login_lockout_seconds + 1),
+            ),
         )
 
     _fail(client, ADMIN, 1)  # would be the locking failure inside the window
@@ -96,7 +96,7 @@ async def test_the_lock_expires(client: TestClient) -> None:
         await session.execute(
             update(LoginThrottle)
             .where(LoginThrottle.email == ADMIN)
-            .values(locked_until=datetime.now(UTC) - timedelta(seconds=1))
+            .values(locked_until=datetime.now(UTC) - timedelta(seconds=1)),
         )
 
     assert _login(client, ADMIN, "password").status_code == 200
@@ -114,7 +114,9 @@ async def test_expired_records_are_purged_and_active_ones_kept() -> None:
                     last_failed_at=now - window - timedelta(minutes=1),
                 ),
                 LoginThrottle(
-                    email="recent@example.org", failed_attempts=2, last_failed_at=now
+                    email="recent@example.org",
+                    failed_attempts=2,
+                    last_failed_at=now,
                 ),
                 LoginThrottle(
                     email="locked@example.org",
@@ -122,7 +124,7 @@ async def test_expired_records_are_purged_and_active_ones_kept() -> None:
                     last_failed_at=now - window - timedelta(minutes=1),
                     locked_until=now + timedelta(minutes=5),
                 ),
-            ]
+            ],
         )
 
     async with TestSessionLocal() as session, session.begin():

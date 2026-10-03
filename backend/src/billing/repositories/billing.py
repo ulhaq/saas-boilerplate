@@ -163,10 +163,10 @@ class PlanPriceRepository(SoftDeleteRepository[PlanPrice]):
             exists().where(
                 Subscription.plan_price_id == plan_price_id,
                 Subscription.status.in_(
-                    ["active", "trialing", "past_due", "incomplete"]
+                    ["active", "trialing", "past_due", "incomplete"],
                 ),
                 Subscription.deleted_at.is_(None),
-            )
+            ),
         )
         rs = await self.db.execute(stmt)
         return bool(rs.scalar_one())
@@ -178,7 +178,7 @@ class PlanFeatureRepository(SoftDeleteRepository[PlanFeature]):
 
     async def get_features_for_organization(self, organization_id: int) -> set[str]:
         stmt = select(PlanFeature.feature).where(
-            PlanFeature.plan_id == entitled_plan_id(organization_id)
+            PlanFeature.plan_id == entitled_plan_id(organization_id),
         )
         rs = await self.db.execute(stmt)
         return set(rs.scalars().all())
@@ -189,7 +189,8 @@ class SubscriptionRepository(OrganizationScopedRepository[Subscription]):
         super().__init__(Subscription, db)
 
     async def get_active_for_organization(
-        self, organization_id: int
+        self,
+        organization_id: int,
     ) -> Subscription | None:
         stmt = (
             select(self.model)
@@ -205,7 +206,8 @@ class SubscriptionRepository(OrganizationScopedRepository[Subscription]):
         return rs.unique().scalar_one_or_none()
 
     async def get_active_for_organization_locked(
-        self, organization_id: int
+        self,
+        organization_id: int,
     ) -> Subscription | None:
         """
         Same as get_active_for_organization but acquires a row lock (SELECT FOR UPDATE)
@@ -227,7 +229,8 @@ class SubscriptionRepository(OrganizationScopedRepository[Subscription]):
         return rs.unique().scalar_one_or_none()
 
     async def get_by_external_subscription_id(
-        self, external_id: str
+        self,
+        external_id: str,
     ) -> Subscription | None:
         # Intentionally bypasses organization scope - needed in webhook handler
         stmt = select(self.model).filter(
@@ -238,7 +241,8 @@ class SubscriptionRepository(OrganizationScopedRepository[Subscription]):
         return rs.unique().scalar_one_or_none()
 
     async def get_by_external_subscription_id_locked(
-        self, external_id: str
+        self,
+        external_id: str,
     ) -> Subscription | None:
         """
         Like get_by_external_subscription_id but acquires a row lock (SELECT FOR UPDATE)
@@ -256,7 +260,8 @@ class SubscriptionRepository(OrganizationScopedRepository[Subscription]):
         return rs.unique().scalar_one_or_none()
 
     async def get_stale_incomplete_subscriptions(
-        self, older_than: datetime
+        self,
+        older_than: datetime,
     ) -> Sequence[Subscription]:
         """
         Returns incomplete subscriptions with no external_subscription_id that are
@@ -308,7 +313,9 @@ class PlanSettingRepository(SoftDeleteRepository[PlanSetting]):
         super().__init__(PlanSetting, db)
 
     async def get_for_organization(
-        self, organization_id: int, key: str
+        self,
+        organization_id: int,
+        key: str,
     ) -> PlanSetting | None:
         stmt = (
             select(PlanSetting)
@@ -323,7 +330,8 @@ class PlanSettingRepository(SoftDeleteRepository[PlanSetting]):
         return rs.unique().scalar_one_or_none()
 
     async def get_settings_for_organization(
-        self, organization_id: int
+        self,
+        organization_id: int,
     ) -> Sequence[PlanSetting]:
         stmt = select(PlanSetting).where(
             PlanSetting.plan_id == entitled_plan_id(organization_id),
@@ -338,7 +346,10 @@ class PlanUsageRepository(SQLResourceRepository[PlanUsage]):
         super().__init__(PlanUsage, db)
 
     async def get_count(
-        self, organization_id: int, metric: str, period_start: date
+        self,
+        organization_id: int,
+        metric: str,
+        period_start: date,
     ) -> int:
         stmt = select(PlanUsage.count).where(
             PlanUsage.organization_id == organization_id,
@@ -383,7 +394,9 @@ class PlanUsageRepository(SQLResourceRepository[PlanUsage]):
         return rs.scalar_one_or_none()
 
     async def get_for_organization(
-        self, organization_id: int, period_start: date
+        self,
+        organization_id: int,
+        period_start: date,
     ) -> Sequence[PlanUsage]:
         stmt = select(PlanUsage).where(
             PlanUsage.organization_id == organization_id,
@@ -398,10 +411,11 @@ class WebhookEventRepository(SoftDeleteRepository[WebhookEvent]):
         super().__init__(WebhookEvent, db)
 
     async def get_by_external_event_id(
-        self, external_event_id: str
+        self,
+        external_event_id: str,
     ) -> WebhookEvent | None:
         stmt = select(self.model).filter(
-            self.model.external_event_id == external_event_id
+            self.model.external_event_id == external_event_id,
         )
         rs = await self.db.execute(stmt)
         return rs.unique().scalar_one_or_none()

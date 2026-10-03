@@ -21,7 +21,9 @@ class _ProductTemplateLoader(BaseLoader):
     searched after the platform's own."""
 
     def get_source(
-        self, environment: Environment, template: str
+        self,
+        environment: Environment,
+        template: str,
     ) -> tuple[str, str | None, Callable[[], bool] | None]:
         directories = composition.current().template_directories
         return FileSystemLoader(directories).get_source(environment, template)
@@ -30,15 +32,15 @@ class _ProductTemplateLoader(BaseLoader):
 templates = Jinja2Templates(
     env=Environment(
         loader=ChoiceLoader(
-            [FileSystemLoader(_TEMPLATE_DIR), _ProductTemplateLoader()]
+            [FileSystemLoader(_TEMPLATE_DIR), _ProductTemplateLoader()],
         ),
         autoescape=select_autoescape(),
-    )
+    ),
 )
 
 
 def _nl2br(value: str) -> Markup:
-    return Markup(escape(value).replace("\n", Markup("<br>\n")))
+    return escape(value).replace("\n", Markup("<br>\n"))
 
 
 templates.env.filters["nl2br"] = _nl2br

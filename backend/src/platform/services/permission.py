@@ -16,8 +16,11 @@ from src.platform.services.base import ResourceService
 
 class PermissionService(
     ResourceService[
-        PermissionRepository, Permission, PermissionIn | PermissionPatch, PermissionOut
-    ]
+        PermissionRepository,
+        Permission,
+        PermissionIn | PermissionPatch,
+        PermissionOut,
+    ],
 ):
     def __init__(
         self,
@@ -30,6 +33,7 @@ class PermissionService(
         self,
         schema_out: type[PermissionOut],
         page_query_params: PageQueryParams,
+        *,
         include_deleted: bool = False,
     ) -> PaginatedResponse[PermissionOut]:
         return await super().paginate(
@@ -42,50 +46,60 @@ class PermissionService(
         async def validate() -> None:
             if await self.repo.get_by_name(schema_in.name):
                 raise AlreadyExistsException(
-                    f"Permission already exists. [name={schema_in.name}]"
+                    f"Permission already exists. [name={schema_in.name}]",
                 )
 
         return PermissionOut.model_validate(await super().create(schema_in, validate))
 
     async def update_permission(
-        self, identifier: int, schema_in: PermissionIn
+        self,
+        identifier: int,
+        schema_in: PermissionIn,
     ) -> PermissionOut:
         async def validate() -> None:
             existing_permission = await self.repo.get_by_name(schema_in.name)
 
             if existing_permission and existing_permission.id != identifier:
                 raise AlreadyExistsException(
-                    f"Permission already exists. [name={schema_in.name}]"
+                    f"Permission already exists. [name={schema_in.name}]",
                 )
 
         return PermissionOut.model_validate(
-            await super().update(identifier, schema_in, validate)
+            await super().update(identifier, schema_in, validate),
         )
 
     async def patch_permission(
-        self, identifier: int, schema_in: PermissionPatch
+        self,
+        identifier: int,
+        schema_in: PermissionPatch,
     ) -> PermissionOut:
         async def validate() -> None:
             if schema_in.name:
                 existing_permission = await self.repo.get_by_name(schema_in.name)
                 if existing_permission and existing_permission.id != identifier:
                     raise AlreadyExistsException(
-                        f"Permission already exists. [name={schema_in.name}]"
+                        f"Permission already exists. [name={schema_in.name}]",
                     )
 
         return PermissionOut.model_validate(
-            await super().patch(identifier, schema_in, validate)
+            await super().patch(identifier, schema_in, validate),
         )
 
     async def get_permission(
-        self, identifier: int, include_deleted: bool = False
+        self,
+        identifier: int,
+        *,
+        include_deleted: bool = False,
     ) -> PermissionOut:
         return PermissionOut.model_validate(
-            await super().get(identifier, include_deleted=include_deleted)
+            await super().get(identifier, include_deleted=include_deleted),
         )
 
     async def delete_permission(
-        self, identifier: int, force_delete: bool = False
+        self,
+        identifier: int,
+        *,
+        force_delete: bool = False,
     ) -> None:
         await super().delete(identifier, force_delete=force_delete)
 
@@ -98,7 +112,8 @@ class PermissionSync:
 
 
 async def sync_permissions(
-    repos: RepositoryManager, declared: Mapping[str, str]
+    repos: RepositoryManager,
+    declared: Mapping[str, str],
 ) -> PermissionSync:
     """Bring the database in line with the permissions the installed modules
     declare (name -> description): add the missing ones and grant every
@@ -109,7 +124,8 @@ async def sync_permissions(
     declared are reported, not removed: roles may still hold them."""
     added = await repos.permission.sync_declared(declared)
     granted = await repos.role.unscoped.grant_to_protected_roles(
-        OWNER_ROLE_NAME, declared
+        OWNER_ROLE_NAME,
+        declared,
     )
     undeclared = await repos.permission.get_undeclared_names(declared)
     return PermissionSync(added=added, granted=granted, undeclared=undeclared)

@@ -71,15 +71,14 @@ class WebhookService(BillingBaseService):
         except Exception as exc:
             # Permanent error (bug, unexpected data)
             # log and ack to stop infinite retries
-            log.error(
-                "Permanent webhook handler failure [event_id=%s event_type=%s]: %s",
+            log.exception(
+                "Permanent webhook handler failure [event_id=%s event_type=%s]",
                 webhook.external_event_id,
                 webhook.event_type,
-                exc,
-                exc_info=True,
             )
             await self.repos.webhook_event.mark_failed(
-                event_record, f"permanent: {exc}"
+                event_record,
+                f"permanent: {exc}",
             )
             record_webhook_event(webhook.event_type, "failed")
             return True

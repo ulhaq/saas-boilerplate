@@ -14,7 +14,8 @@ def _do_register(client: TestClient, email: str = "purge_test@example.org") -> N
 
 
 async def test_purge_expired_tokens_removes_stale_tokens(
-    mocker: MockerFixture, client: TestClient
+    mocker: MockerFixture,
+    client: TestClient,
 ) -> None:
     mocker.patch("src.platform.services.auth.credentials.send_email")
     _do_register(client)
@@ -34,9 +35,8 @@ async def test_purge_expired_tokens_removes_stale_tokens(
 
 
 async def test_purge_expired_tokens_returns_zero_when_nothing_to_purge() -> None:
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            count = await purge_expired_tokens(session)
+    async with TestSessionLocal() as session, session.begin():
+        count = await purge_expired_tokens(session)
 
     assert count == 0
 

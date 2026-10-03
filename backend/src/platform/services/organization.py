@@ -59,7 +59,8 @@ async def setup_new_organization(
             organization=organization,
         )
         await repos.role.add_permissions(
-            role, *[permission_map[p] for p in role_permissions if p in permission_map]
+            role,
+            *[permission_map[p] for p in role_permissions if p in permission_map],
         )
 
     await emit(
@@ -76,7 +77,7 @@ class OrganizationService(
         Organization,
         OrganizationBase | OrganizationPatch,
         OrganizationOut,
-    ]
+    ],
 ):
     current_user: Auth
 
@@ -89,13 +90,19 @@ class OrganizationService(
         self.current_user = current_user
         super().__init__(repos)
 
-    async def get(self, identifier: int, include_deleted: bool = False) -> Organization:
+    async def get(
+        self,
+        identifier: int,
+        *,
+        include_deleted: bool = False,
+    ) -> Organization:
         membership = await self.repos.user_organization.get_by_user_and_organization(
-            self.current_user.id, identifier
+            self.current_user.id,
+            identifier,
         )
         if not membership:
             raise PermissionDeniedException(
-                "You are not allowed to access other organizations"
+                "You are not allowed to access other organizations",
             )
         return await super().get(identifier, include_deleted=include_deleted)
 
@@ -103,6 +110,7 @@ class OrganizationService(
         self,
         schema_out: type[OrganizationOut],
         page_query_params: PageQueryParams,
+        *,
         include_deleted: bool = False,
     ) -> PaginatedResponse[OrganizationOut]:
         return await super().paginate(
@@ -113,7 +121,7 @@ class OrganizationService(
 
     async def get_all_organizations(self) -> list[MyOrganizationOut]:
         memberships = await self.repos.user_organization.get_all_for_user(
-            self.current_user.id
+            self.current_user.id,
         )
         organization_ids = [m.organization_id for m in memberships]
         organizations = await self.repos.organization.filter_by_ids(organization_ids)
@@ -174,11 +182,13 @@ class OrganizationService(
         return OrganizationOut.model_validate(organization)
 
     async def patch_organization(
-        self, identifier: int, schema_in: OrganizationPatch
+        self,
+        identifier: int,
+        schema_in: OrganizationPatch,
     ) -> OrganizationOut:
         if identifier != self.current_user.organization_id:
             raise PermissionDeniedException(
-                "You can only update your active organization"
+                "You can only update your active organization",
             )
 
         async def validate() -> None:
@@ -186,7 +196,7 @@ class OrganizationService(
                 existing_org = await self.repo.get_by_name(schema_in.name)
                 if existing_org and existing_org.id != identifier:
                     raise AlreadyExistsException(
-                        f"Organization already exists. [name={schema_in.name}]"
+                        f"Organization already exists. [name={schema_in.name}]",
                     )
 
         updated = await super().patch(identifier, schema_in, validate)
@@ -204,11 +214,14 @@ class OrganizationService(
         return OrganizationOut.model_validate(await self.get(identifier))
 
     async def delete_organization(
-        self, identifier: int, force_delete: bool = False
+        self,
+        identifier: int,
+        *,
+        force_delete: bool = False,
     ) -> None:
         if identifier != self.current_user.organization_id:
             raise PermissionDeniedException(
-                "You can only delete your active organization"
+                "You can only delete your active organization",
             )
 
         await emit(
@@ -220,7 +233,7 @@ class OrganizationService(
         # Load members before deletion so the DB cascade hasn't removed the rows yet
         memberships = (
             await self.repos.user_organization.get_all_members_of_organization(
-                identifier
+                identifier,
             )
         )
         for membership in memberships:
@@ -230,7 +243,7 @@ class OrganizationService(
             # get_all_for_user filters soft-deleted orgs
             # so this gives remaining active orgs
             other = await self.repos.user_organization.get_all_for_user(
-                membership.user_id
+                membership.user_id,
             )
             if not any(m.organization_id != identifier for m in other):
                 await self.repos.refresh_token.delete_by_user(user)
@@ -246,7 +259,9 @@ class OrganizationService(
         await super().delete(identifier, force_delete=force_delete)
 
     async def get_organization_users(
-        self, organization_id: int, page_query_params: PageQueryParams
+        self,
+        organization_id: int,
+        page_query_params: PageQueryParams,
     ) -> PaginatedResponse[UserOut]:
         await self.get(organization_id)  # validates access
 
@@ -271,7 +286,7 @@ class OrganizationService(
                         for role in user.roles
                         if role.organization_id == organization_id
                     ],
-                }
+                },
             )
             for user in items
         ]
@@ -283,11 +298,13 @@ class OrganizationService(
         )
 
     async def transfer_ownership(
-        self, organization_id: int, schema_in: TransferOwnershipIn
+        self,
+        organization_id: int,
+        schema_in: TransferOwnershipIn,
     ) -> None:
         if organization_id != self.current_user.organization_id:
             raise PermissionDeniedException(
-                "You can only transfer ownership of your active organization"
+                "You can only transfer ownership of your active organization",
             )
 
         if schema_in.user_id == self.current_user.id:
@@ -296,7 +313,8 @@ class OrganizationService(
         await self.get(organization_id)
 
         membership = await self.repos.user_organization.get_by_user_and_organization(
-            schema_in.user_id, organization_id
+            schema_in.user_id,
+            organization_id,
         )
         if not membership:
             raise NotFoundException("Target user is not a member of this organization")

@@ -26,9 +26,8 @@ class Base(DeclarativeBase): ...
 async def get_db() -> AsyncGenerator[AsyncSession]:
     """One transaction per request: committed when the endpoint returns,
     rolled back if it raises."""
-    async with ASYNC_SESSION_LOCAL(expire_on_commit=True) as db:
-        async with db.begin():
-            yield db
+    async with ASYNC_SESSION_LOCAL(expire_on_commit=True) as db, db.begin():
+        yield db
 
 
 # Always depend on the request session through this alias, never on
@@ -50,7 +49,9 @@ _CAPACITY_LOCK_NAMESPACE = 0x63617073
 
 
 async def lock_capacity(
-    session: AsyncSession, organization_id: int, metric: str
+    session: AsyncSession,
+    organization_id: int,
+    metric: str,
 ) -> None:
     """Serialize "how many can exist" checks for one organization and metric
     until the transaction ends: a concurrent request waits here, then counts

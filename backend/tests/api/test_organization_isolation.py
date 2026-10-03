@@ -14,7 +14,8 @@ def test_cannot_patch_other_organization(
     organization2_admin_authenticated: TestClient,
 ) -> None:
     response = organization2_admin_authenticated.patch(
-        "/v1/organizations/1", json={"name": "Hacked"}
+        "/v1/organizations/1",
+        json={"name": "Hacked"},
     )
     assert response.status_code == 403
 
@@ -41,7 +42,8 @@ def test_cannot_manage_roles_of_other_organization_user(
     organization2_admin_authenticated: TestClient,
 ) -> None:
     response = organization2_admin_authenticated.post(
-        "/v1/users/1/roles", json={"role_ids": [3]}
+        "/v1/users/1/roles",
+        json={"role_ids": [3]},
     )
     assert response.status_code == 404
 
@@ -60,7 +62,8 @@ def test_cannot_patch_other_organization_role(
     organization2_admin_authenticated: TestClient,
 ) -> None:
     response = organization2_admin_authenticated.patch(
-        "/v1/roles/1", json={"name": "hacked"}
+        "/v1/roles/1",
+        json={"name": "hacked"},
     )
     assert response.status_code == 404
 
@@ -83,10 +86,12 @@ def test_roles_list_only_shows_own_organization_roles(
 
 
 def test_new_role_not_visible_to_other_organization(
-    admin_authenticated: TestClient, organization2_admin_authenticated: TestClient
+    admin_authenticated: TestClient,
+    organization2_admin_authenticated: TestClient,
 ) -> None:
     response = admin_authenticated.post(
-        "/v1/roles", json={"name": "secret_role", "description": "Organization 1 only"}
+        "/v1/roles",
+        json={"name": "secret_role", "description": "Organization 1 only"},
     )
     assert response.status_code == 201
 

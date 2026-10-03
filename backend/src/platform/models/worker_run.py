@@ -18,7 +18,8 @@ class WorkerRun(Base):
         index=True,
     )
     finished_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
+        DateTime(timezone=True),
+        nullable=True,
     )
     status: Mapped[str] = mapped_column(String, nullable=False, default="running")
     items_processed: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

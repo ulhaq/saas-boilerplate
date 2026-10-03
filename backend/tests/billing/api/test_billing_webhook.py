@@ -14,7 +14,8 @@ from tests.conftest import TestSessionLocal
 
 
 def test_webhook_valid_payload(
-    client: TestClient, mock_billing_provider: MagicMock
+    client: TestClient,
+    mock_billing_provider: MagicMock,
 ) -> None:
     mock_billing_provider.construct_webhook_event.return_value = WebhookPayload(
         external_event_id="evt_001",
@@ -31,10 +32,11 @@ def test_webhook_valid_payload(
 
 
 def test_webhook_invalid_signature(
-    client: TestClient, mock_billing_provider: MagicMock
+    client: TestClient,
+    mock_billing_provider: MagicMock,
 ) -> None:
     mock_billing_provider.construct_webhook_event.side_effect = BillingWebhookException(
-        "Invalid webhook signature"
+        "Invalid webhook signature",
     )
     response = client.post(
         "/v1/billing/webhook",
@@ -46,7 +48,8 @@ def test_webhook_invalid_signature(
 
 
 def test_webhook_idempotency(
-    client: TestClient, mock_billing_provider: MagicMock
+    client: TestClient,
+    mock_billing_provider: MagicMock,
 ) -> None:
     payload = WebhookPayload(
         external_event_id="evt_idempotent_001",
@@ -95,8 +98,8 @@ def test_webhook_checkout_completed_updates_subscription(
                     "subscription": "sub_activated_123",
                     "customer": "cus_test123",
                     "metadata": {"plan_price_id": str(price_id)},
-                }
-            }
+                },
+            },
         },
     )
     resp = admin_authenticated.post(
@@ -119,8 +122,8 @@ def test_webhook_checkout_completed_updates_subscription(
                     "cancel_at_period_end": False,
                     "canceled_at": None,
                     "items": {"data": [{"price": {"id": "price_test123"}}]},
-                }
-            }
+                },
+            },
         },
     )
     admin_authenticated.post(
@@ -154,12 +157,14 @@ def test_webhook_subscription_deleted(
                     "subscription": "sub_to_delete",
                     "customer": "cus_test123",
                     "metadata": {"plan_price_id": str(price_id)},
-                }
-            }
+                },
+            },
         },
     )
     admin_authenticated.post(
-        "/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "s"}
+        "/v1/billing/webhook",
+        content=b"{}",
+        headers={"stripe-signature": "s"},
     )
 
     # Fire subscription.deleted
@@ -172,12 +177,14 @@ def test_webhook_subscription_deleted(
                 "object": {
                     "id": "sub_to_delete",
                     "canceled_at": canceled_ts,
-                }
-            }
+                },
+            },
         },
     )
     resp = admin_authenticated.post(
-        "/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "s"}
+        "/v1/billing/webhook",
+        content=b"{}",
+        headers={"stripe-signature": "s"},
     )
     assert resp.status_code == 200
 
@@ -201,7 +208,8 @@ def test_webhook_payment_failed_does_not_downgrade(
 
     # Set up an active subscription
     admin_authenticated.post(
-        "/v1/billing/subscriptions/checkout", json={"plan_price_id": price_id}
+        "/v1/billing/subscriptions/checkout",
+        json={"plan_price_id": price_id},
     )
     mock_billing_provider.construct_webhook_event.return_value = WebhookPayload(
         external_event_id="evt_activate_for_fail",
@@ -212,12 +220,14 @@ def test_webhook_payment_failed_does_not_downgrade(
                     "subscription": "sub_payment_fail",
                     "customer": "cus_test123",
                     "metadata": {"plan_price_id": str(price_id)},
-                }
-            }
+                },
+            },
         },
     )
     admin_authenticated.post(
-        "/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "s"}
+        "/v1/billing/webhook",
+        content=b"{}",
+        headers={"stripe-signature": "s"},
     )
 
     # Stripe fires subscription.created right after checkout - sets status to active
@@ -232,12 +242,14 @@ def test_webhook_payment_failed_does_not_downgrade(
                     "cancel_at_period_end": False,
                     "canceled_at": None,
                     "items": {"data": [{"price": {"id": "price_test123"}}]},
-                }
-            }
+                },
+            },
         },
     )
     admin_authenticated.post(
-        "/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "s2"}
+        "/v1/billing/webhook",
+        content=b"{}",
+        headers={"stripe-signature": "s2"},
     )
 
     # Fire invoice.payment_failed - plan must NOT be touched
@@ -248,12 +260,14 @@ def test_webhook_payment_failed_does_not_downgrade(
             "data": {
                 "object": {
                     "subscription": "sub_payment_fail",
-                }
-            }
+                },
+            },
         },
     )
     resp = admin_authenticated.post(
-        "/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "s"}
+        "/v1/billing/webhook",
+        content=b"{}",
+        headers={"stripe-signature": "s"},
     )
     assert resp.status_code == 200
 
@@ -284,12 +298,14 @@ def test_webhook_subscription_updated(
                     "subscription": "sub_to_update",
                     "customer": "cus_test123",
                     "metadata": {"plan_price_id": str(price_id)},
-                }
-            }
+                },
+            },
         },
     )
     admin_authenticated.post(
-        "/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "s"}
+        "/v1/billing/webhook",
+        content=b"{}",
+        headers={"stripe-signature": "s"},
     )
 
     now_ts = int(datetime.now(UTC).timestamp())
@@ -306,12 +322,14 @@ def test_webhook_subscription_updated(
                     "current_period_end": now_ts + 2592000,
                     "canceled_at": None,
                     "items": {"data": [{"price": {"id": "price_test123"}}]},
-                }
-            }
+                },
+            },
         },
     )
     resp = admin_authenticated.post(
-        "/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "s"}
+        "/v1/billing/webhook",
+        content=b"{}",
+        headers={"stripe-signature": "s"},
     )
     assert resp.status_code == 200
 
@@ -337,8 +355,8 @@ def _activate_sub(
                     "subscription": sub_id,
                     "customer": "cus_test123",
                     "metadata": {"plan_price_id": str(price_id)},
-                }
-            }
+                },
+            },
         },
     )
     client.post("/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "s"})
@@ -351,7 +369,8 @@ def test_webhook_subscription_created(
 ) -> None:
     price_id = plan_with_price["price"]["id"]
     admin_authenticated.post(
-        "/v1/billing/subscriptions/checkout", json={"plan_price_id": price_id}
+        "/v1/billing/subscriptions/checkout",
+        json={"plan_price_id": price_id},
     )
 
     # subscription.created fires before checkout.session.completed in Stripe's order;
@@ -371,12 +390,14 @@ def test_webhook_subscription_created(
                     "current_period_end": now_ts + 1209600,
                     "canceled_at": None,
                     "items": {"data": [{"price": {"id": "price_test123"}}]},
-                }
-            }
+                },
+            },
         },
     )
     resp = admin_authenticated.post(
-        "/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "s"}
+        "/v1/billing/webhook",
+        content=b"{}",
+        headers={"stripe-signature": "s"},
     )
     assert resp.status_code == 200
 
@@ -400,7 +421,8 @@ def test_webhook_checkout_session_expired(
 
     # Checkout does not change the free subscription row
     admin_authenticated.post(
-        "/v1/billing/subscriptions/checkout", json={"plan_price_id": price_id}
+        "/v1/billing/subscriptions/checkout",
+        json={"plan_price_id": price_id},
     )
     sub = admin_authenticated.get("/v1/billing/subscriptions/current").json()
     assert sub["status"] == "active"
@@ -414,12 +436,14 @@ def test_webhook_checkout_session_expired(
                 "object": {
                     "customer": "cus_test123",
                     "metadata": {"plan_price_id": str(price_id)},
-                }
-            }
+                },
+            },
         },
     )
     resp = admin_authenticated.post(
-        "/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "s"}
+        "/v1/billing/webhook",
+        content=b"{}",
+        headers={"stripe-signature": "s"},
     )
     assert resp.status_code == 200
 
@@ -436,7 +460,11 @@ def test_webhook_payment_action_required_sets_incomplete(
 ) -> None:
     price_id = plan_with_price["price"]["id"]
     _activate_sub(
-        admin_authenticated, price_id, mock_billing_provider, "evt_act_pam", "sub_pam"
+        admin_authenticated,
+        price_id,
+        mock_billing_provider,
+        "evt_act_pam",
+        "sub_pam",
     )
 
     mock_billing_provider.construct_webhook_event.return_value = WebhookPayload(
@@ -445,7 +473,9 @@ def test_webhook_payment_action_required_sets_incomplete(
         raw={"data": {"object": {"subscription": "sub_pam"}}},
     )
     admin_authenticated.post(
-        "/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "s"}
+        "/v1/billing/webhook",
+        content=b"{}",
+        headers={"stripe-signature": "s"},
     )
 
     # Stripe fires customer.subscription.updated alongside the invoice event
@@ -460,12 +490,14 @@ def test_webhook_payment_action_required_sets_incomplete(
                     "cancel_at_period_end": False,
                     "canceled_at": None,
                     "items": {"data": [{"price": {"id": "price_test123"}}]},
-                }
-            }
+                },
+            },
         },
     )
     resp = admin_authenticated.post(
-        "/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "s"}
+        "/v1/billing/webhook",
+        content=b"{}",
+        headers={"stripe-signature": "s"},
     )
     assert resp.status_code == 200
     sub = admin_authenticated.get("/v1/billing/subscriptions/current").json()
@@ -482,7 +514,11 @@ def test_webhook_marked_uncollectible_downgrades_to_free_plan(
     """
     price_id = plan_with_price["price"]["id"]
     _activate_sub(
-        admin_authenticated, price_id, mock_billing_provider, "evt_act_muc", "sub_muc"
+        admin_authenticated,
+        price_id,
+        mock_billing_provider,
+        "evt_act_muc",
+        "sub_muc",
     )
 
     mock_billing_provider.construct_webhook_event.return_value = WebhookPayload(
@@ -491,7 +527,9 @@ def test_webhook_marked_uncollectible_downgrades_to_free_plan(
         raw={"data": {"object": {"subscription": "sub_muc"}}},
     )
     resp = admin_authenticated.post(
-        "/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "s"}
+        "/v1/billing/webhook",
+        content=b"{}",
+        headers={"stripe-signature": "s"},
     )
     assert resp.status_code == 200
 
@@ -514,7 +552,11 @@ def test_webhook_charge_dispute_marks_past_due(
     """
     price_id = plan_with_price["price"]["id"]
     _activate_sub(
-        admin_authenticated, price_id, mock_billing_provider, "evt_act_disp", "sub_disp"
+        admin_authenticated,
+        price_id,
+        mock_billing_provider,
+        "evt_act_disp",
+        "sub_disp",
     )
 
     # subscription.created sets the status to active
@@ -529,12 +571,14 @@ def test_webhook_charge_dispute_marks_past_due(
                     "cancel_at_period_end": False,
                     "canceled_at": None,
                     "items": {"data": [{"price": {"id": "price_test123"}}]},
-                }
-            }
+                },
+            },
         },
     )
     admin_authenticated.post(
-        "/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "s"}
+        "/v1/billing/webhook",
+        content=b"{}",
+        headers={"stripe-signature": "s"},
     )
 
     mock_billing_provider.get_charge_customer.return_value = "cus_test123"
@@ -544,7 +588,9 @@ def test_webhook_charge_dispute_marks_past_due(
         raw={"data": {"object": {"charge": "ch_disputed"}}},
     )
     resp = admin_authenticated.post(
-        "/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "s"}
+        "/v1/billing/webhook",
+        content=b"{}",
+        headers={"stripe-signature": "s"},
     )
     assert resp.status_code == 200
 
@@ -568,7 +614,11 @@ def test_webhook_subscription_updated_noop_skips_plan_changed_hook(
     """
     price_id = plan_with_price["price"]["id"]
     _activate_sub(
-        admin_authenticated, price_id, mock_billing_provider, "evt_act_noop", "sub_noop"
+        admin_authenticated,
+        price_id,
+        mock_billing_provider,
+        "evt_act_noop",
+        "sub_noop",
     )
     mock_billing_provider.construct_webhook_event.return_value = WebhookPayload(
         external_event_id="evt_sub_created_for_noop",
@@ -581,12 +631,14 @@ def test_webhook_subscription_updated_noop_skips_plan_changed_hook(
                     "cancel_at_period_end": False,
                     "canceled_at": None,
                     "items": {"data": [{"price": {"id": "price_test123"}}]},
-                }
-            }
+                },
+            },
         },
     )
     admin_authenticated.post(
-        "/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "s"}
+        "/v1/billing/webhook",
+        content=b"{}",
+        headers={"stripe-signature": "s"},
     )
 
     emit_mock = mocker.patch("src.billing.services.webhooks.base.emit")
@@ -604,12 +656,14 @@ def test_webhook_subscription_updated_noop_skips_plan_changed_hook(
                     "current_period_start": now_ts,
                     "current_period_end": now_ts + 2592000,
                     "items": {"data": [{"price": {"id": "price_test123"}}]},
-                }
-            }
+                },
+            },
         },
     )
     resp = admin_authenticated.post(
-        "/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "s"}
+        "/v1/billing/webhook",
+        content=b"{}",
+        headers={"stripe-signature": "s"},
     )
     assert resp.status_code == 200
     emit_mock.assert_not_called()
@@ -624,12 +678,14 @@ def test_webhook_subscription_updated_noop_skips_plan_changed_hook(
                     "id": "sub_noop",
                     "status": "past_due",
                     "items": {"data": [{"price": {"id": "price_test123"}}]},
-                }
-            }
+                },
+            },
         },
     )
     resp = admin_authenticated.post(
-        "/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "s"}
+        "/v1/billing/webhook",
+        content=b"{}",
+        headers={"stripe-signature": "s"},
     )
     assert resp.status_code == 200
     emit_mock.assert_called_once()
@@ -646,7 +702,11 @@ def test_webhook_subscription_unpaid_downgrades_to_free_plan(
     """
     price_id = plan_with_price["price"]["id"]
     _activate_sub(
-        admin_authenticated, price_id, mock_billing_provider, "evt_act_unp", "sub_unp"
+        admin_authenticated,
+        price_id,
+        mock_billing_provider,
+        "evt_act_unp",
+        "sub_unp",
     )
 
     mock_billing_provider.construct_webhook_event.return_value = WebhookPayload(
@@ -658,12 +718,14 @@ def test_webhook_subscription_unpaid_downgrades_to_free_plan(
                     "id": "sub_unp",
                     "status": "unpaid",
                     "items": {"data": [{"price": {"id": "price_test123"}}]},
-                }
-            }
+                },
+            },
         },
     )
     resp = admin_authenticated.post(
-        "/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "s"}
+        "/v1/billing/webhook",
+        content=b"{}",
+        headers={"stripe-signature": "s"},
     )
     assert resp.status_code == 200
 
@@ -685,7 +747,11 @@ def test_webhook_subscription_incomplete_expired_downgrades_to_free_plan(
     """
     price_id = plan_with_price["price"]["id"]
     _activate_sub(
-        admin_authenticated, price_id, mock_billing_provider, "evt_act_exp", "sub_exp"
+        admin_authenticated,
+        price_id,
+        mock_billing_provider,
+        "evt_act_exp",
+        "sub_exp",
     )
 
     mock_billing_provider.construct_webhook_event.return_value = WebhookPayload(
@@ -697,12 +763,14 @@ def test_webhook_subscription_incomplete_expired_downgrades_to_free_plan(
                     "id": "sub_exp",
                     "status": "incomplete_expired",
                     "items": {"data": [{"price": {"id": "price_test123"}}]},
-                }
-            }
+                },
+            },
         },
     )
     resp = admin_authenticated.post(
-        "/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "s"}
+        "/v1/billing/webhook",
+        content=b"{}",
+        headers={"stripe-signature": "s"},
     )
     assert resp.status_code == 200
 
@@ -726,12 +794,14 @@ def test_webhook_product_created(
                     "name": "Stripe Plan",
                     "description": "Created in Stripe",
                     "active": True,
-                }
-            }
+                },
+            },
         },
     )
     resp = admin_authenticated.post(
-        "/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "s"}
+        "/v1/billing/webhook",
+        content=b"{}",
+        headers={"stripe-signature": "s"},
     )
     assert resp.status_code == 200
 
@@ -741,9 +811,9 @@ def test_webhook_product_created(
     assert created["description"] == "Created in Stripe"
 
 
+@pytest.mark.usefixtures("plan_with_price")
 def test_webhook_product_created_already_exists(
     admin_authenticated: TestClient,
-    plan_with_price: dict,
     mock_billing_provider: MagicMock,
 ) -> None:
     # plan_with_price already has external_product_id="prod_test123"
@@ -757,12 +827,14 @@ def test_webhook_product_created_already_exists(
                     "name": "Duplicate",
                     "description": None,
                     "active": True,
-                }
-            }
+                },
+            },
         },
     )
     resp = admin_authenticated.post(
-        "/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "s"}
+        "/v1/billing/webhook",
+        content=b"{}",
+        headers={"stripe-signature": "s"},
     )
     assert resp.status_code == 200
 
@@ -771,9 +843,9 @@ def test_webhook_product_created_already_exists(
     assert len(matching) == 0  # no duplicate created
 
 
+@pytest.mark.usefixtures("plan_with_price")
 def test_webhook_product_updated(
     admin_authenticated: TestClient,
-    plan_with_price: dict,
     mock_billing_provider: MagicMock,
 ) -> None:
     mock_billing_provider.construct_webhook_event.return_value = WebhookPayload(
@@ -786,12 +858,14 @@ def test_webhook_product_updated(
                     "name": "Updated Name",
                     "description": "Updated desc",
                     "active": False,
-                }
-            }
+                },
+            },
         },
     )
     resp = admin_authenticated.post(
-        "/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "s"}
+        "/v1/billing/webhook",
+        content=b"{}",
+        headers={"stripe-signature": "s"},
     )
     assert resp.status_code == 200
 
@@ -819,12 +893,14 @@ def test_webhook_price_created(
                     "currency": "dkk",
                     "active": True,
                     "recurring": {"interval": "year", "interval_count": 1},
-                }
-            }
+                },
+            },
         },
     )
     resp = admin_authenticated.post(
-        "/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "s"}
+        "/v1/billing/webhook",
+        content=b"{}",
+        headers={"stripe-signature": "s"},
     )
     assert resp.status_code == 200
 
@@ -852,18 +928,22 @@ def test_webhook_price_created_unknown_product(
                     "currency": "dkk",
                     "active": True,
                     "recurring": {"interval": "month", "interval_count": 1},
-                }
-            }
+                },
+            },
         },
     )
     resp = admin_authenticated.post(
-        "/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "s"}
+        "/v1/billing/webhook",
+        content=b"{}",
+        headers={"stripe-signature": "s"},
     )
     assert resp.status_code == 200  # no crash
 
 
 @pytest.fixture
-async def free_plan_subscription(plan_with_price: dict) -> dict:
+async def free_plan_subscription(
+    plan_with_price: dict,  # noqa: ARG001 - the plan must exist first
+) -> dict:
     """
     Set up organization 1 with an active free-plan subscription and Stripe customer ID.
     Simulates a user assigned the free plan by _setup_new_organization.
@@ -878,7 +958,7 @@ async def free_plan_subscription(plan_with_price: dict) -> dict:
         # Update the existing free subscription rather than inserting a new row
         sub = (
             await session.execute(
-                select(Subscription).where(Subscription.organization_id == 1)
+                select(Subscription).where(Subscription.organization_id == 1),
             )
         ).scalar_one()
         sub.plan_price_id = free_price_id
@@ -888,10 +968,10 @@ async def free_plan_subscription(plan_with_price: dict) -> dict:
     return {"free_price_id": free_price_id}
 
 
+@pytest.mark.usefixtures("free_plan_subscription")
 async def test_free_plan_user_checkout_upgrades_to_trial(
     admin_authenticated: TestClient,
     plan_with_price: dict,
-    free_plan_subscription: dict,
     mock_billing_provider: MagicMock,
 ) -> None:
     """
@@ -929,12 +1009,14 @@ async def test_free_plan_user_checkout_upgrades_to_trial(
                     "canceled_at": None,
                     "trial_end": int(datetime(2026, 5, 15, tzinfo=UTC).timestamp()),
                     "items": {"data": [{"price": {"id": "price_test123"}}]},
-                }
-            }
+                },
+            },
         },
     )
     resp = admin_authenticated.post(
-        "/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "s1"}
+        "/v1/billing/webhook",
+        content=b"{}",
+        headers={"stripe-signature": "s1"},
     )
     assert resp.status_code == 200
 
@@ -954,7 +1036,7 @@ async def trialing_subscription(plan_with_price: dict) -> dict:
             account.external_customer_id = "cus_test123"
         sub = (
             await session.execute(
-                select(Subscription).where(Subscription.organization_id == 1)
+                select(Subscription).where(Subscription.organization_id == 1),
             )
         ).scalar_one()
         sub.plan_price_id = price_id
@@ -964,9 +1046,9 @@ async def trialing_subscription(plan_with_price: dict) -> dict:
     return {"external_subscription_id": "sub_trial"}
 
 
+@pytest.mark.usefixtures("trialing_subscription")
 def test_webhook_subscription_trial_will_end_sends_email(
     admin_authenticated: TestClient,
-    trialing_subscription: dict,
     mock_billing_provider: MagicMock,
     mocker: MockerFixture,
 ) -> None:
@@ -981,12 +1063,14 @@ def test_webhook_subscription_trial_will_end_sends_email(
                 "object": {
                     "id": "sub_trial",
                     "trial_end": trial_end_ts,
-                }
-            }
+                },
+            },
         },
     )
     resp = admin_authenticated.post(
-        "/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "s"}
+        "/v1/billing/webhook",
+        content=b"{}",
+        headers={"stripe-signature": "s"},
     )
     assert resp.status_code == 200
     assert mock_send.called
@@ -1008,7 +1092,9 @@ def test_webhook_subscription_trial_will_end_unknown_sub(
         raw={"data": {"object": {"id": "sub_nonexistent", "trial_end": None}}},
     )
     resp = client.post(
-        "/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "s"}
+        "/v1/billing/webhook",
+        content=b"{}",
+        headers={"stripe-signature": "s"},
     )
     assert resp.status_code == 200  # silently ignored
 
@@ -1028,12 +1114,14 @@ def test_webhook_price_updated(
                 "object": {
                     "id": "price_test123",
                     "active": False,
-                }
-            }
+                },
+            },
         },
     )
     resp = admin_authenticated.post(
-        "/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "s"}
+        "/v1/billing/webhook",
+        content=b"{}",
+        headers={"stripe-signature": "s"},
     )
     assert resp.status_code == 200
 
@@ -1042,10 +1130,10 @@ def test_webhook_price_updated(
     assert price["is_active"] is False
 
 
+@pytest.mark.usefixtures("plan_with_price")
+@pytest.mark.usefixtures("trialing_subscription")
 def test_webhook_uncollectible_downgrades_to_free_plan(
     admin_authenticated: TestClient,
-    plan_with_price: dict,
-    trialing_subscription: dict,
     mock_billing_provider: MagicMock,
 ) -> None:
     """
@@ -1057,7 +1145,9 @@ def test_webhook_uncollectible_downgrades_to_free_plan(
         raw={"data": {"object": {"subscription": "sub_trial"}}},
     )
     resp = admin_authenticated.post(
-        "/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "s"}
+        "/v1/billing/webhook",
+        content=b"{}",
+        headers={"stripe-signature": "s"},
     )
     assert resp.status_code == 200
 
@@ -1068,10 +1158,10 @@ def test_webhook_uncollectible_downgrades_to_free_plan(
     mock_billing_provider.switch_subscription_price.assert_not_called()
 
 
+@pytest.mark.usefixtures("plan_with_price")
+@pytest.mark.usefixtures("trialing_subscription")
 def test_webhook_uncollectible_falls_back_gracefully_on_provider_error(
     admin_authenticated: TestClient,
-    plan_with_price: dict,
-    trialing_subscription: dict,
     mock_billing_provider: MagicMock,
 ) -> None:
     """
@@ -1081,7 +1171,7 @@ def test_webhook_uncollectible_falls_back_gracefully_on_provider_error(
     This prevents a lingering active Stripe subscription from generating charges.
     """
     mock_billing_provider.delete_subscription.side_effect = BillingProviderException(
-        "Stripe error"
+        "Stripe error",
     )
     mock_billing_provider.construct_webhook_event.return_value = WebhookPayload(
         external_event_id="evt_uncollectible_fallback",
@@ -1089,7 +1179,9 @@ def test_webhook_uncollectible_falls_back_gracefully_on_provider_error(
         raw={"data": {"object": {"subscription": "sub_trial"}}},
     )
     resp = admin_authenticated.post(
-        "/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "s"}
+        "/v1/billing/webhook",
+        content=b"{}",
+        headers={"stripe-signature": "s"},
     )
     assert resp.status_code == 400
 
@@ -1107,9 +1199,9 @@ async def no_free_price() -> None:
         await session.commit()
 
 
+@pytest.mark.usefixtures("trialing_subscription")
 def test_webhook_subscription_paused_trial_end_downgrades_to_free(
     admin_authenticated: TestClient,
-    trialing_subscription: dict,
     mock_billing_provider: MagicMock,
     mocker: MockerFixture,
 ) -> None:
@@ -1128,12 +1220,14 @@ def test_webhook_subscription_paused_trial_end_downgrades_to_free(
                 "object": {
                     "id": "sub_trial",
                     "pause_collection": None,
-                }
-            }
+                },
+            },
         },
     )
     resp = admin_authenticated.post(
-        "/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "s"}
+        "/v1/billing/webhook",
+        content=b"{}",
+        headers={"stripe-signature": "s"},
     )
     assert resp.status_code == 200
 
@@ -1149,9 +1243,9 @@ def test_webhook_subscription_paused_trial_end_downgrades_to_free(
     assert sub["plan_price"]["amount"] == 0
 
 
+@pytest.mark.usefixtures("trialing_subscription")
 def test_webhook_subscription_paused_manual_stays_paused(
     admin_authenticated: TestClient,
-    trialing_subscription: dict,
     mock_billing_provider: MagicMock,
 ) -> None:
     """
@@ -1166,12 +1260,14 @@ def test_webhook_subscription_paused_manual_stays_paused(
                 "object": {
                     "id": "sub_trial",
                     "pause_collection": {"behavior": "void"},
-                }
-            }
+                },
+            },
         },
     )
     resp = admin_authenticated.post(
-        "/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "s"}
+        "/v1/billing/webhook",
+        content=b"{}",
+        headers={"stripe-signature": "s"},
     )
     assert resp.status_code == 200
 
@@ -1180,10 +1276,10 @@ def test_webhook_subscription_paused_manual_stays_paused(
     mock_billing_provider.switch_subscription_price.assert_not_called()
 
 
+@pytest.mark.usefixtures("trialing_subscription")
+@pytest.mark.usefixtures("no_free_price")
 def test_webhook_subscription_paused_trial_end_no_free_plan_cancels(
     admin_authenticated: TestClient,
-    trialing_subscription: dict,
-    no_free_price: None,
     mock_billing_provider: MagicMock,
 ) -> None:
     """
@@ -1198,12 +1294,14 @@ def test_webhook_subscription_paused_trial_end_no_free_plan_cancels(
                 "object": {
                     "id": "sub_trial",
                     "pause_collection": None,
-                }
-            }
+                },
+            },
         },
     )
     resp = admin_authenticated.post(
-        "/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "s"}
+        "/v1/billing/webhook",
+        content=b"{}",
+        headers={"stripe-signature": "s"},
     )
     assert resp.status_code == 200
 
@@ -1213,9 +1311,9 @@ def test_webhook_subscription_paused_trial_end_no_free_plan_cancels(
     mock_billing_provider.switch_subscription_price.assert_not_called()
 
 
+@pytest.mark.usefixtures("trialing_subscription")
 def test_webhook_payment_method_attached_sets_flag(
     admin_authenticated: TestClient,
-    trialing_subscription: dict,
     mock_billing_provider: MagicMock,
 ) -> None:
     assert (
@@ -1231,7 +1329,9 @@ def test_webhook_payment_method_attached_sets_flag(
         raw={"data": {"object": {"customer": "cus_test123"}}},
     )
     resp = admin_authenticated.post(
-        "/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "s"}
+        "/v1/billing/webhook",
+        content=b"{}",
+        headers={"stripe-signature": "s"},
     )
     assert resp.status_code == 200
     assert (
@@ -1242,9 +1342,9 @@ def test_webhook_payment_method_attached_sets_flag(
     )
 
 
+@pytest.mark.usefixtures("trialing_subscription")
 def test_webhook_payment_method_detached_clears_flag(
     admin_authenticated: TestClient,
-    trialing_subscription: dict,
     mock_billing_provider: MagicMock,
 ) -> None:
     # First attach a payment method
@@ -1254,7 +1354,9 @@ def test_webhook_payment_method_detached_clears_flag(
         raw={"data": {"object": {"customer": "cus_test123"}}},
     )
     admin_authenticated.post(
-        "/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "s"}
+        "/v1/billing/webhook",
+        content=b"{}",
+        headers={"stripe-signature": "s"},
     )
     assert (
         admin_authenticated.get("/v1/billing/subscriptions/current").json()[
@@ -1272,11 +1374,13 @@ def test_webhook_payment_method_detached_clears_flag(
             "data": {
                 "object": {"customer": None},
                 "previous_attributes": {"customer": "cus_test123"},
-            }
+            },
         },
     )
     resp = admin_authenticated.post(
-        "/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "s"}
+        "/v1/billing/webhook",
+        content=b"{}",
+        headers={"stripe-signature": "s"},
     )
     assert resp.status_code == 200
     assert (

@@ -39,10 +39,10 @@ async def _deliver() -> int:
 
 
 async def test_a_rolled_back_transaction_sends_nothing():
-    class Rollback(Exception):
+    class RollbackError(Exception):
         pass
 
-    with pytest.raises(Rollback):
+    async def queue_then_fail() -> None:
         async with TestSessionLocal() as session, session.begin():
             await queue_email(
                 RepositoryManager(session),
@@ -52,7 +52,10 @@ async def test_a_rolled_back_transaction_sends_nothing():
                 locale="en",
                 data={},
             )
-            raise Rollback
+            raise RollbackError
+
+    with pytest.raises(RollbackError):
+        await queue_then_fail()
 
     assert await _outbox() == []
 
@@ -68,7 +71,7 @@ async def test_queued_emails_are_sent_once(mocker):
     assert send.call_args.kwargs["address"] == "a@example.org"
     assert send.call_args.kwargs["email_template"] == "payment-failed"
     assert send.call_args.kwargs["data"] == {
-        "billing_url": "https://app.test/settings/billing"
+        "billing_url": "https://app.test/settings/billing",
     }
     [email] = await _outbox()
     assert email.sent_at is not None

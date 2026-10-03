@@ -71,7 +71,9 @@ async def _authenticate_api_token(token: str, db: AsyncSession) -> Auth:
         raise NotAuthenticatedException(headers=BEARER_HEADERS)
 
     if not await composition.current().entitlements.has_feature(
-        db, api_token.organization_id, PlanFeature.API_TOKEN
+        db,
+        api_token.organization_id,
+        PlanFeature.API_TOKEN,
     ):
         raise PlanFeatureUnavailableException
 
@@ -118,7 +120,8 @@ async def authenticate(
     # The oid claim is signed, but membership may have been revoked after the
     # token was issued - re-verify it so removal takes effect immediately.
     membership = await UserOrganizationRepository(db).get_by_user_and_organization(
-        user_id, organization_id
+        user_id,
+        organization_id,
     )
     if not membership:
         raise NotAuthenticatedException(headers=BEARER_HEADERS)
@@ -170,7 +173,9 @@ def require_plan_feature(feature: StrEnum) -> Callable:
         db: DbSession,
     ) -> Auth:
         if not await composition.current().entitlements.has_feature(
-            db, current_user.organization_id, feature
+            db,
+            current_user.organization_id,
+            feature,
         ):
             raise PlanFeatureUnavailableException
         return current_user
@@ -208,8 +213,10 @@ def require_limit(metric: StrEnum) -> Callable:
         current_user: Annotated[Auth, Depends(authenticate)],
     ) -> None:
         if not await composition.current().entitlements.consume(
-            db, current_user.organization_id, metric
+            db,
+            current_user.organization_id,
+            metric,
         ):
-            raise LimitExceededException()
+            raise LimitExceededException
 
     return _check

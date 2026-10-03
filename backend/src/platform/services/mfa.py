@@ -35,7 +35,11 @@ from src.platform.services.base import BaseService
 
 
 async def verify_user_mfa_code(
-    repos: RepositoryManager, user: User, code: str, *, allow_recovery: bool
+    repos: RepositoryManager,
+    user: User,
+    code: str,
+    *,
+    allow_recovery: bool,
 ) -> None:
     """Accept a fresh TOTP code (or, if allowed, an unused recovery code,
     which is consumed) for a signed-in user's re-authentication. Raises
@@ -51,7 +55,8 @@ async def verify_user_mfa_code(
         await repos.user.update(user, mfa_recovery_codes=remaining)
         return
     raise ValidationException(
-        "Invalid two-factor code", error_code=ErrorCode.MFA_CODE_INVALID
+        "Invalid two-factor code",
+        error_code=ErrorCode.MFA_CODE_INVALID,
     )
 
 
@@ -64,14 +69,14 @@ class MfaService(BaseService):
         current_user: Annotated[Auth, Depends(authenticate)],
     ) -> None:
         if not settings.mfa_enabled:
-            raise NotFoundException()
+            raise NotFoundException
         self.current_user = current_user
         super().__init__(repos)
 
     async def _get_user(self) -> User:
         user = await self.repos.user.unscoped.get(self.current_user.id)
         if not user:
-            raise NotAuthenticatedException()
+            raise NotAuthenticatedException
         return user
 
     async def _audit(self, action: AuditAction) -> None:
@@ -84,16 +89,24 @@ class MfaService(BaseService):
         )
 
     async def _verify_code(
-        self, user: User, code: str, *, allow_recovery: bool
+        self,
+        user: User,
+        code: str,
+        *,
+        allow_recovery: bool,
     ) -> None:
         await verify_user_mfa_code(
-            self.repos, user, code, allow_recovery=allow_recovery
+            self.repos,
+            user,
+            code,
+            allow_recovery=allow_recovery,
         )
 
     async def _issue_recovery_codes(self, user: User) -> MfaRecoveryCodesOut:
         codes = generate_recovery_codes()
         await self.repos.user.update(
-            user, mfa_recovery_codes=[hash_recovery_code(c) for c in codes]
+            user,
+            mfa_recovery_codes=[hash_recovery_code(c) for c in codes],
         )
         return MfaRecoveryCodesOut(recovery_codes=codes)
 
@@ -108,10 +121,13 @@ class MfaService(BaseService):
             )
         secret = generate_secret()
         await self.repos.user.update(
-            user, mfa_secret=encrypt_secret(secret), mfa_last_used_step=None
+            user,
+            mfa_secret=encrypt_secret(secret),
+            mfa_last_used_step=None,
         )
         return MfaSetupOut(
-            secret=secret, otpauth_uri=provisioning_uri(secret, user.email)
+            secret=secret,
+            otpauth_uri=provisioning_uri(secret, user.email),
         )
 
     async def enable(self, schema_in: MfaCodeIn) -> MfaRecoveryCodesOut:
@@ -123,7 +139,8 @@ class MfaService(BaseService):
             )
         if not user.mfa_secret:
             raise ValidationException(
-                "Start two-factor setup first", error_code=ErrorCode.MFA_SETUP_REQUIRED
+                "Start two-factor setup first",
+                error_code=ErrorCode.MFA_SETUP_REQUIRED,
             )
         await self._verify_code(user, schema_in.code, allow_recovery=False)
         await self.repos.user.update(user, mfa_enabled_at=datetime.now(UTC))
@@ -140,7 +157,8 @@ class MfaService(BaseService):
             )
         if not authenticate_user(schema_in.password, user):
             raise NotAuthenticatedException(
-                "Incorrect password", error_code=ErrorCode.LOGIN_FAILED
+                "Incorrect password",
+                error_code=ErrorCode.LOGIN_FAILED,
             )
         await self._verify_code(user, schema_in.code, allow_recovery=True)
         await self.repos.user.update(
@@ -155,7 +173,8 @@ class MfaService(BaseService):
         await self._audit(AuditAction.USER_MFA_DISABLE)
 
     async def regenerate_recovery_codes(
-        self, schema_in: MfaCodeIn
+        self,
+        schema_in: MfaCodeIn,
     ) -> MfaRecoveryCodesOut:
         user = await self._get_user()
         if not user.mfa_active:

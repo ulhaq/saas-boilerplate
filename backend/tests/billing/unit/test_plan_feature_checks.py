@@ -29,9 +29,8 @@ async def test_require_feature_raises_when_feature_unavailable():
     class _Feature(StrEnum):
         SSO = "sso"
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            repos = RepositoryManager(session)
-            service = OrganizationService(repos, _admin_auth())
-            with pytest.raises(PlanFeatureUnavailableException):
-                await service._require_feature(_Feature.SSO, organization_id=1)
+    async with TestSessionLocal() as session, session.begin():
+        repos = RepositoryManager(session)
+        service = OrganizationService(repos, _admin_auth())
+        with pytest.raises(PlanFeatureUnavailableException):
+            await service._require_feature(_Feature.SSO, organization_id=1)

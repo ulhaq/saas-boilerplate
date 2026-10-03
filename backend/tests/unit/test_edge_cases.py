@@ -44,7 +44,9 @@ def test_change_password_in_passwords_do_not_match():
     """ChangePasswordIn.check_passwords_match raises when passwords differ (line 61)."""
     with pytest.raises(ValidationError):
         ChangePasswordIn(
-            password="old", new_password="abc123!", confirm_password="xyz789!"
+            password="old",
+            new_password="abc123!",
+            confirm_password="xyz789!",
         )
 
 
@@ -63,24 +65,23 @@ def test_complete_invite_in_must_accept_terms():
 
 async def test_paginate_with_between_filter():
     """BETWEEN operator in get_filter_expression / cast_values_to_type."""
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            repos = RepositoryManager(session)
-            repos.role.set_organization_scope(1)
-            items, total = await repos.role.paginate(
-                sort=["id"],
-                filters=[
-                    FilterItem(
-                        field="id",
-                        op=ComparisonOperator.BETWEEN,
-                        values=["1", "3"],
-                    )
-                ],
-                page_size=10,
-                page_number=1,
-            )
-            assert total >= 1
-            assert all(1 <= item.id <= 3 for item in items)
+    async with TestSessionLocal() as session, session.begin():
+        repos = RepositoryManager(session)
+        repos.role.set_organization_scope(1)
+        items, total = await repos.role.paginate(
+            sort=["id"],
+            filters=[
+                FilterItem(
+                    field="id",
+                    op=ComparisonOperator.BETWEEN,
+                    values=["1", "3"],
+                ),
+            ],
+            page_size=10,
+            page_number=1,
+        )
+        assert total >= 1
+        assert all(1 <= item.id <= 3 for item in items)
 
 
 # ---------------------------------------------------------------------------
@@ -90,27 +91,21 @@ async def test_paginate_with_between_filter():
 
 async def test_has_other_user_with_role_returns_true():
     """Another user has role id=1 (Owner) when user 1 is excluded."""
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            repos = RepositoryManager(session)
-            repos.user.set_organization_scope(1)
-            # User 1 has Owner role (id=1); exclude user 2 > user 1 still has it
-            result = await repos.user.has_other_user_with_role(
-                role_id=1, exclude_user_id=2
-            )
+    async with TestSessionLocal() as session, session.begin():
+        repos = RepositoryManager(session)
+        repos.user.set_organization_scope(1)
+        # User 1 has Owner role (id=1); exclude user 2 > user 1 still has it
+        result = await repos.user.has_other_user_with_role(role_id=1, exclude_user_id=2)
     assert result is True
 
 
 async def test_has_other_user_with_role_returns_false():
     """No other user has the Owner role when user 1 is excluded."""
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            repos = RepositoryManager(session)
-            repos.user.set_organization_scope(1)
-            # Only user 1 has Owner role; exclude user 1 > nobody else
-            result = await repos.user.has_other_user_with_role(
-                role_id=1, exclude_user_id=1
-            )
+    async with TestSessionLocal() as session, session.begin():
+        repos = RepositoryManager(session)
+        repos.user.set_organization_scope(1)
+        # Only user 1 has Owner role; exclude user 1 > nobody else
+        result = await repos.user.has_other_user_with_role(role_id=1, exclude_user_id=1)
     assert result is False
 
 
@@ -121,16 +116,13 @@ async def test_has_other_user_with_role_returns_false():
 
 async def test_delete_with_validation_callback_is_called():
     """ResourceService.delete() calls validation_callback when provided (line 113)."""
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            repos = RepositoryManager(session)
-            service = PermissionService(repos)
-            perm = await service.create_permission(
-                PermissionIn(name="callback:test_perm")
-            )
+    async with TestSessionLocal() as session, session.begin():
+        repos = RepositoryManager(session)
+        service = PermissionService(repos)
+        perm = await service.create_permission(PermissionIn(name="callback:test_perm"))
 
-            callback = AsyncMock()
-            await service.delete(perm.id, validation_callback=callback)
+        callback = AsyncMock()
+        await service.delete(perm.id, validation_callback=callback)
 
     callback.assert_awaited_once()
 
@@ -145,25 +137,23 @@ async def test_delete_organization_skips_orphaned_membership():
     delete_organization skips a membership whose user is soft-deleted (line 180)
     """
     deleted_at = datetime(2026, 1, 1, tzinfo=UTC)
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            user = User(
-                name="Gone",
-                email="gone@example.org",
-                password="x",
-                deleted_at=deleted_at,
-            )
-            session.add(user)
-            await session.flush()
-            session.add(UserOrganization(user_id=user.id, organization_id=1))
-            user_id = user.id
+    async with TestSessionLocal() as session, session.begin():
+        user = User(
+            name="Gone",
+            email="gone@example.org",
+            password="x",
+            deleted_at=deleted_at,
+        )
+        session.add(user)
+        await session.flush()
+        session.add(UserOrganization(user_id=user.id, organization_id=1))
+        user_id = user.id
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            repos = RepositoryManager(session)
-            service = OrganizationService(repos, _admin_auth(org_id=1))
-            # Should not raise; the soft-deleted user is silently skipped
-            await service.delete_organization(1)
+    async with TestSessionLocal() as session, session.begin():
+        repos = RepositoryManager(session)
+        service = OrganizationService(repos, _admin_auth(org_id=1))
+        # Should not raise; the soft-deleted user is silently skipped
+        await service.delete_organization(1)
 
     async with TestSessionLocal() as session:
         user = await session.get(User, user_id)
@@ -180,16 +170,15 @@ async def test_transfer_ownership_no_owner_role_raises(mocker):
     """
     transfer_ownership raises NotFoundException when Owner role is missing (line 250)
     """
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            repos = RepositoryManager(session)
-            service = OrganizationService(repos, _admin_auth())
+    async with TestSessionLocal() as session, session.begin():
+        repos = RepositoryManager(session)
+        service = OrganizationService(repos, _admin_auth())
 
-            # Simulate missing Owner role by patching the lookup
-            mocker.patch.object(repos.role, "get_by_name", AsyncMock(return_value=None))
+        # Simulate missing Owner role by patching the lookup
+        mocker.patch.object(repos.role, "get_by_name", AsyncMock(return_value=None))
 
-            with pytest.raises(NotFoundException):
-                await service.transfer_ownership(1, TransferOwnershipIn(user_id=2))
+        with pytest.raises(NotFoundException):
+            await service.transfer_ownership(1, TransferOwnershipIn(user_id=2))
 
 
 # ---------------------------------------------------------------------------

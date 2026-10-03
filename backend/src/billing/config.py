@@ -38,7 +38,7 @@ class BillingSettings(EnvSettings):
                 url = getattr(self, field_name)
                 if "localhost" in url or "127.0.0.1" in url:
                     raise ValueError(
-                        f"{field_name} must not point to localhost in production"
+                        f"{field_name} must not point to localhost in production",
                     )
         return self
 
@@ -47,11 +47,11 @@ class BillingSettings(EnvSettings):
         if self.app_env not in ("local", "development"):
             if not self.stripe_secret_key.get_secret_value():
                 raise ValueError(
-                    "STRIPE_SECRET_KEY must be set in non-local environments"
+                    "STRIPE_SECRET_KEY must be set in non-local environments",
                 )
             if not self.stripe_webhook_secret.get_secret_value():
                 raise ValueError(
-                    "STRIPE_WEBHOOK_SECRET must be set in non-local environments"
+                    "STRIPE_WEBHOOK_SECRET must be set in non-local environments",
                 )
         return self
 

@@ -64,13 +64,13 @@ def test_non_sensitive_text_untouched() -> None:
 
 def test_nested_dict_redacted_by_key() -> None:
     out = _redact_nested(
-        {"payload": {"password": "pw", "inner": {"access_token": "tk", "ok": 1}}}
+        {"payload": {"password": "pw", "inner": {"access_token": "tk", "ok": 1}}},
     )
     assert out == {
         "payload": {
             "password": "<redacted>",
             "inner": {"access_token": "<redacted>", "ok": 1},
-        }
+        },
     }
 
 

@@ -4,6 +4,7 @@ from typing import Any, Literal, Protocol, Self
 from uuid import uuid4
 
 from argon2 import PasswordHasher
+from argon2.exceptions import InvalidHashError, VerificationError
 from fastapi.security import OAuth2PasswordBearer
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from jwt import ExpiredSignatureError, InvalidTokenError, decode, encode
@@ -68,7 +69,7 @@ class _Argon2Context:
     def verify(self, plain: str, hashed: str) -> bool:
         try:
             return self._hasher.verify(hashed, plain)
-        except Exception:
+        except VerificationError, InvalidHashError:
             return False
 
 
@@ -115,7 +116,7 @@ class Auth(BaseModel):
 class Token(ResponseSchema):
     access_token: str
     refresh_token: str
-    token_type: str = "bearer"
+    token_type: str = "bearer"  # noqa: S105 - OAuth token type, not a secret
 
 
 class JWTTokenClaims(BaseModel):
@@ -144,7 +145,8 @@ type SignSalt = Literal[
 
 def sign(data: Any, salt: SignSalt) -> str:
     s = URLSafeTimedSerializer(
-        secret_key=settings.app_secret.get_secret_value(), salt=salt
+        secret_key=settings.app_secret.get_secret_value(),
+        salt=salt,
     )
     return s.dumps(data)
 
@@ -152,16 +154,19 @@ def sign(data: Any, salt: SignSalt) -> str:
 def unsign(token: str, salt: SignSalt, max_age: int = 10 * 60) -> Any:
     try:
         s = URLSafeTimedSerializer(
-            secret_key=settings.app_secret.get_secret_value(), salt=salt
+            secret_key=settings.app_secret.get_secret_value(),
+            salt=salt,
         )
         return s.loads(token, max_age=max_age)
     except SignatureExpired as exc:
         raise NotAuthenticatedException(
-            "Signature expired", error_code=ErrorCode.SIGNATURE_EXPIRED
+            "Signature expired",
+            error_code=ErrorCode.SIGNATURE_EXPIRED,
         ) from exc
     except BadSignature as exc:
         raise NotAuthenticatedException(
-            "Signature invalid", error_code=ErrorCode.SIGNATURE_INVALID
+            "Signature invalid",
+            error_code=ErrorCode.SIGNATURE_INVALID,
         ) from exc
 
 
@@ -172,7 +177,7 @@ def hash_secret(secret: str) -> str:
 def verify_secret(plain_secret: str, hashed_secret: str) -> bool:
     try:
         return crypt_context.verify(plain_secret, hashed_secret)
-    except Exception:
+    except VerificationError, InvalidHashError:
         return False
 
 
@@ -187,7 +192,9 @@ def decode_token(token: str, *, expected_type: TokenType = "access") -> dict:
         )
     except ExpiredSignatureError as exc:
         raise NotAuthenticatedException(
-            "Token expired", error_code=ErrorCode.TOKEN_EXPIRED, headers=BEARER_HEADERS
+            "Token expired",
+            error_code=ErrorCode.TOKEN_EXPIRED,
+            headers=BEARER_HEADERS,
         ) from exc
     except InvalidTokenError as exc:
         raise NotAuthenticatedException(headers=BEARER_HEADERS) from exc
@@ -196,7 +203,9 @@ def decode_token(token: str, *, expected_type: TokenType = "access") -> dict:
     # prevents one from being accepted where the other is expected.
     if payload.get("typ") != expected_type:
         raise NotAuthenticatedException(
-            "Token invalid", error_code=ErrorCode.TOKEN_INVALID, headers=BEARER_HEADERS
+            "Token invalid",
+            error_code=ErrorCode.TOKEN_INVALID,
+            headers=BEARER_HEADERS,
         )
     return payload
 
@@ -208,7 +217,7 @@ def create_token(
     include_user_claims: bool = True,
     organization_id: int | None = None,
     jti: str | None = None,
-    token_type: TokenType = "access",
+    token_type: TokenType = "access",  # noqa: S107 - JWT kind, not a secret
 ) -> str:
     claims = JWTTokenClaims(
         iss=settings.app_name,

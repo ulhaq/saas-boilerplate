@@ -14,7 +14,9 @@ class UserOrganizationRepository(SQLResourceRepository[UserOrganization]):
         super().__init__(UserOrganization, db)
 
     async def get_by_user_and_organization(
-        self, user_id: int, organization_id: int
+        self,
+        user_id: int,
+        organization_id: int,
     ) -> UserOrganization | None:
         stmt = select(UserOrganization).where(
             UserOrganization.user_id == user_id,
@@ -40,7 +42,8 @@ class UserOrganizationRepository(SQLResourceRepository[UserOrganization]):
         return rs.scalars().all()
 
     async def get_active_organization_for_user(
-        self, user_id: int
+        self,
+        user_id: int,
     ) -> UserOrganization | None:
         """
         Return the most-recently-active membership row.
@@ -52,15 +55,17 @@ class UserOrganizationRepository(SQLResourceRepository[UserOrganization]):
         return rows[0] if rows else None
 
     async def get_all_members_of_organization(
-        self, organization_id: int
+        self,
+        organization_id: int,
     ) -> Sequence[UserOrganization]:
         stmt = select(UserOrganization).where(
-            UserOrganization.organization_id == organization_id
+            UserOrganization.organization_id == organization_id,
         )
         rs = await self.db.execute(stmt)
         return rs.scalars().all()
 
     async def update_last_active(
-        self, membership: UserOrganization
+        self,
+        membership: UserOrganization,
     ) -> UserOrganization:
         return await self.update(membership, last_active_at=datetime.now(UTC))

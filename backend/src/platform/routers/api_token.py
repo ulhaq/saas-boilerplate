@@ -19,7 +19,7 @@ router = APIRouter(prefix="/api-tokens")
 @router.get("", status_code=status.HTTP_200_OK)
 @limiter.limit("60/minute")
 async def list_api_tokens(
-    request: Request,
+    request: Request,  # noqa: ARG001
     service: Annotated[ApiTokenService, Depends()],
     _: Annotated[Auth, Depends(require_permission(Permission.MANAGE_API_TOKEN))],
     __: Annotated[Auth, Depends(require_plan_feature(PlanFeature.API_TOKEN))],
@@ -30,7 +30,7 @@ async def list_api_tokens(
 @router.post("", status_code=status.HTTP_201_CREATED)
 @limiter.limit("10/minute")
 async def create_api_token(
-    request: Request,
+    request: Request,  # noqa: ARG001
     service: Annotated[ApiTokenService, Depends()],
     _: Annotated[Auth, Depends(require_permission(Permission.MANAGE_API_TOKEN))],
     __: Annotated[Auth, Depends(require_plan_feature(PlanFeature.API_TOKEN))],
@@ -42,7 +42,7 @@ async def create_api_token(
 @router.delete("/{token_id}", status_code=status.HTTP_204_NO_CONTENT)
 @limiter.limit("20/minute")
 async def revoke_api_token(
-    request: Request,
+    request: Request,  # noqa: ARG001
     service: Annotated[ApiTokenService, Depends()],
     _: Annotated[Auth, Depends(require_permission(Permission.MANAGE_API_TOKEN))],
     __: Annotated[Auth, Depends(require_plan_feature(PlanFeature.API_TOKEN))],

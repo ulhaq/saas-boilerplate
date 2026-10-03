@@ -60,13 +60,16 @@ class ApiTokenService(BaseService):
 
     async def list_tokens(self) -> list[ApiTokenResponse]:
         tokens = await self.repos.api_token.list_for_user_org(
-            self.current_user.id, self.current_user.organization_id
+            self.current_user.id,
+            self.current_user.organization_id,
         )
         return [ApiTokenResponse.model_validate(t) for t in tokens]
 
     async def revoke_token(self, token_id: int) -> None:
         revoked = await self.repos.api_token.revoke(
-            token_id, self.current_user.id, self.current_user.organization_id
+            token_id,
+            self.current_user.id,
+            self.current_user.organization_id,
         )
         if not revoked:
             raise NotFoundException("API token not found")

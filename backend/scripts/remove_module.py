@@ -37,25 +37,26 @@ def fail(message: str) -> NoReturn:
 def unlist(name: str) -> None:
     path = ROOT / "src/products.py"
     text = path.read_text()
-    match = re.search(rf"^from src\.{name}\.module import (\w+)\n", text, re.M)
+    match = re.search(rf"^from src\.{name}\.module import (\w+)\n", text, re.MULTILINE)
     if not match:
         fail(f"no `from src.{name}.module import ...` in {path}")
     constant = match.group(1)
     text = text.replace(match.group(0), "")
-    listed = re.search(r"^MODULES: list\[Module\] = \[(.*)\]$", text, re.M)
+    listed = re.search(r"^MODULES: list\[Module\] = \[(.*)\]$", text, re.MULTILINE)
     if not listed or constant not in listed.group(1).split(", "):
         fail(f"{constant} is not listed in MODULES in {path}")
     entries = [e for e in listed.group(1).split(", ") if e != constant]
     text = text.replace(
-        listed.group(0), f"MODULES: list[Module] = [{', '.join(entries)}]"
+        listed.group(0),
+        f"MODULES: list[Module] = [{', '.join(entries)}]",
     )
     path.write_text(text)
 
 
 def _revision(text: str, field: str) -> str | None:
-    match = re.search(rf'^{field}: str \| None = "?(\w+)"?$', text, re.M)
+    match = re.search(rf'^{field}: str \| None = "?(\w+)"?$', text, re.MULTILINE)
     if not match:
-        match = re.search(rf'^{field}: str = "(\w+)"$', text, re.M)
+        match = re.search(rf'^{field}: str = "(\w+)"$', text, re.MULTILINE)
     if not match:
         return None
     return None if match.group(1) == "None" else match.group(1)
@@ -79,13 +80,13 @@ def drop_migration(name: str) -> None:
                 rf'^down_revision: str \| None = "{revision}"$',
                 f"down_revision: str | None = {new_down}",
                 text,
-                flags=re.M,
+                flags=re.MULTILINE,
             )
             text = re.sub(
                 rf"^Revises: {revision}$",
                 f"Revises: {previous or ''}",
                 text,
-                flags=re.M,
+                flags=re.MULTILINE,
             )
             other.write_text(text)
     files[0].unlink()
@@ -96,7 +97,7 @@ def drop_contracts(name: str) -> None:
     text = path.read_text()
     entry = rf'"src\.{name}(?:\.\w+)*"'
     # One entry per line in multi-line lists, then inline entries ("a", "b").
-    updated = re.sub(rf"^[ \t]*{entry},\n", "", text, flags=re.M)
+    updated = re.sub(rf"^[ \t]*{entry},\n", "", text, flags=re.MULTILINE)
     updated = re.sub(rf"{entry},[ \t]*|,[ \t]*{entry}", "", updated)
     if updated == text:
         fail(f"no src.{name} entries in the import-linter contracts")
@@ -147,12 +148,17 @@ def drop_tests(name: str) -> list[Path]:
     shutil.rmtree(tests / name)
     touched = [p for p in tests.rglob("test_*.py") if _drop_marked_tests(p, name)]
     ini = ROOT / "pytest.ini"
-    ini.write_text(re.sub(rf"^[ \t]+{name}:.*\n", "", ini.read_text(), flags=re.M))
+    ini.write_text(
+        re.sub(rf"^[ \t]+{name}:.*\n", "", ini.read_text(), flags=re.MULTILINE),
+    )
     return touched
 
 
+EXPECTED_ARGC = 2  # script name + module name
+
+
 def main() -> None:
-    if len(sys.argv) != 2:
+    if len(sys.argv) != EXPECTED_ARGC:
         fail("usage: remove_module.py <module>")
     name = sys.argv[1]
     package = ROOT / "src" / name
@@ -168,8 +174,18 @@ def main() -> None:
     touched = drop_tests(name)
     if touched:
         # Imports only the removed tests used.
-        subprocess.run(
-            ["ruff", "check", "--fix", "--select", "F401", "-q", *map(str, touched)],
+        subprocess.run(  # noqa: S603 - fixed argv, paths from our own tests dir
+            [
+                sys.executable,
+                "-m",
+                "ruff",
+                "check",
+                "--fix",
+                "--select",
+                "F401",
+                "-q",
+                *map(str, touched),
+            ],
             cwd=ROOT,
             check=False,
         )

@@ -83,25 +83,23 @@ def _token(result: object) -> Token:
 
 
 async def test_register_new_email():
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            service = await _make_service(session, RegistrationService)
-            out = await service.register_organization(
-                RegisterIn(email="brand_new@example.com", terms_accepted=True),
-                schedule_task=_no_op_schedule,
-            )
+    async with TestSessionLocal() as session, session.begin():
+        service = await _make_service(session, RegistrationService)
+        out = await service.register_organization(
+            RegisterIn(email="brand_new@example.com", terms_accepted=True),
+            schedule_task=_no_op_schedule,
+        )
     assert "email" in out.message.lower() or out.message
 
 
 async def test_register_duplicate_email_raises():
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            service = await _make_service(session, RegistrationService)
-            with pytest.raises(AlreadyExistsException):
-                await service.register_organization(
-                    RegisterIn(email="admin@example.org", terms_accepted=True),
-                    schedule_task=_no_op_schedule,
-                )
+    async with TestSessionLocal() as session, session.begin():
+        service = await _make_service(session, RegistrationService)
+        with pytest.raises(AlreadyExistsException):
+            await service.register_organization(
+                RegisterIn(email="admin@example.org", terms_accepted=True),
+                schedule_task=_no_op_schedule,
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -113,31 +111,29 @@ async def test_verify_email_valid_token():
     email = "verify@example.com"
     captured: dict = {}
 
-    def capture_schedule(fn, **kwargs):
+    def capture_schedule(_fn, **kwargs):
         verify_url: str = (kwargs.get("data") or {}).get("verify_url", "")
         if "token=" in verify_url:
             captured["token"] = verify_url.split("token=")[-1]
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            service = await _make_service(session, RegistrationService)
-            await service.register_organization(
-                RegisterIn(email=email, terms_accepted=True),
-                schedule_task=capture_schedule,
-            )
-            out = await service.verify_email(VerifyEmailIn(token=captured["token"]))
+    async with TestSessionLocal() as session, session.begin():
+        service = await _make_service(session, RegistrationService)
+        await service.register_organization(
+            RegisterIn(email=email, terms_accepted=True),
+            schedule_task=capture_schedule,
+        )
+        out = await service.verify_email(VerifyEmailIn(token=captured["token"]))
 
     assert out.setup_token
 
 
 async def test_verify_email_invalid_token_raises():
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            service = await _make_service(session, RegistrationService)
-            # Token is valid (signed) but no DB record exists
-            token = sign(data="nobody@example.com", salt="email-verification")
-            with pytest.raises(NotAuthenticatedException):
-                await service.verify_email(VerifyEmailIn(token=token))
+    async with TestSessionLocal() as session, session.begin():
+        service = await _make_service(session, RegistrationService)
+        # Token is valid (signed) but no DB record exists
+        token = sign(data="nobody@example.com", salt="email-verification")
+        with pytest.raises(NotAuthenticatedException):
+            await service.verify_email(VerifyEmailIn(token=token))
 
 
 # ---------------------------------------------------------------------------
@@ -148,20 +144,20 @@ async def test_verify_email_invalid_token_raises():
 async def test_complete_registration_creates_user_and_org():
     email = "complete@example.com"
     setup_token = sign(
-        data={"email": email, "terms_accepted_at": None}, salt="complete-registration"
+        data={"email": email, "terms_accepted_at": None},
+        salt="complete-registration",
     )
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            service = await _make_service(session, RegistrationService)
-            token = await service.complete_registration(
-                CompleteRegistrationIn(
-                    setup_token=setup_token,
-                    name="Test User",
-                    password="Str0ng!Pass",
-                ),
-                schedule_task=_no_op_schedule,
-            )
+    async with TestSessionLocal() as session, session.begin():
+        service = await _make_service(session, RegistrationService)
+        token = await service.complete_registration(
+            CompleteRegistrationIn(
+                setup_token=setup_token,
+                name="Test User",
+                password="Str0ng!Pass",
+            ),
+            schedule_task=_no_op_schedule,
+        )
 
     assert token.access_token
     assert token.refresh_token
@@ -174,18 +170,17 @@ async def test_complete_registration_duplicate_email_raises():
         salt="complete-registration",
     )
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            service = await _make_service(session, RegistrationService)
-            with pytest.raises(AlreadyExistsException):
-                await service.complete_registration(
-                    CompleteRegistrationIn(
-                        setup_token=setup_token,
-                        name="Dupe",
-                        password="Str0ng!Pass",
-                    ),
-                    schedule_task=_no_op_schedule,
-                )
+    async with TestSessionLocal() as session, session.begin():
+        service = await _make_service(session, RegistrationService)
+        with pytest.raises(AlreadyExistsException):
+            await service.complete_registration(
+                CompleteRegistrationIn(
+                    setup_token=setup_token,
+                    name="Dupe",
+                    password="Str0ng!Pass",
+                ),
+                schedule_task=_no_op_schedule,
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -194,31 +189,26 @@ async def test_complete_registration_duplicate_email_raises():
 
 
 async def test_get_access_token_valid_credentials():
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            service = await _make_service(session, SessionService)
-            token = _token(
-                await service.get_access_token("admin@example.org", "password")
-            )
+    async with TestSessionLocal() as session, session.begin():
+        service = await _make_service(session, SessionService)
+        token = _token(await service.get_access_token("admin@example.org", "password"))
 
     assert token.access_token
     assert token.refresh_token
 
 
 async def test_get_access_token_wrong_password():
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            service = await _make_service(session, SessionService)
-            with pytest.raises(NotAuthenticatedException):
-                await service.get_access_token("admin@example.org", "wrong")
+    async with TestSessionLocal() as session, session.begin():
+        service = await _make_service(session, SessionService)
+        with pytest.raises(NotAuthenticatedException):
+            await service.get_access_token("admin@example.org", "wrong")
 
 
 async def test_get_access_token_unknown_user():
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            service = await _make_service(session, SessionService)
-            with pytest.raises(NotAuthenticatedException):
-                await service.get_access_token("ghost@example.org", "password")
+    async with TestSessionLocal() as session, session.begin():
+        service = await _make_service(session, SessionService)
+        with pytest.raises(NotAuthenticatedException):
+            await service.get_access_token("ghost@example.org", "password")
 
 
 # ---------------------------------------------------------------------------
@@ -227,33 +217,30 @@ async def test_get_access_token_unknown_user():
 
 
 async def test_refresh_access_token_valid():
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            service = await _make_service(session, SessionService)
-            # Log in first to get a persisted refresh token
-            original = _token(
-                await service.get_access_token("admin@example.org", "password")
-            )
-            new_tokens = await service.refresh_access_token(original.refresh_token)
+    async with TestSessionLocal() as session, session.begin():
+        service = await _make_service(session, SessionService)
+        # Log in first to get a persisted refresh token
+        original = _token(
+            await service.get_access_token("admin@example.org", "password"),
+        )
+        new_tokens = await service.refresh_access_token(original.refresh_token)
 
     assert new_tokens.access_token
     assert new_tokens.access_token != original.access_token
 
 
 async def test_refresh_access_token_missing_raises():
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            service = await _make_service(session, SessionService)
-            with pytest.raises(NotAuthenticatedException):
-                await service.refresh_access_token(None)
+    async with TestSessionLocal() as session, session.begin():
+        service = await _make_service(session, SessionService)
+        with pytest.raises(NotAuthenticatedException):
+            await service.refresh_access_token(None)
 
 
 async def test_refresh_access_token_bogus_raises():
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            service = await _make_service(session, SessionService)
-            with pytest.raises(NotAuthenticatedException):
-                await service.refresh_access_token("not.a.valid.jwt")
+    async with TestSessionLocal() as session, session.begin():
+        service = await _make_service(session, SessionService)
+        with pytest.raises(NotAuthenticatedException):
+            await service.refresh_access_token("not.a.valid.jwt")
 
 
 # ---------------------------------------------------------------------------
@@ -264,17 +251,16 @@ async def test_refresh_access_token_bogus_raises():
 async def test_switch_organization_valid():
     from src.platform.core.security import Auth
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            repos = RepositoryManager(session)
-            # Fetch admin user (id=1) who belongs to org 1
-            user = await repos.user.unscoped.get(1)
-            assert user
-            current_auth = Auth.from_user_model(user, active_organization_id=1)
+    async with TestSessionLocal() as session, session.begin():
+        repos = RepositoryManager(session)
+        # Fetch admin user (id=1) who belongs to org 1
+        user = await repos.user.unscoped.get(1)
+        assert user
+        current_auth = Auth.from_user_model(user, active_organization_id=1)
 
-            service = SessionService(repos)
-            # Switch back to org 1 (they already belong to it)
-            token = await service.switch_organization(current_auth, organization_id=1)
+        service = SessionService(repos)
+        # Switch back to org 1 (they already belong to it)
+        token = await service.switch_organization(current_auth, organization_id=1)
 
     assert token.access_token
 
@@ -282,17 +268,16 @@ async def test_switch_organization_valid():
 async def test_switch_organization_non_member_raises():
     from src.platform.core.security import Auth
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            repos = RepositoryManager(session)
-            user = await repos.user.unscoped.get(1)
-            assert user
-            current_auth = Auth.from_user_model(user, active_organization_id=1)
+    async with TestSessionLocal() as session, session.begin():
+        repos = RepositoryManager(session)
+        user = await repos.user.unscoped.get(1)
+        assert user
+        current_auth = Auth.from_user_model(user, active_organization_id=1)
 
-            service = SessionService(repos)
-            # Org 999 does not exist
-            with pytest.raises(PermissionDeniedException):
-                await service.switch_organization(current_auth, organization_id=999)
+        service = SessionService(repos)
+        # Org 999 does not exist
+        with pytest.raises(PermissionDeniedException):
+            await service.switch_organization(current_auth, organization_id=999)
 
 
 # ---------------------------------------------------------------------------
@@ -301,29 +286,24 @@ async def test_switch_organization_non_member_raises():
 
 
 async def test_logout_deletes_refresh_token():
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            service = await _make_service(session, SessionService)
-            tokens = _token(
-                await service.get_access_token("admin@example.org", "password")
-            )
-            # logout should not raise even if the token is valid
-            await service.logout(tokens.refresh_token)
+    async with TestSessionLocal() as session, session.begin():
+        service = await _make_service(session, SessionService)
+        tokens = _token(await service.get_access_token("admin@example.org", "password"))
+        # logout should not raise even if the token is valid
+        await service.logout(tokens.refresh_token)
 
 
 async def test_logout_invalid_token_is_silent():
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            service = await _make_service(session, SessionService)
-            # Should not raise
-            await service.logout("garbage.token.here")
+    async with TestSessionLocal() as session, session.begin():
+        service = await _make_service(session, SessionService)
+        # Should not raise
+        await service.logout("garbage.token.here")
 
 
 async def test_logout_none_is_silent():
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            service = await _make_service(session, SessionService)
-            await service.logout(None)
+    async with TestSessionLocal() as session, session.begin():
+        service = await _make_service(session, SessionService)
+        await service.logout(None)
 
 
 # ---------------------------------------------------------------------------
@@ -332,25 +312,23 @@ async def test_logout_none_is_silent():
 
 
 async def test_request_password_reset_existing_user():
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            service = await _make_service(session, CredentialsService)
-            # Should complete without error
-            result = await service.request_password_reset(
-                EmailIn(email="admin@example.org"),
-                schedule_task=_no_op_schedule,
-            )
+    async with TestSessionLocal() as session, session.begin():
+        service = await _make_service(session, CredentialsService)
+        # Should complete without error
+        result = await service.request_password_reset(
+            EmailIn(email="admin@example.org"),
+            schedule_task=_no_op_schedule,
+        )
     assert result is None
 
 
 async def test_request_password_reset_unknown_email_is_silent():
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            service = await _make_service(session, CredentialsService)
-            result = await service.request_password_reset(
-                EmailIn(email="nobody@example.org"),
-                schedule_task=_no_op_schedule,
-            )
+    async with TestSessionLocal() as session, session.begin():
+        service = await _make_service(session, CredentialsService)
+        result = await service.request_password_reset(
+            EmailIn(email="nobody@example.org"),
+            schedule_task=_no_op_schedule,
+        )
     assert result is None
 
 
@@ -360,49 +338,48 @@ async def test_request_password_reset_unknown_email_is_silent():
 
 
 async def test_reset_password_valid():
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            service = await _make_service(session, CredentialsService)
-            # Create the reset token record
-            await service.request_password_reset(
-                EmailIn(email="admin@example.org"), schedule_task=_no_op_schedule
-            )
-            token = sign(data="admin@example.org", salt="reset-password")
-            # Stamp the hashed token into the DB record so verify_secret matches
-            repos = RepositoryManager(session)
-            user = await repos.user.get_by_email("admin@example.org")
-            assert user
-            await repos.user.delete_password_reset_token(user=user)
-            await repos.user.create_password_reset_token(
-                user=user, token=hash_secret(token)
-            )
-            result = await service.reset_password(
-                ResetPasswordIn(token=token, password="NewP@ssw0rd!")
-            )
+    async with TestSessionLocal() as session, session.begin():
+        service = await _make_service(session, CredentialsService)
+        # Create the reset token record
+        await service.request_password_reset(
+            EmailIn(email="admin@example.org"),
+            schedule_task=_no_op_schedule,
+        )
+        token = sign(data="admin@example.org", salt="reset-password")
+        # Stamp the hashed token into the DB record so verify_secret matches
+        repos = RepositoryManager(session)
+        user = await repos.user.get_by_email("admin@example.org")
+        assert user
+        await repos.user.delete_password_reset_token(user=user)
+        await repos.user.create_password_reset_token(
+            user=user,
+            token=hash_secret(token),
+        )
+        result = await service.reset_password(
+            ResetPasswordIn(token=token, password="NewP@ssw0rd!"),
+        )
     assert result is None
 
 
 async def test_reset_password_invalid_token_raises():
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            service = await _make_service(session, CredentialsService)
-            token = sign(data="admin@example.org", salt="reset-password")
-            # No DB record exists - should raise
-            with pytest.raises(NotAuthenticatedException):
-                await service.reset_password(
-                    ResetPasswordIn(token=token, password="NewP@ss!")
-                )
+    async with TestSessionLocal() as session, session.begin():
+        service = await _make_service(session, CredentialsService)
+        token = sign(data="admin@example.org", salt="reset-password")
+        # No DB record exists - should raise
+        with pytest.raises(NotAuthenticatedException):
+            await service.reset_password(
+                ResetPasswordIn(token=token, password="NewP@ss!"),
+            )
 
 
 async def test_reset_password_unknown_email_raises():
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            service = await _make_service(session, CredentialsService)
-            token = sign(data="ghost@example.org", salt="reset-password")
-            with pytest.raises(NotFoundException):
-                await service.reset_password(
-                    ResetPasswordIn(token=token, password="NewP@ss!")
-                )
+    async with TestSessionLocal() as session, session.begin():
+        service = await _make_service(session, CredentialsService)
+        token = sign(data="ghost@example.org", salt="reset-password")
+        with pytest.raises(NotFoundException):
+            await service.reset_password(
+                ResetPasswordIn(token=token, password="NewP@ss!"),
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -414,12 +391,11 @@ async def test_invite_status_valid():
 
     email = "invitee@example.com"
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            repos = RepositoryManager(session)
-            token = await _seed_invite(repos, email, organization_id=1, role_ids=[])
-            service = InviteService(repos)
-            out = await service.invite_status(token)
+    async with TestSessionLocal() as session, session.begin():
+        repos = RepositoryManager(session)
+        token = await _seed_invite(repos, email, organization_id=1, role_ids=[])
+        service = InviteService(repos)
+        out = await service.invite_status(token)
 
     assert out.email == email
     assert out.user_exists is False
@@ -429,12 +405,11 @@ async def test_invite_status_existing_user():
 
     email = "admin@example.org"  # already seeded
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            repos = RepositoryManager(session)
-            token = await _seed_invite(repos, email, organization_id=1, role_ids=[])
-            service = InviteService(repos)
-            out = await service.invite_status(token)
+    async with TestSessionLocal() as session, session.begin():
+        repos = RepositoryManager(session)
+        token = await _seed_invite(repos, email, organization_id=1, role_ids=[])
+        service = InviteService(repos)
+        out = await service.invite_status(token)
 
     assert out.user_exists is True
 
@@ -448,22 +423,20 @@ async def test_complete_invite_new_user():
 
     email = "invite_new@example.com"
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            repos = RepositoryManager(session)
-            token = await _seed_invite(repos, email, organization_id=1, role_ids=[])
-            service = InviteService(repos)
-            result = _token(
-                await service.complete_invite(
-                    CompleteInviteIn(
-                        invite_token=token,
-                        name="New Invitee",
-                        password="Str0ng!Pass",
-                        terms_accepted=True,
-                    ),
-                    schedule_task=_no_op_schedule,
-                )
-            )
+    async with TestSessionLocal() as session, session.begin():
+        repos = RepositoryManager(session)
+        token = await _seed_invite(repos, email, organization_id=1, role_ids=[])
+        service = InviteService(repos)
+        result = _token(
+            await service.complete_invite(
+                CompleteInviteIn(
+                    invite_token=token,
+                    name="New Invitee",
+                    password="Str0ng!Pass",
+                    terms_accepted=True,
+                ),
+            ),
+        )
 
     assert result.access_token
 
@@ -473,18 +446,14 @@ async def test_complete_invite_existing_user_requires_sign_in():
 
     email = "admin@example.org"  # already in org 1
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            repos = RepositoryManager(session)
-            token = await _seed_invite(repos, email, organization_id=2, role_ids=[])
-            service = InviteService(repos)
-            with pytest.raises(PermissionDeniedException) as exc:
-                await service.complete_invite(
-                    CompleteInviteIn(invite_token=token),
-                    schedule_task=_no_op_schedule,
-                )
-            assert exc.value.error_code == ErrorCode.INVITE_LOGIN_REQUIRED
-            assert await repos.invitation.get_by_token(token) is not None
+    async with TestSessionLocal() as session, session.begin():
+        repos = RepositoryManager(session)
+        token = await _seed_invite(repos, email, organization_id=2, role_ids=[])
+        service = InviteService(repos)
+        with pytest.raises(PermissionDeniedException) as exc:
+            await service.complete_invite(CompleteInviteIn(invite_token=token))
+        assert exc.value.error_code == ErrorCode.INVITE_LOGIN_REQUIRED
+        assert await repos.invitation.get_by_token(token) is not None
 
 
 async def test_accept_invite_existing_user():
@@ -493,16 +462,15 @@ async def test_accept_invite_existing_user():
 
     email = "admin@example.org"  # already in org 1
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            repos = RepositoryManager(session)
-            token = await _seed_invite(repos, email, organization_id=2, role_ids=[])
-            service = InviteService(repos)
-            result = await service.accept_invite(
-                await _auth(repos, email, organization_id=1),
-                token,
-                schedule_task=_no_op_schedule,
-            )
+    async with TestSessionLocal() as session, session.begin():
+        repos = RepositoryManager(session)
+        token = await _seed_invite(repos, email, organization_id=2, role_ids=[])
+        service = InviteService(repos)
+        result = await service.accept_invite(
+            await _auth(repos, email, organization_id=1),
+            token,
+            schedule_task=_no_op_schedule,
+        )
 
     assert decode_token(result.access_token)["oid"] == 2
 
@@ -521,32 +489,31 @@ async def test_complete_registration_restores_soft_deleted_user():
 
     email = "restored@example.com"
     setup_token = sign(
-        data={"email": email, "terms_accepted_at": None}, salt="complete-registration"
+        data={"email": email, "terms_accepted_at": None},
+        salt="complete-registration",
     )
 
-    async with TestSessionLocal() as session:
-        # Seed a soft-deleted user with the same email
-        async with session.begin():
-            deleted_user = User(
-                name="Old Name",
-                email=email,
-                password=hash_secret("oldpass"),
-                deleted_at=datetime.now(UTC),
-            )
-            session.add(deleted_user)
+    # Seed a soft-deleted user with the same email
+    async with TestSessionLocal() as session, session.begin():
+        deleted_user = User(
+            name="Old Name",
+            email=email,
+            password=hash_secret("oldpass"),
+            deleted_at=datetime.now(UTC),
+        )
+        session.add(deleted_user)
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            repos = RepositoryManager(session)
-            service = RegistrationService(repos)
-            token = await service.complete_registration(
-                CompleteRegistrationIn(
-                    setup_token=setup_token,
-                    name="Restored User",
-                    password="Str0ng!Pass",
-                ),
-                schedule_task=_no_op_schedule,
-            )
+    async with TestSessionLocal() as session, session.begin():
+        repos = RepositoryManager(session)
+        service = RegistrationService(repos)
+        token = await service.complete_registration(
+            CompleteRegistrationIn(
+                setup_token=setup_token,
+                name="Restored User",
+                password="Str0ng!Pass",
+            ),
+            schedule_task=_no_op_schedule,
+        )
 
     assert token.access_token
 
@@ -561,12 +528,11 @@ async def test_invite_status_invalid_token_raises():
 
     token = "not-a-real-invite-token"
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            repos = RepositoryManager(session)
-            service = InviteService(repos)
-            with pytest.raises(NotAuthenticatedException):
-                await service.invite_status(token)
+    async with TestSessionLocal() as session, session.begin():
+        repos = RepositoryManager(session)
+        service = InviteService(repos)
+        with pytest.raises(NotAuthenticatedException):
+            await service.invite_status(token)
 
 
 # ---------------------------------------------------------------------------
@@ -579,15 +545,11 @@ async def test_complete_invite_invalid_token_raises():
 
     token = "not-a-real-invite-token"
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            repos = RepositoryManager(session)
-            service = InviteService(repos)
-            with pytest.raises(NotAuthenticatedException):
-                await service.complete_invite(
-                    CompleteInviteIn(invite_token=token),
-                    schedule_task=_no_op_schedule,
-                )
+    async with TestSessionLocal() as session, session.begin():
+        repos = RepositoryManager(session)
+        service = InviteService(repos)
+        with pytest.raises(NotAuthenticatedException):
+            await service.complete_invite(CompleteInviteIn(invite_token=token))
 
 
 # ---------------------------------------------------------------------------
@@ -599,20 +561,16 @@ async def test_complete_invite_org_deleted_raises():
     """The inviting org was (soft-)deleted after the invite was sent."""
     email = "orgnotfound@example.com"
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            repos = RepositoryManager(session)
-            token = await _seed_invite(repos, email, organization_id=2, role_ids=[])
-            organization = await repos.organization.get(2)
-            assert organization is not None
-            organization.deleted_at = datetime.now(UTC)
-            await session.flush()
-            service = InviteService(repos)
-            with pytest.raises(NotFoundException):
-                await service.complete_invite(
-                    CompleteInviteIn(invite_token=token),
-                    schedule_task=_no_op_schedule,
-                )
+    async with TestSessionLocal() as session, session.begin():
+        repos = RepositoryManager(session)
+        token = await _seed_invite(repos, email, organization_id=2, role_ids=[])
+        organization = await repos.organization.get(2)
+        assert organization is not None
+        organization.deleted_at = datetime.now(UTC)
+        await session.flush()
+        service = InviteService(repos)
+        with pytest.raises(NotFoundException):
+            await service.complete_invite(CompleteInviteIn(invite_token=token))
 
 
 # ---------------------------------------------------------------------------
@@ -624,17 +582,16 @@ async def test_accept_invite_already_member_raises():
 
     email = "admin@example.org"  # already in org 1
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            repos = RepositoryManager(session)
-            token = await _seed_invite(repos, email, organization_id=1, role_ids=[])
-            service = InviteService(repos)
-            with pytest.raises(AlreadyExistsException):
-                await service.accept_invite(
-                    await _auth(repos, email, organization_id=1),
-                    token,
-                    schedule_task=_no_op_schedule,
-                )
+    async with TestSessionLocal() as session, session.begin():
+        repos = RepositoryManager(session)
+        token = await _seed_invite(repos, email, organization_id=1, role_ids=[])
+        service = InviteService(repos)
+        with pytest.raises(AlreadyExistsException):
+            await service.accept_invite(
+                await _auth(repos, email, organization_id=1),
+                token,
+                schedule_task=_no_op_schedule,
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -648,16 +605,15 @@ async def test_accept_invite_with_roles():
     email = "admin@example.org"  # in org 1; being invited to org 2
     # Role id=4 is Org 2's Member role (non-protected) - must use same-org role
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            repos = RepositoryManager(session)
-            token = await _seed_invite(repos, email, organization_id=2, role_ids=[4])
-            service = InviteService(repos)
-            await service.accept_invite(
-                await _auth(repos, email, organization_id=1),
-                token,
-                schedule_task=_no_op_schedule,
-            )
+    async with TestSessionLocal() as session, session.begin():
+        repos = RepositoryManager(session)
+        token = await _seed_invite(repos, email, organization_id=2, role_ids=[4])
+        service = InviteService(repos)
+        await service.accept_invite(
+            await _auth(repos, email, organization_id=1),
+            token,
+            schedule_task=_no_op_schedule,
+        )
 
     async with TestSessionLocal() as session:
         user = await RepositoryManager(session).user.get_by_email(email)
@@ -675,16 +631,14 @@ async def test_complete_invite_new_user_no_credentials_raises():
 
     email = "nocreds@example.com"
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            repos = RepositoryManager(session)
-            token = await _seed_invite(repos, email, organization_id=1, role_ids=[])
-            service = InviteService(repos)
-            with pytest.raises(ValidationException):
-                await service.complete_invite(
-                    CompleteInviteIn(invite_token=token),  # no name or password
-                    schedule_task=_no_op_schedule,
-                )
+    async with TestSessionLocal() as session, session.begin():
+        repos = RepositoryManager(session)
+        token = await _seed_invite(repos, email, organization_id=1, role_ids=[])
+        service = InviteService(repos)
+        with pytest.raises(ValidationException):
+            await service.complete_invite(
+                CompleteInviteIn(invite_token=token),  # no name or password
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -700,32 +654,29 @@ async def test_complete_invite_restores_soft_deleted_user():
 
     email = "deleted_invite@example.com"
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            deleted_user = User(
-                name="Deleted",
-                email=email,
-                password=hash_secret("oldpass"),
-                deleted_at=datetime.now(UTC),
-            )
-            session.add(deleted_user)
+    async with TestSessionLocal() as session, session.begin():
+        deleted_user = User(
+            name="Deleted",
+            email=email,
+            password=hash_secret("oldpass"),
+            deleted_at=datetime.now(UTC),
+        )
+        session.add(deleted_user)
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            repos = RepositoryManager(session)
-            token = await _seed_invite(repos, email, organization_id=1, role_ids=[])
-            service = InviteService(repos)
-            result = _token(
-                await service.complete_invite(
-                    CompleteInviteIn(
-                        invite_token=token,
-                        name="Restored",
-                        password="Str0ng!Pass",
-                        terms_accepted=True,
-                    ),
-                    schedule_task=_no_op_schedule,
-                )
-            )
+    async with TestSessionLocal() as session, session.begin():
+        repos = RepositoryManager(session)
+        token = await _seed_invite(repos, email, organization_id=1, role_ids=[])
+        service = InviteService(repos)
+        result = _token(
+            await service.complete_invite(
+                CompleteInviteIn(
+                    invite_token=token,
+                    name="Restored",
+                    password="Str0ng!Pass",
+                    terms_accepted=True,
+                ),
+            ),
+        )
 
     assert result.access_token
 
@@ -740,22 +691,20 @@ async def test_complete_invite_new_user_with_roles():
     email = "newwithroles@example.com"
     # Role id=2 is Org 1's Admin role (non-protected) - valid_roles must be non-empty
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            repos = RepositoryManager(session)
-            token = await _seed_invite(repos, email, organization_id=1, role_ids=[2])
-            service = InviteService(repos)
-            result = _token(
-                await service.complete_invite(
-                    CompleteInviteIn(
-                        invite_token=token,
-                        name="New With Roles",
-                        password="Str0ng!Pass",
-                        terms_accepted=True,
-                    ),
-                    schedule_task=_no_op_schedule,
-                )
-            )
+    async with TestSessionLocal() as session, session.begin():
+        repos = RepositoryManager(session)
+        token = await _seed_invite(repos, email, organization_id=1, role_ids=[2])
+        service = InviteService(repos)
+        result = _token(
+            await service.complete_invite(
+                CompleteInviteIn(
+                    invite_token=token,
+                    name="New With Roles",
+                    password="Str0ng!Pass",
+                    terms_accepted=True,
+                ),
+            ),
+        )
 
     assert result.access_token
 
@@ -769,22 +718,20 @@ async def test_get_access_token_no_membership_raises():
     """User exists and password is correct but has no org membership."""
     from src.platform.core.security import hash_secret
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            from src.platform.models.user import User
+    async with TestSessionLocal() as session, session.begin():
+        from src.platform.models.user import User
 
-            user = User(
-                name="No Org User",
-                email="nomembership@example.com",
-                password=hash_secret("password"),
-            )
-            session.add(user)
+        user = User(
+            name="No Org User",
+            email="nomembership@example.com",
+            password=hash_secret("password"),
+        )
+        session.add(user)
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            service = await _make_service(session, SessionService)
-            with pytest.raises(NotAuthenticatedException):
-                await service.get_access_token("nomembership@example.com", "password")
+    async with TestSessionLocal() as session, session.begin():
+        service = await _make_service(session, SessionService)
+        with pytest.raises(NotAuthenticatedException):
+            await service.get_access_token("nomembership@example.com", "password")
 
 
 # ---------------------------------------------------------------------------
@@ -799,11 +746,10 @@ async def test_refresh_access_token_zero_user_id_raises(mocker):
         return_value={"sub": "0"},
     )
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            service = await _make_service(session, SessionService)
-            with pytest.raises(NotAuthenticatedException):
-                await service.refresh_access_token("fake.jwt.token")
+    async with TestSessionLocal() as session, session.begin():
+        service = await _make_service(session, SessionService)
+        with pytest.raises(NotAuthenticatedException):
+            await service.refresh_access_token("fake.jwt.token")
 
 
 # ---------------------------------------------------------------------------
@@ -818,11 +764,10 @@ async def test_refresh_access_token_user_not_found_raises(mocker):
         return_value={"sub": "99999"},
     )
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            service = await _make_service(session, SessionService)
-            with pytest.raises(NotAuthenticatedException):
-                await service.refresh_access_token("fake.jwt.token")
+    async with TestSessionLocal() as session, session.begin():
+        service = await _make_service(session, SessionService)
+        with pytest.raises(NotAuthenticatedException):
+            await service.refresh_access_token("fake.jwt.token")
 
 
 # ---------------------------------------------------------------------------
@@ -832,17 +777,12 @@ async def test_refresh_access_token_user_not_found_raises(mocker):
 
 async def test_second_login_does_not_invalidate_first_session():
     """Logins are independent sessions; both refresh tokens stay valid."""
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            service = await _make_service(session, SessionService)
-            first = _token(
-                await service.get_access_token("admin@example.org", "password")
-            )
-            second = _token(
-                await service.get_access_token("admin@example.org", "password")
-            )
-            assert await service.refresh_access_token(first.refresh_token)
-            assert await service.refresh_access_token(second.refresh_token)
+    async with TestSessionLocal() as session, session.begin():
+        service = await _make_service(session, SessionService)
+        first = _token(await service.get_access_token("admin@example.org", "password"))
+        second = _token(await service.get_access_token("admin@example.org", "password"))
+        assert await service.refresh_access_token(first.refresh_token)
+        assert await service.refresh_access_token(second.refresh_token)
 
 
 async def test_refresh_token_reuse_revokes_all_sessions():
@@ -873,25 +813,20 @@ async def test_refresh_access_token_no_membership_raises():
 
     from src.platform.models.user_organization import UserOrganization
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            service = await _make_service(session, SessionService)
-            tokens = _token(
-                await service.get_access_token("admin@example.org", "password")
-            )
+    async with TestSessionLocal() as session, session.begin():
+        service = await _make_service(session, SessionService)
+        tokens = _token(await service.get_access_token("admin@example.org", "password"))
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            # Remove all org memberships for user 1
-            await session.execute(
-                delete(UserOrganization).where(UserOrganization.user_id == 1)
-            )
+    async with TestSessionLocal() as session, session.begin():
+        # Remove all org memberships for user 1
+        await session.execute(
+            delete(UserOrganization).where(UserOrganization.user_id == 1),
+        )
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            service = await _make_service(session, SessionService)
-            with pytest.raises(NotAuthenticatedException):
-                await service.refresh_access_token(tokens.refresh_token)
+    async with TestSessionLocal() as session, session.begin():
+        service = await _make_service(session, SessionService)
+        with pytest.raises(NotAuthenticatedException):
+            await service.refresh_access_token(tokens.refresh_token)
 
 
 # ---------------------------------------------------------------------------
@@ -912,9 +847,8 @@ async def test_switch_organization_user_not_found_raises():
         permissions=[],
     )
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            repos = RepositoryManager(session)
-            service = SessionService(repos)
-            with pytest.raises(NotAuthenticatedException):
-                await service.switch_organization(ghost_auth, organization_id=1)
+    async with TestSessionLocal() as session, session.begin():
+        repos = RepositoryManager(session)
+        service = SessionService(repos)
+        with pytest.raises(NotAuthenticatedException):
+            await service.switch_organization(ghost_auth, organization_id=1)

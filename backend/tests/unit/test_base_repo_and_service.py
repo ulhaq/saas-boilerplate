@@ -14,36 +14,33 @@ from tests.conftest import TestSessionLocal
 
 
 async def test_permission_repo_exists_returns_true():
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            repos = RepositoryManager(session)
-            # Permission id=1 is always seeded
-            assert await repos.permission.exists(1) is True
+    async with TestSessionLocal() as session, session.begin():
+        repos = RepositoryManager(session)
+        # Permission id=1 is always seeded
+        assert await repos.permission.exists(1) is True
 
 
 async def test_permission_repo_exists_returns_false():
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            repos = RepositoryManager(session)
-            assert await repos.permission.exists(99999) is False
+    async with TestSessionLocal() as session, session.begin():
+        repos = RepositoryManager(session)
+        assert await repos.permission.exists(99999) is False
 
 
 async def test_permission_repo_exists_soft_deleted_excluded_by_default():
     """A soft-deleted permission is not found unless include_deleted=True."""
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            repos = RepositoryManager(session)
-            perm = await repos.permission.create(
-                name="exists:test_perm", description="temp"
-            )
-            perm_id = perm.id
-            await repos.permission.delete(perm)
+    async with TestSessionLocal() as session, session.begin():
+        repos = RepositoryManager(session)
+        perm = await repos.permission.create(
+            name="exists:test_perm",
+            description="temp",
+        )
+        perm_id = perm.id
+        await repos.permission.delete(perm)
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            repos = RepositoryManager(session)
-            assert await repos.permission.exists(perm_id) is False
-            assert await repos.permission.exists(perm_id, include_deleted=True) is True
+    async with TestSessionLocal() as session, session.begin():
+        repos = RepositoryManager(session)
+        assert await repos.permission.exists(perm_id) is False
+        assert await repos.permission.exists(perm_id, include_deleted=True) is True
 
 
 # ---------------------------------------------------------------------------
@@ -53,30 +50,27 @@ async def test_permission_repo_exists_soft_deleted_excluded_by_default():
 
 
 async def test_role_repo_exists_returns_true():
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            repos = RepositoryManager(session)
-            repos.role.set_organization_scope(1)
-            # Role id=1 belongs to org 1
-            assert await repos.role.exists(1) is True
+    async with TestSessionLocal() as session, session.begin():
+        repos = RepositoryManager(session)
+        repos.role.set_organization_scope(1)
+        # Role id=1 belongs to org 1
+        assert await repos.role.exists(1) is True
 
 
 async def test_role_repo_exists_returns_false_wrong_org():
     """A role that exists but belongs to a different org is not visible."""
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            repos = RepositoryManager(session)
-            repos.role.set_organization_scope(1)
-            # Role id=5 belongs to org 2 - invisible from org 1's scope
-            assert await repos.role.exists(5) is False
+    async with TestSessionLocal() as session, session.begin():
+        repos = RepositoryManager(session)
+        repos.role.set_organization_scope(1)
+        # Role id=5 belongs to org 2 - invisible from org 1's scope
+        assert await repos.role.exists(5) is False
 
 
 async def test_role_repo_exists_returns_false_missing():
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            repos = RepositoryManager(session)
-            repos.role.set_organization_scope(1)
-            assert await repos.role.exists(99999) is False
+    async with TestSessionLocal() as session, session.begin():
+        repos = RepositoryManager(session)
+        repos.role.set_organization_scope(1)
+        assert await repos.role.exists(99999) is False
 
 
 # ---------------------------------------------------------------------------
@@ -98,9 +92,8 @@ def _admin_auth() -> Auth:
 
 async def test_require_feature_passes_when_feature_available():
     """Org 1 has API_TOKEN on the free plan - should not raise."""
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            repos = RepositoryManager(session)
-            service = OrganizationService(repos, _admin_auth())
-            # Should complete without raising
-            await service._require_feature(PlanFeature.API_TOKEN, organization_id=1)
+    async with TestSessionLocal() as session, session.begin():
+        repos = RepositoryManager(session)
+        service = OrganizationService(repos, _admin_auth())
+        # Should complete without raising
+        await service._require_feature(PlanFeature.API_TOKEN, organization_id=1)

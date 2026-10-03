@@ -275,7 +275,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("user_id", sa.Integer(), nullable=False),
         sa.Column("organization_id", sa.Integer(), nullable=False),
-        sa.Column("type", sa.String(length=64), nullable=False),
+        sa.Column("notification_type", sa.String(length=64), nullable=False),
         sa.Column(
             "payload",
             postgresql.JSONB(astext_type=sa.Text()),

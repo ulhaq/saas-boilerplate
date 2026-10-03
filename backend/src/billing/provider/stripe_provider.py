@@ -46,7 +46,8 @@ def configure_stripe(timeout_seconds: float, max_network_retries: int) -> None:
 
 
 configure_stripe(
-    billing_settings.stripe_timeout_seconds, billing_settings.stripe_max_network_retries
+    billing_settings.stripe_timeout_seconds,
+    billing_settings.stripe_max_network_retries,
 )
 
 
@@ -78,12 +79,15 @@ class StripeProvider(BillingProviderABC):
                 )
                 for p in results.data:
                     return ExternalProduct(external_id=p.id, is_active=p.active)
-            return None
         except stripe.StripeError as exc:
             raise BillingProviderException(str(exc)) from exc
+        else:
+            return None
 
     async def create_product(
-        self, name: str, description: str | None
+        self,
+        name: str,
+        description: str | None,
     ) -> ExternalProduct:
         try:
             params: dict = {"name": name}
@@ -92,7 +96,9 @@ class StripeProvider(BillingProviderABC):
             product = await stripe.Product.create_async(
                 **params,
                 idempotency_key=self._idempotency_key(
-                    "product-create", name, description or ""
+                    "product-create",
+                    name,
+                    description or "",
                 ),
                 api_key=self._api_key,
             )
@@ -101,7 +107,10 @@ class StripeProvider(BillingProviderABC):
             raise BillingProviderException(str(exc)) from exc
 
     async def update_product(
-        self, external_product_id: str, name: str, description: str | None
+        self,
+        external_product_id: str,
+        name: str,
+        description: str | None,
     ) -> ExternalProduct:
         try:
             params: dict = {"name": name}
@@ -161,9 +170,10 @@ class StripeProvider(BillingProviderABC):
                         and recurring.interval_count == interval_count
                     ):
                         return ExternalPrice(external_id=p.id, is_active=p.active)
-            return None
         except stripe.StripeError as exc:
             raise BillingProviderException(str(exc)) from exc
+        else:
+            return None
 
     async def create_price(
         self,
@@ -210,7 +220,10 @@ class StripeProvider(BillingProviderABC):
             raise BillingProviderException(str(exc)) from exc
 
     async def get_or_create_customer(
-        self, organization_id: int, organization_name: str, email: str | None = None
+        self,
+        organization_id: int,
+        organization_name: str,
+        email: str | None = None,
     ) -> str:
         try:
             existing = await stripe.Customer.search_async(
@@ -234,9 +247,10 @@ class StripeProvider(BillingProviderABC):
                 api_key=self._api_key,
                 idempotency_key=f"org-{organization_id}-customer",
             )
-            return customer.id
         except stripe.StripeError as exc:
             raise BillingProviderException(str(exc)) from exc
+        else:
+            return customer.id
 
     async def update_customer(
         self,
@@ -291,7 +305,7 @@ class StripeProvider(BillingProviderABC):
                 params["subscription_data"] = {
                     "trial_period_days": trial_period_days,
                     "trial_settings": {
-                        "end_behavior": {"missing_payment_method": "pause"}
+                        "end_behavior": {"missing_payment_method": "pause"},
                     },
                 }
 
@@ -313,7 +327,8 @@ class StripeProvider(BillingProviderABC):
             raise BillingProviderException(str(exc)) from exc
 
     async def cancel_subscription(
-        self, external_subscription_id: str
+        self,
+        external_subscription_id: str,
     ) -> ExternalSubscription:
         try:
             sub = await stripe.Subscription.modify_async(
@@ -337,23 +352,28 @@ class StripeProvider(BillingProviderABC):
     async def cancel_duplicate_subscription(self, external_subscription_id: str) -> int:
         try:
             subscription = await stripe.Subscription.retrieve_async(
-                external_subscription_id, api_key=self._api_key
+                external_subscription_id,
+                api_key=self._api_key,
             )
             refunded = 0
             invoice_id = _stripe_id(subscription.latest_invoice)
             if invoice_id:
                 payments = await stripe.InvoicePayment.list_async(
-                    invoice=invoice_id, status="paid", api_key=self._api_key
+                    invoice=invoice_id,
+                    status="paid",
+                    api_key=self._api_key,
                 )
                 for invoice_payment in payments.data:
                     refunded += await self._refund_duplicate(invoice_payment.payment)
             if subscription.status != "canceled":
                 await stripe.Subscription.cancel_async(
-                    external_subscription_id, api_key=self._api_key
+                    external_subscription_id,
+                    api_key=self._api_key,
                 )
-            return refunded
         except stripe.StripeError as exc:
             raise BillingProviderException(str(exc)) from exc
+        else:
+            return refunded
 
     async def _refund_duplicate(self, payment: stripe.InvoicePayment.Payment) -> int:
         # Keyed per payment, so a webhook retry gets the same refund back
@@ -377,7 +397,8 @@ class StripeProvider(BillingProviderABC):
         return refund.amount
 
     async def resume_subscription(
-        self, external_subscription_id: str
+        self,
+        external_subscription_id: str,
     ) -> ExternalSubscription:
         try:
             current = await stripe.Subscription.retrieve_async(
@@ -404,6 +425,7 @@ class StripeProvider(BillingProviderABC):
         self,
         external_subscription_id: str,
         new_external_price_id: str,
+        *,
         skip_proration: bool = False,
         new_amount: int = 0,
     ) -> ExternalSubscription:
@@ -451,7 +473,7 @@ class StripeProvider(BillingProviderABC):
             if trial_period_days:
                 params["trial_period_days"] = trial_period_days
                 params["trial_settings"] = {
-                    "end_behavior": {"missing_payment_method": "pause"}
+                    "end_behavior": {"missing_payment_method": "pause"},
                 }
             sub = await stripe.Subscription.create_async(**params)
             return self._map_subscription(sub)
@@ -472,7 +494,8 @@ class StripeProvider(BillingProviderABC):
     async def get_charge_customer(self, external_charge_id: str) -> str | None:
         try:
             charge = await stripe.Charge.retrieve_async(
-                external_charge_id, api_key=self._api_key
+                external_charge_id,
+                api_key=self._api_key,
             )
             customer = charge.customer
             if customer is None:
@@ -482,7 +505,9 @@ class StripeProvider(BillingProviderABC):
             raise BillingProviderException(str(exc)) from exc
 
     async def get_customer_portal_url(
-        self, external_customer_id: str, return_url: str
+        self,
+        external_customer_id: str,
+        return_url: str,
     ) -> CustomerPortalResult:
         try:
             session = await stripe.billing_portal.Session.create_async(
@@ -495,11 +520,15 @@ class StripeProvider(BillingProviderABC):
             raise BillingProviderException(str(exc)) from exc
 
     def construct_webhook_event(
-        self, payload: bytes, sig_header: str
+        self,
+        payload: bytes,
+        sig_header: str,
     ) -> WebhookPayload:
         try:
             event = stripe.Webhook.construct_event(
-                payload, sig_header, self._webhook_secret
+                payload,
+                sig_header,
+                self._webhook_secret,
             )
         except stripe.SignatureVerificationError as exc:
             raise BillingWebhookException("Invalid webhook signature") from exc

@@ -36,21 +36,21 @@ async def purge_expired_tokens(db: AsyncSession) -> int:
 
     r1 = await db.execute(
         delete(PasswordResetToken).where(
-            PasswordResetToken.created_at < password_reset_cutoff
-        )
+            PasswordResetToken.created_at < password_reset_cutoff,
+        ),
     )
     r2 = await db.execute(
         delete(EmailVerificationToken).where(
-            EmailVerificationToken.created_at < email_verify_cutoff
-        )
+            EmailVerificationToken.created_at < email_verify_cutoff,
+        ),
     )
     r3 = await db.execute(
-        delete(Invitation).where(Invitation.expires_at < now - cutoff_buffer)
+        delete(Invitation).where(Invitation.expires_at < now - cutoff_buffer),
     )
     # Refresh-token rows carry their own expiry; one row per session/device,
     # so expired sessions accumulate until purged here.
     r4 = await db.execute(
-        delete(RefreshToken).where(RefreshToken.expires_at < now - cutoff_buffer)
+        delete(RefreshToken).where(RefreshToken.expires_at < now - cutoff_buffer),
     )
     return (
         cast(CursorResult[Any], r1).rowcount
@@ -64,7 +64,7 @@ async def purge_expired_login_throttles(db: AsyncSession) -> int:
     """Failed sign-in records past their lockout window (they hold email
     addresses, which may belong to no account)."""
     return await LoginThrottleRepository(db).purge_expired(
-        timedelta(seconds=settings.login_lockout_seconds)
+        timedelta(seconds=settings.login_lockout_seconds),
     )
 
 
@@ -120,7 +120,7 @@ async def run_gdpr_retention_loop(session_factory: Any) -> None:
                             user_count = await purge_soft_deleted_users(session)
                             org_count = await purge_soft_deleted_orgs(session)
                             throttle_count = await purge_expired_login_throttles(
-                                session
+                                session,
                             )
                             log.info(
                                 "GDPR retention: purged %d token(s), %d user(s), "
@@ -132,6 +132,6 @@ async def run_gdpr_retention_loop(session_factory: Any) -> None:
                             )
                         else:
                             log.info("GDPR retention: running in another worker")
-        except Exception as exc:
-            log.error("GDPR retention loop error: %s", exc, exc_info=True)
+        except Exception:
+            log.exception("GDPR retention loop error")
         await asyncio.sleep(interval)

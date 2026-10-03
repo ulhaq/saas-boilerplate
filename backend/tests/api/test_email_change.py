@@ -64,7 +64,8 @@ def _login(email: str, password: str = "password"):
 
 
 def test_request_sends_confirmation_and_notice(
-    admin_authenticated: TestClient, user_mail: MagicMock
+    admin_authenticated: TestClient,
+    user_mail: MagicMock,
 ) -> None:
     rs = _request(admin_authenticated)
     assert rs.status_code == 202
@@ -79,9 +80,8 @@ def test_request_sends_confirmation_and_notice(
     assert sent["email-change-requested"]["data"]["new_email"] == NEW_EMAIL
 
 
-def test_request_does_not_change_email_yet(
-    admin_authenticated: TestClient, user_mail: MagicMock
-) -> None:
+@pytest.mark.usefixtures("user_mail")
+def test_request_does_not_change_email_yet(admin_authenticated: TestClient) -> None:
     _request(admin_authenticated)
     assert admin_authenticated.get("/v1/users/me").json()["email"] == (
         "admin@example.org"
@@ -89,7 +89,8 @@ def test_request_does_not_change_email_yet(
 
 
 def test_request_requires_correct_password(
-    admin_authenticated: TestClient, user_mail: MagicMock
+    admin_authenticated: TestClient,
+    user_mail: MagicMock,
 ) -> None:
     rs = _request(admin_authenticated, password="wrong")
     assert rs.status_code == 401
@@ -97,16 +98,16 @@ def test_request_requires_correct_password(
     user_mail.assert_not_called()
 
 
-def test_request_rejects_same_email(
-    admin_authenticated: TestClient, user_mail: MagicMock
-) -> None:
+@pytest.mark.usefixtures("user_mail")
+def test_request_rejects_same_email(admin_authenticated: TestClient) -> None:
     rs = _request(admin_authenticated, new_email="ADMIN@example.org")
     assert rs.status_code == 422
     assert rs.json()["error_code"] == "email_unchanged"
 
 
 def test_request_rejects_taken_email(
-    admin_authenticated: TestClient, user_mail: MagicMock
+    admin_authenticated: TestClient,
+    user_mail: MagicMock,
 ) -> None:
     rs = _request(admin_authenticated, new_email="standard@example.org")
     assert rs.status_code == 409
@@ -114,9 +115,8 @@ def test_request_rejects_taken_email(
     user_mail.assert_not_called()
 
 
-def test_request_rejects_disposable_email(
-    admin_authenticated: TestClient, user_mail: MagicMock
-) -> None:
+@pytest.mark.usefixtures("user_mail")
+def test_request_rejects_disposable_email(admin_authenticated: TestClient) -> None:
     rs = _request(admin_authenticated, new_email="user@mailinator.com")
     assert rs.status_code == 422
 
@@ -125,9 +125,8 @@ def test_request_requires_authentication(client: TestClient) -> None:
     assert _request(client).status_code == 401
 
 
-def test_request_is_audited(
-    admin_authenticated: TestClient, user_mail: MagicMock
-) -> None:
+@pytest.mark.usefixtures("user_mail")
+def test_request_is_audited(admin_authenticated: TestClient) -> None:
     _request(admin_authenticated)
     logs = admin_authenticated.get("/v1/audit-logs").json()["items"]
     [entry] = [e for e in logs if e["action"] == "user.email_change_request"]
@@ -139,7 +138,9 @@ def test_request_is_audited(
 
 @pytest.fixture
 def mfa_admin(
-    admin_authenticated: TestClient, clock: _Clock, monkeypatch: pytest.MonkeyPatch
+    admin_authenticated: TestClient,
+    clock: _Clock,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> tuple[TestClient, str, list[str]]:
     monkeypatch.setattr(settings, "mfa_enabled", True)
     secret, codes = _enroll(admin_authenticated, clock)
@@ -147,7 +148,8 @@ def mfa_admin(
 
 
 def test_request_with_mfa_requires_code(
-    mfa_admin: tuple[TestClient, str, list[str]], user_mail: MagicMock
+    mfa_admin: tuple[TestClient, str, list[str]],
+    user_mail: MagicMock,
 ) -> None:
     client, _, _ = mfa_admin
     rs = _request(client)
@@ -157,7 +159,8 @@ def test_request_with_mfa_requires_code(
 
 
 def test_request_with_mfa_rejects_wrong_code(
-    mfa_admin: tuple[TestClient, str, list[str]], user_mail: MagicMock
+    mfa_admin: tuple[TestClient, str, list[str]],
+    user_mail: MagicMock,
 ) -> None:
     client, _, _ = mfa_admin
     rs = _request(client, code="000000")
@@ -166,23 +169,26 @@ def test_request_with_mfa_rejects_wrong_code(
     user_mail.assert_not_called()
 
 
+@pytest.mark.usefixtures("user_mail")
 def test_request_with_mfa_accepts_totp_code(
-    mfa_admin: tuple[TestClient, str, list[str]], clock: _Clock, user_mail: MagicMock
+    mfa_admin: tuple[TestClient, str, list[str]],
+    clock: _Clock,
 ) -> None:
     client, secret, _ = mfa_admin
     assert _request(client, code=clock.code(secret)).status_code == 202
 
 
+@pytest.mark.usefixtures("user_mail")
 def test_request_with_mfa_accepts_recovery_code(
-    mfa_admin: tuple[TestClient, str, list[str]], user_mail: MagicMock
+    mfa_admin: tuple[TestClient, str, list[str]],
 ) -> None:
     client, _, codes = mfa_admin
     assert _request(client, code=codes[0]).status_code == 202
 
 
+@pytest.mark.usefixtures("user_mail")
 def test_request_skips_code_when_mfa_flag_off(
     mfa_admin: tuple[TestClient, str, list[str]],
-    user_mail: MagicMock,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     client, _, _ = mfa_admin
@@ -194,7 +200,9 @@ def test_request_skips_code_when_mfa_flag_off(
 
 
 def test_confirm_changes_email(
-    admin_authenticated: TestClient, user_mail: MagicMock, auth_mail: MagicMock
+    admin_authenticated: TestClient,
+    user_mail: MagicMock,
+    auth_mail: MagicMock,
 ) -> None:
     _request(admin_authenticated)
     token = _confirm_token(user_mail)
@@ -212,8 +220,10 @@ def test_confirm_changes_email(
     assert auth_mail.call_args.kwargs["data"]["new_email"] == NEW_EMAIL
 
 
+@pytest.mark.usefixtures("auth_mail")
 def test_confirm_signs_out_all_sessions(
-    admin_authenticated: TestClient, user_mail: MagicMock, auth_mail: MagicMock
+    admin_authenticated: TestClient,
+    user_mail: MagicMock,
 ) -> None:
     # admin_authenticated's login set a refresh cookie on this client.
     assert admin_authenticated.post("/v1/auth/refresh").status_code == 200
@@ -221,34 +231,40 @@ def test_confirm_signs_out_all_sessions(
     _request(admin_authenticated)
     with TestClient(app) as anonymous:
         anonymous.post(
-            "/v1/auth/confirm-email-change", json={"token": _confirm_token(user_mail)}
+            "/v1/auth/confirm-email-change",
+            json={"token": _confirm_token(user_mail)},
         )
 
     assert admin_authenticated.post("/v1/auth/refresh").status_code == 401
 
 
+@pytest.mark.usefixtures("auth_mail")
 async def test_confirm_is_audited(
-    admin_authenticated: TestClient, user_mail: MagicMock, auth_mail: MagicMock
+    admin_authenticated: TestClient,
+    user_mail: MagicMock,
 ) -> None:
     _request(admin_authenticated)
     with TestClient(app) as anonymous:
         anonymous.post(
-            "/v1/auth/confirm-email-change", json={"token": _confirm_token(user_mail)}
+            "/v1/auth/confirm-email-change",
+            json={"token": _confirm_token(user_mail)},
         )
 
     # User-level event (no org context when the link is clicked), like
     # auth.password_reset - so it isn't in any org's audit-log listing.
     async with TestSessionLocal() as session:
         rs = await session.execute(
-            select(AuditLog).where(AuditLog.action == "user.email_change")
+            select(AuditLog).where(AuditLog.action == "user.email_change"),
         )
         [entry] = rs.scalars().all()
     assert entry.user_id == 1
     assert entry.details == {"old_email": "admin@example.org", "new_email": NEW_EMAIL}
 
 
+@pytest.mark.usefixtures("auth_mail")
 def test_confirm_link_works_once(
-    admin_authenticated: TestClient, user_mail: MagicMock, auth_mail: MagicMock
+    admin_authenticated: TestClient,
+    user_mail: MagicMock,
 ) -> None:
     _request(admin_authenticated)
     token = _confirm_token(user_mail)
@@ -259,8 +275,8 @@ def test_confirm_link_works_once(
     assert rs.json()["error_code"] == "token_invalid"
 
 
+@pytest.mark.usefixtures("mocker")
 def test_confirm_rejects_if_new_email_taken_meanwhile(
-    mocker: MockerFixture,
     admin_authenticated: TestClient,
     user_mail: MagicMock,
     auth_mail: MagicMock,
@@ -278,8 +294,8 @@ def test_confirm_rejects_if_new_email_taken_meanwhile(
             "/v1/auth/verify-email",
             json={
                 "token": auth_mail.call_args.kwargs["data"]["verify_url"].split(
-                    "token="
-                )[1]
+                    "token=",
+                )[1],
             },
         ).json()["setup_token"]
         other.post(
@@ -294,7 +310,8 @@ def test_confirm_rejects_if_new_email_taken_meanwhile(
 
 
 def test_confirm_rejects_expired_link(
-    admin_authenticated: TestClient, user_mail: MagicMock
+    admin_authenticated: TestClient,
+    user_mail: MagicMock,
 ) -> None:
     _request(admin_authenticated)
     token = _confirm_token(user_mail)

@@ -26,7 +26,8 @@ def _invite(
 
 
 def test_list_invitations(
-    mocker: MockerFixture, admin_authenticated: TestClient
+    mocker: MockerFixture,
+    admin_authenticated: TestClient,
 ) -> None:
     _invite(mocker, admin_authenticated)
 
@@ -44,10 +45,12 @@ def test_list_invitations(
 
 
 def test_list_invitations_omits_deleted_roles(
-    mocker: MockerFixture, admin_authenticated: TestClient
+    mocker: MockerFixture,
+    admin_authenticated: TestClient,
 ) -> None:
     role = admin_authenticated.post(
-        "/v1/roles", json={"name": "Temp", "description": "temporary"}
+        "/v1/roles",
+        json={"name": "Temp", "description": "temporary"},
     ).json()
     _invite(mocker, admin_authenticated, role_ids=[2, role["id"]])
     admin_authenticated.delete(f"/v1/roles/{role['id']}")
@@ -57,7 +60,8 @@ def test_list_invitations_omits_deleted_roles(
 
 
 def test_list_invitations_newest_first(
-    mocker: MockerFixture, admin_authenticated: TestClient
+    mocker: MockerFixture,
+    admin_authenticated: TestClient,
 ) -> None:
     _invite(mocker, admin_authenticated, email="first@example.org")
     _invite(mocker, admin_authenticated, email="second@example.org")
@@ -67,7 +71,8 @@ def test_list_invitations_newest_first(
 
 
 def test_list_invitations_flags_expired(
-    mocker: MockerFixture, admin_authenticated: TestClient
+    mocker: MockerFixture,
+    admin_authenticated: TestClient,
 ) -> None:
     with patch("src.platform.core.config.settings.invite_expiry", -1):
         _invite(mocker, admin_authenticated)
@@ -99,7 +104,8 @@ def test_list_invitations_is_scoped_to_active_org(
 
 
 def test_accepted_invitation_is_no_longer_listed(
-    mocker: MockerFixture, admin_authenticated: TestClient
+    mocker: MockerFixture,
+    admin_authenticated: TestClient,
 ) -> None:
     token = _invite(mocker, admin_authenticated)
     with TestClient(app) as invitee:
@@ -126,7 +132,8 @@ def test_list_invitations_requires_authentication(client: TestClient) -> None:
 
 
 def test_revoke_invitation(
-    mocker: MockerFixture, admin_authenticated: TestClient
+    mocker: MockerFixture,
+    admin_authenticated: TestClient,
 ) -> None:
     token = _invite(mocker, admin_authenticated)
     [item] = admin_authenticated.get("/v1/invitations").json()
@@ -143,7 +150,8 @@ def test_revoke_invitation(
 
 
 def test_revoke_invitation_is_audited(
-    mocker: MockerFixture, admin_authenticated: TestClient
+    mocker: MockerFixture,
+    admin_authenticated: TestClient,
 ) -> None:
     _invite(mocker, admin_authenticated)
     [item] = admin_authenticated.get("/v1/invitations").json()
@@ -163,7 +171,10 @@ def test_revoke_only_affects_that_orgs_invitation(
     email = "shared@example.org"
     _invite(mocker, admin_authenticated, email=email)
     token_org2 = _invite(
-        mocker, organization2_admin_authenticated, email=email, role_ids=[4]
+        mocker,
+        organization2_admin_authenticated,
+        email=email,
+        role_ids=[4],
     )
 
     [item] = admin_authenticated.get("/v1/invitations").json()
