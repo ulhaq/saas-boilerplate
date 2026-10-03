@@ -1,10 +1,10 @@
 """Billing's worker loops take their job lock: an iteration runs in one worker
-at a time (the platform's `try_job_lock`)."""
+at a time (the platform's `try_job_lock`). The customer sync is the exception -
+it is safe to run concurrently (see `sync_customer_emails`)."""
 
 import pytest
 
 from src.billing.services.maintenance import (
-    run_customer_sync_loop,
     run_stale_checkout_cleanup_loop,
     run_trial_reminder_loop,
 )
@@ -26,12 +26,6 @@ LOOPS = [
         "src.billing.services.maintenance."
         "BillingMaintenanceService.cleanup_stale_checkouts",
         id="stale-checkout-cleanup",
-    ),
-    pytest.param(
-        "customer_sync",
-        run_customer_sync_loop,
-        "src.billing.services.maintenance.sync_customer_emails",
-        id="customer-sync",
     ),
 ]
 

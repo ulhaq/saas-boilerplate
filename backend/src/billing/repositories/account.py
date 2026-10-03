@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import Select, and_, exists, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -59,17 +59,28 @@ class BillingAccountRepository(SQLResourceRepository[BillingAccount]):
         )
         return list(rs.unique().scalars().all())
 
-    async def get_pending_customer_syncs(
-        self, limit: int = 100
+    async def get_due_customer_syncs(
+        self, max_attempts: int, limit: int = 100
     ) -> list[BillingAccount]:
-        """Accounts whose provider customer is waiting for an email update."""
+        """Accounts whose provider customer is waiting for an email update and
+        due for a try: never tried, or past their backoff - and not given up.
+        Never-tried first, then the longest overdue, so failing accounts can't
+        crowd out the rest."""
+        now = datetime.now(UTC)
         stmt = (
             self._live()
             .filter(
                 self.model.pending_customer_email.is_not(None),
                 self.model.external_customer_id.is_not(None),
+                self.model.customer_sync_attempts < max_attempts,
+                or_(
+                    self.model.customer_sync_next_at.is_(None),
+                    self.model.customer_sync_next_at <= now,
+                ),
             )
-            .order_by(self.model.updated_at)
+            .order_by(
+                self.model.customer_sync_next_at.asc().nulls_first(), self.model.id
+            )
             .limit(limit)
         )
         rs = await self.db.execute(stmt)
@@ -84,9 +95,33 @@ class BillingAccountRepository(SQLResourceRepository[BillingAccount]):
                 self.model.id == account_id,
                 self.model.pending_customer_email == email,
             )
-            .values(pending_customer_email=None)
+            .values(
+                pending_customer_email=None,
+                customer_sync_attempts=0,
+                customer_sync_next_at=None,
+            )
         )
         return bool(rs.rowcount)
+
+    async def record_customer_sync_failure(
+        self, account_id: int, email: str, retry_at: datetime
+    ) -> int | None:
+        """Count a failed push of ``email`` and schedule the next try. Returns
+        the attempts so far - or None if a newer email replaced it meanwhile
+        (that one starts fresh)."""
+        rs = await self.db.execute(
+            update(self.model)
+            .where(
+                self.model.id == account_id,
+                self.model.pending_customer_email == email,
+            )
+            .values(
+                customer_sync_attempts=self.model.customer_sync_attempts + 1,
+                customer_sync_next_at=retry_at,
+            )
+            .returning(self.model.customer_sync_attempts)
+        )
+        return rs.scalar_one_or_none()
 
     async def get_trial_reminder_candidates(
         self, created_before: datetime, limit: int = 500

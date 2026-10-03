@@ -39,5 +39,13 @@ class BillingAccount(ResourceModelBase):
     pending_customer_email: Mapped[str | None] = mapped_column(
         String, default=None, nullable=True
     )
+    # Failed pushes of that email so far, and when to try again (exponential
+    # backoff; given up after `MAX_CUSTOMER_SYNC_ATTEMPTS`).
+    customer_sync_attempts: Mapped[int] = mapped_column(
+        Integer, default=0, server_default="0", nullable=False
+    )
+    customer_sync_next_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), default=None, nullable=True
+    )
 
     organization: Mapped[Organization] = relationship(lazy="selectin")

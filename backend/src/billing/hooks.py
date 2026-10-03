@@ -69,6 +69,10 @@ async def bill_the_new_owner(
     account = await billing.billing_account.get_for_organization(organization_id)
     if account and account.external_customer_id:
         new_owner = await repos.user.unscoped.get_one(user_id)
+        # A new email starts its retries fresh.
         await billing.billing_account.update(
-            account, pending_customer_email=new_owner.email
+            account,
+            pending_customer_email=new_owner.email,
+            customer_sync_attempts=0,
+            customer_sync_next_at=None,
         )

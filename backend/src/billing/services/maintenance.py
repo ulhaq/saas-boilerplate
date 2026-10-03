@@ -83,29 +83,88 @@ class BillingMaintenanceService(BillingBaseService):
         return reminded
 
 
+# A push failing this often is given up (logged as an error, left pending):
+# with the backoff below that is about four hours of retries.
+MAX_CUSTOMER_SYNC_ATTEMPTS = 8
+
+
 async def sync_customer_emails(
-    repos: BillingRepositoryManager, provider: BillingProviderABC
+    session_factory: Any, provider: BillingProviderABC
 ) -> int:
     """Push pending customer emails (`BillingAccount.pending_customer_email`)
-    to the provider. A failed push stays pending and is retried on the next
-    tick; a push is only marked done if no newer email replaced it meanwhile.
-    Returns how many were synced."""
+    to the provider. A failed push is retried with exponential backoff, up to
+    `MAX_CUSTOMER_SYNC_ATTEMPTS` - a failing account never blocks the others;
+    a push is only marked done if no newer email replaced it meanwhile.
+    Returns how many were synced.
+
+    No transaction is open during a provider call: the pending accounts are
+    read in one short transaction and each is cleared in its own, so a slow
+    or failing provider never holds a connection or blocks a writer. That
+    also makes it safe to run in several workers at once (no job lock): two
+    pushing the same email is harmless, and the clear compares first.
+    """
+    async with session_factory() as session, session.begin():
+        accounts = await BillingRepositoryManager(
+            session
+        ).billing_account.get_due_customer_syncs(MAX_CUSTOMER_SYNC_ATTEMPTS)
+        pending = [
+            (
+                account.id,
+                account.external_customer_id,
+                account.pending_customer_email,
+                account.customer_sync_attempts,
+            )
+            for account in accounts
+        ]
+
     synced = 0
-    for account in await repos.billing_account.get_pending_customer_syncs():
-        email = account.pending_customer_email
-        customer_id = account.external_customer_id
-        if email is None or customer_id is None:
+    for account_id, customer_id, email, attempts in pending:
+        if customer_id is None or email is None:
             continue
         try:
             await provider.update_customer(customer_id, email=email)
         except Exception as exc:
-            log.warning(
-                "Customer sync failed, will retry [customer=%s]: %s", customer_id, exc
+            await _record_failure(
+                session_factory, account_id, customer_id, email, attempts, exc
             )
             continue
-        if await repos.billing_account.clear_pending_customer_email(account.id, email):
-            synced += 1
+        async with session_factory() as session, session.begin():
+            repo = BillingRepositoryManager(session).billing_account
+            if await repo.clear_pending_customer_email(account_id, email):
+                synced += 1
     return synced
+
+
+async def _record_failure(
+    session_factory: Any,
+    account_id: int,
+    customer_id: str,
+    email: str,
+    previous_attempts: int,
+    exc: Exception,
+) -> None:
+    # The first retry after 2 minutes, doubling each time.
+    retry_at = datetime.now(UTC) + timedelta(minutes=2 ** (previous_attempts + 1))
+    async with session_factory() as session, session.begin():
+        attempts = await BillingRepositoryManager(
+            session
+        ).billing_account.record_customer_sync_failure(account_id, email, retry_at)
+    if attempts is None:
+        return  # a newer email replaced it; that one starts fresh
+    if attempts >= MAX_CUSTOMER_SYNC_ATTEMPTS:
+        log.error(
+            "Customer sync gave up after %d attempts [customer=%s]: %s",
+            attempts,
+            customer_id,
+            exc,
+        )
+    else:
+        log.warning(
+            "Customer sync failed, retrying [customer=%s attempt=%d]: %s",
+            customer_id,
+            attempts,
+            exc,
+        )
 
 
 async def run_customer_sync_loop(session_factory: Any) -> None:
@@ -119,15 +178,11 @@ async def run_customer_sync_loop(session_factory: Any) -> None:
     while True:
         try:
             with track_worker_run("customer_sync", interval):
-                async with session_factory() as session:
-                    async with session.begin():
-                        if await try_job_lock(session, "customer_sync"):
-                            count = await sync_customer_emails(
-                                BillingRepositoryManager(session),
-                                get_billing_provider(),
-                            )
-                            if count:
-                                log.info("Customer sync: %d customer(s)", count)
+                count = await sync_customer_emails(
+                    session_factory, get_billing_provider()
+                )
+                if count:
+                    log.info("Customer sync: %d customer(s)", count)
         except Exception as exc:
             log.error("Customer sync loop error: %s", exc, exc_info=True)
         await asyncio.sleep(interval)

@@ -52,6 +52,12 @@ def upgrade() -> None:
         sa.Column("trial_used", sa.Boolean(), nullable=False, server_default="0"),
         sa.Column("trial_reminder_sent_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("pending_customer_email", sa.String(), nullable=True),
+        sa.Column(
+            "customer_sync_attempts", sa.Integer(), nullable=False, server_default="0"
+        ),
+        sa.Column(
+            "customer_sync_next_at", sa.DateTime(timezone=True), nullable=True
+        ),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.UniqueConstraint("organization_id"),
