@@ -28,16 +28,12 @@ class PlanEntitlements:
         setting = await repos.plan_setting.get_for_organization(organization_id, metric)
         return setting.value if setting is not None else None
 
-    async def usage(self, db: AsyncSession, organization_id: int, metric: str) -> int:
-        repos = BillingRepositoryManager(db)
-        return await repos.plan_usage.get_count(
-            organization_id, metric, current_period_start()
-        )
-
-    async def record_usage(
+    async def consume(
         self, db: AsyncSession, organization_id: int, metric: str
-    ) -> int:
+    ) -> bool:
+        limit = await self.limit(db, organization_id, metric)
         repos = BillingRepositoryManager(db)
-        return await repos.plan_usage.increment(
-            organization_id, metric, current_period_start()
+        consumed = await repos.plan_usage.consume(
+            organization_id, metric, current_period_start(), limit
         )
+        return consumed is not None

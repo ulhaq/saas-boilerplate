@@ -1,6 +1,7 @@
 """Tests for billing repositories, the provider factory, plan entitlements and
-the platform's require_limit / track_usage over them."""
+the platform's require_limit over them."""
 
+import asyncio
 from datetime import UTC, date, datetime, timedelta
 from enum import StrEnum
 from unittest.mock import MagicMock
@@ -58,28 +59,24 @@ def test_current_period_start_is_first_of_month():
 
 
 # ---------------------------------------------------------------------------
-# require_limit / track_usage (platform) over the installed Entitlements
+# require_limit (platform) over the installed Entitlements
 # ---------------------------------------------------------------------------
 
 
 class _FakeEntitlements:
-    def __init__(self, limit: int | None, usage: int = 0) -> None:
-        self._limit = limit
-        self._usage = usage
-        self.recorded: list[tuple[int, str]] = []
+    def __init__(self, allows: bool) -> None:
+        self._allows = allows
+        self.consumed: list[tuple[int, str]] = []
 
     async def has_feature(self, db, organization_id, feature) -> bool:
         return True
 
     async def limit(self, db, organization_id, metric) -> int | None:
-        return self._limit
+        return None
 
-    async def usage(self, db, organization_id, metric) -> int:
-        return self._usage
-
-    async def record_usage(self, db, organization_id, metric) -> int:
-        self.recorded.append((organization_id, metric))
-        return len(self.recorded)
+    async def consume(self, db, organization_id, metric) -> bool:
+        self.consumed.append((organization_id, metric))
+        return self._allows
 
 
 def _install(mocker, entitlements: _FakeEntitlements) -> None:
@@ -89,41 +86,34 @@ def _install(mocker, entitlements: _FakeEntitlements) -> None:
     )
 
 
-@pytest.mark.parametrize(
-    ("limit", "usage"),
-    [(None, 10_000), (100, 50)],
-    ids=["unlimited", "within the limit"],
-)
-async def test_require_limit_passes(mocker, limit, usage):
+async def test_require_limit_consumes_one_use(mocker):
     from src.platform.services.access import require_limit
 
-    _install(mocker, _FakeEntitlements(limit, usage))
-    check = require_limit(_Metric.API_CALLS)
-    await check(db=MagicMock(), current_user=_admin_auth())  # should not raise
+    entitlements = _FakeEntitlements(allows=True)
+    _install(mocker, entitlements)
+    await require_limit(_Metric.API_CALLS)(db=MagicMock(), current_user=_admin_auth())
+    assert entitlements.consumed == [(1, _Metric.API_CALLS)]
 
 
 async def test_require_limit_exceeded_raises(mocker):
     from src.platform.services.access import require_limit
 
-    _install(mocker, _FakeEntitlements(limit=10, usage=10))
+    _install(mocker, _FakeEntitlements(allows=False))
     check = require_limit(_Metric.API_CALLS)
     with pytest.raises(LimitExceededException):
         await check(db=MagicMock(), current_user=_admin_auth())
 
 
-async def test_track_usage_records_one_use(mocker):
-    from src.platform.services.access import track_usage
-
-    entitlements = _FakeEntitlements(limit=None)
-    _install(mocker, entitlements)
-
-    assert await track_usage(MagicMock(), 1, _Metric.API_CALLS) == 1
-    assert entitlements.recorded == [(1, _Metric.API_CALLS)]
-
-
 # ---------------------------------------------------------------------------
 # PlanEntitlements (billing): plan features, plan settings, usage counters
 # ---------------------------------------------------------------------------
+
+
+async def _usage(organization_id: int, metric: str) -> int:
+    async with TestSessionLocal() as session:
+        return await BillingRepositoryManager(session).plan_usage.get_count(
+            organization_id, metric, current_period_start()
+        )
 
 
 async def test_plan_entitlements_read_the_organizations_plan():
@@ -140,11 +130,43 @@ async def test_plan_entitlements_read_the_organizations_plan():
         assert await entitlements.limit(session, 1, "api_calls") == 2
         assert await entitlements.limit(session, 1, "seats") is None
 
-        assert await entitlements.usage(session, 1, "api_calls") == 0
-        assert await entitlements.record_usage(session, 1, "api_calls") == 1
-        assert await entitlements.record_usage(session, 1, "api_calls") == 2
-        assert await entitlements.usage(session, 1, "api_calls") == 2
-        assert await entitlements.usage(session, 2, "api_calls") == 0
+        # Two uses fit the limit of 2; the third doesn't, and isn't counted.
+        assert await entitlements.consume(session, 1, "api_calls")
+        assert await entitlements.consume(session, 1, "api_calls")
+        assert not await entitlements.consume(session, 1, "api_calls")
+        # Unlimited metrics are counted too.
+        assert await entitlements.consume(session, 1, "exports")
+
+    assert await _usage(1, "api_calls") == 2
+    assert await _usage(1, "exports") == 1
+    assert await _usage(2, "api_calls") == 0
+
+
+async def test_a_zero_limit_allows_nothing():
+    async with TestSessionLocal() as session, session.begin():
+        free_price = await BillingRepositoryManager(session).plan_price.get_free_price()
+        assert free_price
+        session.add(PlanSetting(plan_id=free_price.plan_id, key="api_calls", value=0))
+        await session.flush()
+        assert not await PlanEntitlements().consume(session, 1, "api_calls")
+    assert await _usage(1, "api_calls") == 0
+
+
+async def test_concurrent_uses_never_overshoot_the_limit():
+    """Many requests at once, 3 units left: exactly 3 succeed."""
+    async with TestSessionLocal() as session, session.begin():
+        free_price = await BillingRepositoryManager(session).plan_price.get_free_price()
+        assert free_price
+        session.add(PlanSetting(plan_id=free_price.plan_id, key="api_calls", value=3))
+
+    async def use() -> bool:
+        async with TestSessionLocal() as session, session.begin():
+            return await PlanEntitlements().consume(session, 1, "api_calls")
+
+    results = await asyncio.gather(*(use() for _ in range(10)))
+
+    assert results.count(True) == 3
+    assert await _usage(1, "api_calls") == 3
 
 
 # ---------------------------------------------------------------------------

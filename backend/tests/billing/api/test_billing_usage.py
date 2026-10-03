@@ -4,6 +4,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 
 from src.billing.models.billing import PlanSetting, PlanUsage
 from src.main import app
@@ -27,6 +28,13 @@ async def _limit_gated_endpoint(
     _: Annotated[None, Depends(require_limit(_Metric.API_CALLS))],
 ) -> dict:
     return {"ok": True}
+
+
+@_test_router.get("/test-limit-gate-failing")
+async def _limit_gated_failing_endpoint(
+    _: Annotated[None, Depends(require_limit(_Metric.API_CALLS))],
+) -> dict:
+    raise RuntimeError("the work failed")
 
 
 app.include_router(_test_router, prefix="/v1")
@@ -229,3 +237,33 @@ async def test_limit_is_org_isolated(
     assert (
         organization2_admin_authenticated.get("/v1/test-limit-gate").status_code == 429
     )
+
+
+async def _count(organization_id: int) -> int:
+    async with TestSessionLocal() as session:
+        rs = await session.execute(
+            select(PlanUsage.count).where(
+                PlanUsage.organization_id == organization_id,
+                PlanUsage.metric == _Metric.API_CALLS,
+            )
+        )
+        return rs.scalar_one_or_none() or 0
+
+
+async def test_a_request_uses_up_one_unit(admin_authenticated: TestClient) -> None:
+    await _add_limit(_FREE_PLAN_ID, _Metric.API_CALLS, 2)
+
+    assert admin_authenticated.get("/v1/test-limit-gate").status_code == 200
+    assert admin_authenticated.get("/v1/test-limit-gate").status_code == 200
+    assert admin_authenticated.get("/v1/test-limit-gate").status_code == 429
+    assert await _count(1) == 2
+
+
+async def test_a_failed_request_does_not_use_up_a_unit(
+    admin_authenticated: TestClient,
+) -> None:
+    await _add_limit(_FREE_PLAN_ID, _Metric.API_CALLS, 2)
+
+    assert admin_authenticated.get("/v1/test-limit-gate-failing").status_code == 500
+
+    assert await _count(1) == 0

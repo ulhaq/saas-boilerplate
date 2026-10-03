@@ -22,14 +22,11 @@ class Entitlements(Protocol):
         """The organization's cap for ``metric``; ``None`` means unlimited."""
         ...
 
-    async def usage(self, db: AsyncSession, organization_id: int, metric: str) -> int:
-        """How much of a per-period ``metric`` was used this period."""
-        ...
-
-    async def record_usage(
+    async def consume(
         self, db: AsyncSession, organization_id: int, metric: str
-    ) -> int:
-        """Count one use of a per-period ``metric``; returns the new count."""
+    ) -> bool:
+        """Count one use of a per-period ``metric`` if the limit allows it,
+        atomically; False when the period's limit is reached."""
         ...
 
 
@@ -44,13 +41,10 @@ class _Unlimited:
     ) -> int | None:
         return None
 
-    async def usage(self, db: AsyncSession, organization_id: int, metric: str) -> int:
-        return 0
-
-    async def record_usage(
+    async def consume(
         self, db: AsyncSession, organization_id: int, metric: str
-    ) -> int:
-        return 0
+    ) -> bool:
+        return True
 
 
 UNLIMITED: Entitlements = _Unlimited()

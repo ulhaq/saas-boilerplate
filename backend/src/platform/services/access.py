@@ -191,12 +191,14 @@ def require_owner() -> Callable:
 
 def require_limit(metric: StrEnum) -> Callable:
     """
-    FastAPI dependency factory that blocks the request with LIMIT_EXCEEDED when
-    the organisation has consumed its plan allocation for `metric` this period.
-    Use as a default-value dependency on the route parameter list:
+    FastAPI dependency factory that counts one use of a per-period `metric` -
+    or blocks the request with LIMIT_EXCEEDED when the organization has used
+    its plan's allocation this period. Checking and counting are one atomic
+    step, so concurrent requests can't overshoot, and the count is part of the
+    request's transaction (a failed request doesn't use up the allocation).
 
         async def my_endpoint(
-            _: Annotated[None, Depends(require_limit(UsageMetric.SEATS))],
+            _: Annotated[None, Depends(require_limit(AcmeUsageMetric.EXPORTS))],
             ...
         ): ...
     """
@@ -205,20 +207,9 @@ def require_limit(metric: StrEnum) -> Callable:
         db: DbSession,
         current_user: Annotated[Auth, Depends(authenticate)],
     ) -> None:
-        entitlements = composition.current().entitlements
-        organization_id = current_user.organization_id
-        limit = await entitlements.limit(db, organization_id, metric)
-        if limit is None:
-            return
-        if await entitlements.usage(db, organization_id, metric) >= limit:
+        if not await composition.current().entitlements.consume(
+            db, current_user.organization_id, metric
+        ):
             raise LimitExceededException()
 
     return _check
-
-
-async def track_usage(db: AsyncSession, organization_id: int, metric: StrEnum) -> int:
-    """Count one use of a per-period ``metric`` (checked by `require_limit`);
-    returns the new count."""
-    return await composition.current().entitlements.record_usage(
-        db, organization_id, metric
-    )

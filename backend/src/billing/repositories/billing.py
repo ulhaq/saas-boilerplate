@@ -348,9 +348,19 @@ class PlanUsageRepository(SQLResourceRepository[PlanUsage]):
         rs = await self.db.execute(stmt)
         return rs.scalar_one_or_none() or 0
 
-    async def increment(
-        self, organization_id: int, metric: str, period_start: date
-    ) -> int:
+    async def consume(
+        self,
+        organization_id: int,
+        metric: str,
+        period_start: date,
+        limit: int | None,
+    ) -> int | None:
+        """Count one use of ``metric`` in the period - only while the count is
+        under ``limit`` (``None``: unlimited). Returns the new count, or None if
+        the limit is reached. One statement, so concurrent requests can't both
+        take the last unit."""
+        if limit is not None and limit <= 0:
+            return None
         now = datetime.now(UTC)
         stmt = (
             pg_insert(PlanUsage)
@@ -365,12 +375,12 @@ class PlanUsageRepository(SQLResourceRepository[PlanUsage]):
             .on_conflict_do_update(
                 index_elements=["organization_id", "metric", "period_start"],
                 set_={"count": PlanUsage.count + 1, "updated_at": now},
+                where=None if limit is None else PlanUsage.count < limit,
             )
             .returning(PlanUsage.count)
         )
         rs = await self.db.execute(stmt)
-        await self.db.flush()
-        return rs.scalar_one()
+        return rs.scalar_one_or_none()
 
     async def get_for_organization(
         self, organization_id: int, period_start: date
