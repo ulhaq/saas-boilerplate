@@ -43,7 +43,7 @@ class ProjectService(
             await self._require_capacity(
                 ExampleUsageMetric.PROJECTS,
                 self.current_user.organization_id,
-                await self.repo.count(),
+                self.repo.count,
             )
             await self._assert_name_available(schema_in.name)
 

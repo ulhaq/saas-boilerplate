@@ -1,7 +1,7 @@
 import hashlib
-from datetime import datetime
+from datetime import UTC, datetime
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.platform.models.invitation import Invitation
@@ -73,6 +73,23 @@ class InvitationRepository:
         self.db.add(record)
         await self.db.flush()
         return record
+
+    async def count_pending(
+        self, organization_id: int, *, excluding_email: str | None = None
+    ) -> int:
+        """Unexpired invitations to the organization - seats they will take."""
+        stmt = (
+            select(func.count())
+            .select_from(Invitation)
+            .where(
+                Invitation.organization_id == organization_id,
+                Invitation.expires_at > datetime.now(UTC),
+            )
+        )
+        if excluding_email is not None:
+            stmt = stmt.where(Invitation.email != excluding_email)
+        rs = await self.db.execute(stmt)
+        return int(rs.scalar_one())
 
     async def delete(self, invitation: Invitation) -> None:
         await self.db.delete(invitation)

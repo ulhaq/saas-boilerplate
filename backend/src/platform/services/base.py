@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 from src.platform.core import composition
 from src.platform.core.context import client_ip_var
+from src.platform.core.database import lock_capacity
 from src.platform.core.exceptions import (
     CapacityExceededException,
     NotFoundException,
@@ -49,12 +50,24 @@ class BaseService:
             raise PlanFeatureUnavailableException
 
     async def _require_capacity(
-        self, metric: StrEnum, organization_id: int, current_count: int
+        self,
+        metric: StrEnum,
+        organization_id: int,
+        count: Callable[[], Awaitable[int]],
     ) -> None:
+        """Raise unless the organization can hold one more ``metric``.
+
+        Takes the organization's capacity lock for ``metric`` before calling
+        ``count`` (how many exist now), held until the request commits - so
+        concurrent requests can't both take the last slot. Call it right before
+        adding the resource, in the same transaction."""
         limit = await composition.current().entitlements.limit(
             self.repos.db, organization_id, metric
         )
-        if limit is not None and current_count >= limit:
+        if limit is None:
+            return
+        await lock_capacity(self.repos.db, organization_id, metric)
+        if await count() >= limit:
             raise CapacityExceededException()
 
 

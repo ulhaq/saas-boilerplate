@@ -22,6 +22,7 @@ from src.platform.enums import (
     AuditAction,
     ErrorCode,
     RefreshTokenRevokeReason,
+    UsageMetric,
 )
 from src.platform.models.invitation import Invitation
 from src.platform.models.organization import Organization
@@ -76,7 +77,16 @@ class InviteService(AuthBaseService):
         self, user: User, organization_id: int, role_ids: list[int]
     ) -> User:
         """Create the membership, grant the invited roles, emit MEMBER_ADDED.
-        Returns the user re-fetched with the new roles loaded."""
+        Returns the user re-fetched with the new roles loaded.
+
+        Checks the seat limit again: it may have dropped (a plan change) since
+        the invite was sent. A full organization refuses the join, and the
+        rollback leaves the invitation usable once a seat frees up."""
+        await self._require_capacity(
+            UsageMetric.SEATS,
+            organization_id,
+            lambda: self.repos.user.count_for_org(organization_id),
+        )
         await self.repos.user_organization.create(
             user_id=user.id,
             organization_id=organization_id,

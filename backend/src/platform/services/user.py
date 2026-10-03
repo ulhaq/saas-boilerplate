@@ -259,10 +259,18 @@ class UserService(
     async def invite_user(
         self, invite_in: InviteUserIn, schedule_task: Callable
     ) -> None:
-        count = await self.repos.user.count_for_org(self.current_user.organization_id)
-        await self._require_capacity(
-            UsageMetric.SEATS, self.current_user.organization_id, count
-        )
+        organization_id = self.current_user.organization_id
+
+        async def seats_taken() -> int:
+            # Members plus pending invitations: each invite holds a seat until
+            # it is accepted or expires (re-inviting an email replaces its own).
+            members = await self.repos.user.count_for_org(organization_id)
+            pending = await self.repos.invitation.count_pending(
+                organization_id, excluding_email=invite_in.email
+            )
+            return members + pending
+
+        await self._require_capacity(UsageMetric.SEATS, organization_id, seats_taken)
 
         if invite_in.role_ids:
             self.repos.role.set_organization_scope(self.current_user.organization_id)

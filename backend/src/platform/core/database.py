@@ -45,6 +45,25 @@ DbSession = Annotated[AsyncSession, Depends(get_db, scope="function")]
 _JOB_LOCK_NAMESPACE = 0x6A6F6273
 
 
+# Namespaces the capacity locks (`lock_capacity`) among Postgres advisory locks.
+_CAPACITY_LOCK_NAMESPACE = 0x63617073
+
+
+async def lock_capacity(
+    session: AsyncSession, organization_id: int, metric: str
+) -> None:
+    """Serialize "how many can exist" checks for one organization and metric
+    until the transaction ends: a concurrent request waits here, then counts
+    the rows the first one added - so two can't both take the last slot."""
+    await session.execute(
+        text("SELECT pg_advisory_xact_lock(:namespace, hashtext(:key))"),
+        {
+            "namespace": _CAPACITY_LOCK_NAMESPACE,
+            "key": f"{organization_id}:{metric}",
+        },
+    )
+
+
 async def try_job_lock(session: AsyncSession, job: str) -> bool:
     """Lock `job` for the rest of the session's transaction; False if another
     worker holds it. Worker loops call this first so a job's iteration runs in
