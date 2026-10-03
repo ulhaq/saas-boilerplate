@@ -38,9 +38,11 @@ class HookEvent(StrEnum):
     # A user's membership in an organization was removed (removed by an
     # admin or self-deletion). kwargs: repos, organization_id, user_id
     MEMBER_REMOVED = "member_removed"
-    # An organization's plan or subscription state changed (checkout,
-    # switch, cancellation, webhook update). kwargs: repos, organization_id
-    PLAN_CHANGED = "plan_changed"
+    # What an organization may use (`Entitlements`: features, limits) may have
+    # changed - emitted by the module providing entitlements (billing: on a
+    # checkout, plan switch, cancellation or subscription update), so others
+    # can reconcile limited resources. kwargs: repos, organization_id
+    ENTITLEMENTS_CHANGED = "entitlements_changed"
     # A new (or restored) organization was set up, after its roles are seeded.
     # kwargs: repos, organization_id, user_id (its owner)
     ORGANIZATION_CREATED = "organization_created"

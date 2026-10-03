@@ -33,11 +33,11 @@ class WebhookHandlerGroup(BillingBaseService):
     def handlers(self) -> dict[str, WebhookHandler]:
         raise NotImplementedError
 
-    async def _plan_changed(self, organization_id: int) -> None:
-        """Notify domain modules (via hooks) that the org's plan state changed,
-        so they can reconcile plan-limited resources."""
+    async def _entitlements_changed(self, organization_id: int) -> None:
+        """Tell other modules (via hooks) that the org's plan state - and so its
+        entitlements - changed, so they can reconcile plan-limited resources."""
         await emit(
-            HookEvent.PLAN_CHANGED,
+            HookEvent.ENTITLEMENTS_CHANGED,
             repos=self.repos,
             organization_id=organization_id,
         )
@@ -108,7 +108,7 @@ class WebhookHandlerGroup(BillingBaseService):
             cancel_at=None,
             cancel_at_period_end=False,
         )
-        await self._plan_changed(sub.organization_id)
+        await self._entitlements_changed(sub.organization_id)
 
         return free_price
 

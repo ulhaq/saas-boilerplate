@@ -123,7 +123,7 @@ class CheckoutWebhookHandlers(WebhookHandlerGroup):
                 cancel_at=None,
                 cancel_at_period_end=False,
             )
-            await self._plan_changed(sub.organization_id)
+            await self._entitlements_changed(sub.organization_id)
         else:
             await self.repos.subscription.update(
                 sub,

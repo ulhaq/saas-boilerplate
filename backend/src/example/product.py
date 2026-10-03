@@ -34,7 +34,7 @@ EXAMPLE = Module(
     routers=[RouterMount(router=projects.router, tags=["Projects"])],
     # Emitted by `ProjectService`; other modules may handle them.
     hook_events=list(ExampleHookEvent),
-    hooks={HookEvent.PLAN_CHANGED: [log_projects_over_plan_limit]},
+    hooks={HookEvent.ENTITLEMENTS_CHANGED: [log_projects_over_plan_limit]},
     worker_loops=[run_example_loop],
     email_subjects=EXAMPLE_EMAIL_SUBJECTS,
     template_directory=Path(__file__).resolve().parent / "templates",

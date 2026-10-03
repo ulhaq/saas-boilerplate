@@ -90,7 +90,7 @@ class SubscriptionWebhookHandlers(WebhookHandlerGroup):
                     updates["plan_price_id"] = new_price.id
 
         await self.repos.subscription.update(sub, **updates)
-        await self._plan_changed(sub.organization_id)
+        await self._entitlements_changed(sub.organization_id)
 
         if updates.get("status") == "trialing":
             if account is None:
@@ -156,12 +156,12 @@ class SubscriptionWebhookHandlers(WebhookHandlerGroup):
 
         # Only notify domain modules when plan-relevant state actually changed.
         # Stripe also fires subscription.updated for metadata/tax/billing-anchor
-        # changes, and every PLAN_CHANGED emission triggers a reconciliation
+        # changes, and every ENTITLEMENTS_CHANGED emission triggers a reconciliation
         # run with side effects (e.g. pausing watches over the plan limit).
         plan_state_changed = new_status != sub.status or "plan_price_id" in updates
         await self.repos.subscription.update(sub, **updates)
         if plan_state_changed:
-            await self._plan_changed(sub.organization_id)
+            await self._entitlements_changed(sub.organization_id)
 
     async def _handle_subscription_deleted(self, raw: dict) -> None:
         obj = raw["data"]["object"]
@@ -203,7 +203,7 @@ class SubscriptionWebhookHandlers(WebhookHandlerGroup):
                 # Stripe omitted the timestamp - fall back to now rather than nulling it
                 updates["canceled_at"] = datetime.now(UTC)
             await self.repos.subscription.update(sub, **updates)
-        await self._plan_changed(sub.organization_id)
+        await self._entitlements_changed(sub.organization_id)
 
     async def _handle_subscription_trial_will_end(self, raw: dict) -> None:
         obj = raw["data"]["object"]

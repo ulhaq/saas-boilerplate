@@ -246,10 +246,10 @@ class SubscriptionService(BillingBaseService):
             new_amount=price.amount,
         )
         # This is the authoritative write for a plan switch: the values come
-        # from Stripe's synchronous API response, and PLAN_CHANGED is emitted
+        # from Stripe's synchronous API response, and ENTITLEMENTS_CHANGED is emitted
         # here. The customer.subscription.updated webhook that Stripe fires
         # for the same switch acts as a healer - it only writes (and only
-        # emits PLAN_CHANGED) if local state still differs, e.g. because this
+        # emits ENTITLEMENTS_CHANGED) if local state still differs, e.g. because this
         # transaction failed to commit after the Stripe call succeeded.
         sub = await self.repos.subscription.update(
             sub,
@@ -257,7 +257,7 @@ class SubscriptionService(BillingBaseService):
             status=ext_sub.status,
         )
         await emit(
-            HookEvent.PLAN_CHANGED,
+            HookEvent.ENTITLEMENTS_CHANGED,
             repos=self.repos,
             organization_id=self.current_user.organization_id,
         )

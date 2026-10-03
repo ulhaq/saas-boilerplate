@@ -27,7 +27,7 @@ This is a multi-tenant SaaS application. The backend is in `backend/` using Fast
 - `backend/src/billing/repositories/` - billing data access (`BillingRepositoryManager` in `manager.py`)
 - `backend/src/billing/schemas/billing.py` - Pydantic billing schemas
 - `backend/src/billing/module.py` - the billing manifest: routers, hooks, worker loops (stale-checkout cleanup, trial reminders) (billing background work runs only in the worker process, never in the API lifespan)
-- `backend/src/foundation/core/hooks.py` - hook registry; billing emits `PLAN_CHANGED`, and product handlers (e.g. `backend/src/example/hooks.py`) react (e.g. enforcing product plan limits)
+- `backend/src/foundation/core/hooks.py` - hook registry; billing emits `ENTITLEMENTS_CHANGED`, and product handlers (e.g. `backend/src/example/hooks.py`) react (e.g. enforcing product plan limits)
 - Tests: `backend/tests/api/test_billing_plans.py`, `test_billing_subscriptions.py`, `test_billing_usage.py`, `test_billing_webhook.py`
 
 The tenant discriminator in this project is `organization_id`, not `tenant_id`. Repositories extending `OrganizationScopedRepository` raise `UnscopedQueryError` unless scoped; webhook handlers and worker loops are legitimate cross-tenant callers and must use the explicit `.unscoped` accessor - flag any webhook code path that bypasses this convention some other way.
@@ -61,7 +61,7 @@ For each Stripe event type, verify:
 When asked for a complete check of the billing flow, also audit the non-webhook half:
 - **Checkout/upgrade endpoints**: Trace `routers/billing.py` → `services/billing.py` for the checkout, upgrade, downgrade, and cancel paths. Verify permission guards (`require_permission`), that the acting user's organization is the one billed, and that client-supplied input cannot select another org's subscription or an arbitrary price.
 - **Price/plan integrity**: Amounts and plan identity must come from the server/Stripe (`stripe_setup.py`, seeded plans), never from request bodies.
-- **Plan enforcement**: When a subscription changes, the `PLAN_CHANGED` hook must fire and downstream enforcement (e.g. `PlanFeature` limits, product plan-limit handlers in `src/example/hooks.py`) must be reachable from every state-transition path - including ones driven by webhooks, not just user-initiated upgrades.
+- **Plan enforcement**: When a subscription changes, the `ENTITLEMENTS_CHANGED` hook must fire and downstream enforcement (e.g. `PlanFeature` limits, product plan-limit handlers in `src/example/hooks.py`) must be reachable from every state-transition path - including ones driven by webhooks, not just user-initiated upgrades.
 - **Stale-checkout cleanup**: `run_stale_checkout_cleanup_loop` in `services/billing.py` (registered in `worker.py`) - verify it cannot race a checkout that completes mid-cleanup, and that it uses `.unscoped` access deliberately.
 - **Failure paths**: What state is left if Stripe errors mid-flow (checkout created but webhook never arrives, cancel succeeds in Stripe but the local update fails)? Each should converge to a consistent state via webhook replay or cleanup, not require manual repair.
 - **Test coverage**: Cross-check findings against the four billing test files; flag flows with no test exercising them.

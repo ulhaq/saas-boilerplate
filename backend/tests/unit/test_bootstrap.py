@@ -81,29 +81,32 @@ def test_compose_default_roles_does_not_mutate_foundation_roles():
     assert foundation_grants == [_Perm.READ_WIDGET]
 
 
-async def _on_plan_changed(**_: object) -> None: ...
+async def _on_entitlements_changed(**_: object) -> None: ...
 
 
-async def _on_plan_changed_too(**_: object) -> None: ...
+async def _on_entitlements_changed_too(**_: object) -> None: ...
 
 
 def test_compose_merges_hooks_subjects_and_templates_in_product_order(tmp_path):
     first = _product(
         "first",
-        hooks={HookEvent.PLAN_CHANGED: [_on_plan_changed]},
+        hooks={HookEvent.ENTITLEMENTS_CHANGED: [_on_entitlements_changed]},
         email_subjects={"en": {"widget-ready": "Widget ready"}},
         template_directory=tmp_path / "first",
     )
     second = _product(
         "second",
-        hooks={HookEvent.PLAN_CHANGED: [_on_plan_changed_too]},
+        hooks={HookEvent.ENTITLEMENTS_CHANGED: [_on_entitlements_changed_too]},
         email_subjects={"en": {"gadget-ready": "Gadget ready"}},
     )
 
     composed = compose([first, second])
 
     assert composed.hooks == {
-        HookEvent.PLAN_CHANGED: (_on_plan_changed, _on_plan_changed_too),
+        HookEvent.ENTITLEMENTS_CHANGED: (
+            _on_entitlements_changed,
+            _on_entitlements_changed_too,
+        ),
     }
     assert composed.email_subjects == {
         "en": {"widget-ready": "Widget ready", "gadget-ready": "Gadget ready"},
@@ -119,17 +122,20 @@ class _ClashingEvent(StrEnum):
     WIDGET_BUILT = "widgets.widget_built"
 
 
+async def _on_widget_built(**_: object) -> None: ...
+
+
 def test_compose_lets_a_module_handle_another_modules_hook_event():
     widgets = _product("widgets", hook_events=list(_WidgetEvent))
-    gadgets = _product("gadgets", hooks={_WidgetEvent.WIDGET_BUILT: [_on_plan_changed]})
+    gadgets = _product("gadgets", hooks={_WidgetEvent.WIDGET_BUILT: [_on_widget_built]})
 
     composed = compose([widgets, gadgets])
 
-    assert composed.hooks == {_WidgetEvent.WIDGET_BUILT: (_on_plan_changed,)}
+    assert composed.hooks == {_WidgetEvent.WIDGET_BUILT: (_on_widget_built,)}
 
 
 def test_compose_refuses_a_handler_for_an_undeclared_hook_event():
-    gadgets = _product("gadgets", hooks={_WidgetEvent.WIDGET_BUILT: [_on_plan_changed]})
+    gadgets = _product("gadgets", hooks={_WidgetEvent.WIDGET_BUILT: [_on_widget_built]})
 
     with pytest.raises(ValueError, match="no installed module declares"):
         compose([gadgets])
@@ -139,7 +145,7 @@ def test_compose_refuses_a_handler_keyed_by_an_equal_but_different_event():
     widgets = _product("widgets", hook_events=list(_WidgetEvent))
     gadgets = _product(
         "gadgets",
-        hooks={_ClashingEvent.WIDGET_BUILT: [_on_plan_changed]},
+        hooks={_ClashingEvent.WIDGET_BUILT: [_on_widget_built]},
     )
 
     with pytest.raises(ValueError, match="no installed module declares"):
@@ -148,7 +154,7 @@ def test_compose_refuses_a_handler_keyed_by_an_equal_but_different_event():
 
 @pytest.mark.parametrize(
     "second_events",
-    [list(_ClashingEvent), [HookEvent.PLAN_CHANGED]],
+    [list(_ClashingEvent), [HookEvent.ENTITLEMENTS_CHANGED]],
     ids=["another module's", "the foundation's"],
 )
 def test_compose_refuses_a_hook_event_value_declared_twice(second_events):
@@ -247,7 +253,7 @@ async def test_foundation_code_uses_the_installed_composition(monkeypatch, tmp_p
                     "widgets",
                     hook_events=list(_WidgetEvent),
                     hooks={
-                        HookEvent.PLAN_CHANGED: [record],
+                        HookEvent.ENTITLEMENTS_CHANGED: [record],
                         _WidgetEvent.WIDGET_BUILT: [record],
                     },
                     # Products can also override a foundation subject.
@@ -260,7 +266,7 @@ async def test_foundation_code_uses_the_installed_composition(monkeypatch, tmp_p
         ),
     )
 
-    await emit(HookEvent.PLAN_CHANGED, organization_id=1)
+    await emit(HookEvent.ENTITLEMENTS_CHANGED, organization_id=1)
     await emit(_WidgetEvent.WIDGET_BUILT, widget_id=2)
     assert calls == [{"organization_id": 1}, {"widget_id": 2}]
     assert subject_for("widget-ready", "en", app_name="Acme") == "Acme widget"

@@ -601,7 +601,7 @@ def test_webhook_charge_dispute_marks_past_due(
     mock_billing_provider.delete_subscription.assert_not_called()
 
 
-def test_webhook_subscription_updated_noop_skips_plan_changed_hook(
+def test_webhook_subscription_updated_noop_skips_entitlements_changed_hook(
     admin_authenticated: TestClient,
     plan_with_price: dict,
     mock_billing_provider: MagicMock,
@@ -609,7 +609,7 @@ def test_webhook_subscription_updated_noop_skips_plan_changed_hook(
 ) -> None:
     """
     subscription.updated events that change neither status nor price (e.g.
-    billing-anchor or metadata updates) must not emit PLAN_CHANGED; a real
+    billing-anchor or metadata updates) must not emit ENTITLEMENTS_CHANGED; a real
     status change must.
     """
     price_id = plan_with_price["price"]["id"]
