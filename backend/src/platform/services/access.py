@@ -7,7 +7,7 @@ only answers "who is this request from, and is it allowed?".
 """
 
 import hashlib
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from typing import Annotated
@@ -138,6 +138,20 @@ async def authenticate_user_session(
     if token and token.startswith("sk_"):
         raise PermissionDeniedException("This action requires a signed-in user")
     return auth
+
+
+def assert_can_grant(current_user: Auth, permissions: Iterable[str]) -> None:
+    """Refuse to grant or revoke permissions the caller doesn't hold - through a
+    role's permissions, a user's roles or an invitation - so nobody can hand out
+    more access than they have. Owners hold every permission. (API tokens apply
+    the same rule to themselves.)"""
+    missing = set(permissions) - set(current_user.permissions)
+    if missing:
+        raise PermissionDeniedException(
+            "You can only grant or revoke permissions you hold yourself."
+            f" [missing={','.join(sorted(missing))}]",
+            error_code=ErrorCode.PERMISSION_NOT_HELD,
+        )
 
 
 def require_permission(permission: StrEnum) -> Callable:

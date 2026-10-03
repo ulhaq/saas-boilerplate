@@ -38,7 +38,7 @@ from src.platform.schemas.user import (
     UserPatch,
     UserRoleIn,
 )
-from src.platform.services.access import authenticate
+from src.platform.services.access import assert_can_grant, authenticate
 from src.platform.services.base import ResourceService
 from src.platform.services.mailer import send_email
 from src.platform.services.mfa import verify_user_mfa_code
@@ -280,6 +280,9 @@ class UserService(
                     "The Owner role cannot be assigned via invitation.",
                     error_code=ErrorCode.OWNER_ROLE_ASSIGNMENT,
                 )
+            assert_can_grant(
+                self.current_user, (p.name for role in roles for p in role.permissions)
+            )
 
         organization = await self.repos.organization.get(
             self.current_user.organization_id
@@ -430,6 +433,14 @@ class UserService(
 
         current_roles = {role.id for role in organization_user_roles}
         schema_in_role_ids = set(schema_in.role_ids)
+
+        changed_roles = [r for r in new_roles if r.id not in current_roles] + [
+            r for r in organization_user_roles if r.id not in schema_in_role_ids
+        ]
+        assert_can_grant(
+            self.current_user,
+            (p.name for role in changed_roles for p in role.permissions),
+        )
 
         if roles_to_add := schema_in_role_ids - current_roles:
             await self.repo.add_roles(user, *roles_to_add)

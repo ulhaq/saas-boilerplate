@@ -3,6 +3,7 @@
 import pytest
 from pydantic import ValidationError as PydanticValidationError
 
+from src.bootstrap import ALL_PERMISSIONS
 from src.platform.core.exceptions import (
     AlreadyExistsException,
     NotAuthenticatedException,
@@ -28,7 +29,8 @@ def _admin_auth(user_id: int = 1, org_id: int = 1) -> Auth:
         email="admin@example.org",
         organization_id=org_id,
         roles=["Owner"],
-        permissions=[p.value for p in PermEnum],
+        # Owners hold every installed permission (`sync_permissions`).
+        permissions=[p.value for p in ALL_PERMISSIONS],
     )
 
 

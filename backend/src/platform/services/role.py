@@ -13,7 +13,7 @@ from src.platform.repositories.repository_manager import RepositoryManager
 from src.platform.repositories.role import RoleRepository
 from src.platform.schemas.common import PageQueryParams, PaginatedResponse
 from src.platform.schemas.role import RoleIn, RoleOut, RolePatch, RolePermissionIn
-from src.platform.services.access import authenticate
+from src.platform.services.access import assert_can_grant, authenticate
 from src.platform.services.base import ResourceService
 
 
@@ -115,6 +115,11 @@ class RoleService(ResourceService[RoleRepository, Role, RoleIn | RolePatch, Role
 
         current_permissions = {permission.id for permission in role.permissions}
         schema_in_permission_ids = set(schema_in.permission_ids)
+
+        changed = schema_in_permission_ids ^ current_permissions
+        if changed:
+            permissions = await self.repos.permission.filter_by_ids(list(changed))
+            assert_can_grant(self.current_user, (p.name for p in permissions))
 
         if permissions_to_add := schema_in_permission_ids - current_permissions:
             await self.repo.add_permissions(role, *permissions_to_add)

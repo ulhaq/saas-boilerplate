@@ -88,6 +88,10 @@ class ErrorCode(ErrorCodeEnum):
         "protected_role_modification",
         "Protected roles cannot be modified or deleted",
     )
+    PERMISSION_NOT_HELD = (
+        "permission_not_held",
+        "You can only grant or revoke permissions you hold yourself",
+    )
     OWNER_ROLE_ASSIGNMENT = (
         "owner_role_assignment",
         "The Owner role cannot be assigned or removed directly; use ownership transfer",

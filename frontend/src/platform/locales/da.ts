@@ -600,6 +600,7 @@ export default {
       token_invalid: 'Din session er ugyldig. Log venligst ind igen.',
       parameter_invalid: 'En eller flere anmodningsparametre er ugyldige.',
       protected_role_modification: 'Beskyttede roller kan ikke ændres eller slettes.',
+      permission_not_held: 'Du kan kun tildele eller fjerne rettigheder, du selv har.',
       owner_role_assignment:
         'Ejer-rollen kan ikke tildeles eller fjernes direkte. Brug ejerskabsoverdragelse i stedet.',
       owner_removal: 'Organisationens ejer kan ikke fjernes. Overdrag ejerskabet først.',

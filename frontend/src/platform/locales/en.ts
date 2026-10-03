@@ -598,6 +598,7 @@ export default {
       token_invalid: 'Your session is invalid. Please sign in again.',
       parameter_invalid: 'One or more request parameters are invalid.',
       protected_role_modification: 'Protected roles cannot be modified or deleted.',
+      permission_not_held: 'You can only grant or remove permissions you have yourself.',
       owner_role_assignment:
         'The Owner role cannot be assigned or removed directly. Use ownership transfer instead.',
       owner_removal: 'The organization owner cannot be removed. Transfer ownership first.',
