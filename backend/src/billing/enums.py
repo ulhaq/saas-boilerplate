@@ -20,6 +20,23 @@ class BillingPermission(StrEnum):
     MANAGE_SUBSCRIPTION = "manage:subscription"
 
 
+class BillingHookEvent(StrEnum):
+    # Billing changes an organization's managers hear about (each one notifies
+    # them through `BILLING_NOTIFICATION_RULES`); other modules may handle them
+    # too. kwargs: repos, organization_id, and those listed.
+    # trial_days
+    TRIAL_AVAILABLE = "billing.trial_available"
+    # trial_end_date (a date, or "soon" when unknown), has_payment_method
+    TRIAL_ENDING = "billing.trial_ending"
+    TRIAL_ENDED = "billing.trial_ended"
+    PAYMENT_FAILED = "billing.payment_failed"
+    PAYMENT_ACTION_REQUIRED = "billing.payment_action_required"
+    PAYMENT_UNCOLLECTIBLE = "billing.payment_uncollectible"
+    SUBSCRIPTION_PAUSED = "billing.subscription_paused"
+    SUBSCRIPTION_RESUMED = "billing.subscription_resumed"
+    DUPLICATE_SUBSCRIPTION_REFUNDED = "billing.duplicate_subscription_refunded"
+
+
 class BillingNotificationCategory(StrEnum):
     TRIAL = "billing.trial"
     PAYMENT = "billing.payment"

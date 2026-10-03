@@ -1,9 +1,10 @@
+from src.billing.enums import BillingHookEvent
 from src.billing.models.billing import Subscription
 from src.billing.services.webhooks.base import (
     WebhookHandler,
     WebhookHandlerGroup,
 )
-from src.foundation.core.config import settings
+from src.foundation.core.hooks import emit
 
 
 class InvoiceWebhookHandlers(WebhookHandlerGroup):
@@ -42,10 +43,10 @@ class InvoiceWebhookHandlers(WebhookHandlerGroup):
         return None
 
     async def _notify_payment_failed(self, sub: Subscription) -> None:
-        await self._notify_subscription_managers(
-            sub.organization_id,
-            "payment-failed",
-            {"billing_url": f"{settings.frontend_url}/settings/billing"},
+        await emit(
+            BillingHookEvent.PAYMENT_FAILED,
+            repos=self.repos,
+            organization_id=sub.organization_id,
         )
 
     async def _handle_invoice_payment_failed(self, raw: dict) -> None:
@@ -75,10 +76,10 @@ class InvoiceWebhookHandlers(WebhookHandlerGroup):
         if not sub:
             return
 
-        await self._notify_subscription_managers(
-            sub.organization_id,
-            "payment-action-required",
-            {"billing_url": f"{settings.frontend_url}/settings/billing"},
+        await emit(
+            BillingHookEvent.PAYMENT_ACTION_REQUIRED,
+            repos=self.repos,
+            organization_id=sub.organization_id,
         )
 
     async def _handle_invoice_marked_uncollectible(self, raw: dict) -> None:

@@ -2,13 +2,11 @@ import logging
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 
-from src.billing.enums import LIVE_STATUSES, BillingAuditAction
+from src.billing.enums import LIVE_STATUSES, BillingAuditAction, BillingHookEvent
 from src.billing.models.billing import PlanPrice, Subscription
 from src.billing.provider.abc import BillingProviderABC
 from src.billing.repositories.manager import BillingRepositoryManager
 from src.billing.services.base import BillingBaseService
-from src.billing.services.common import notify_subscription_managers
-from src.foundation.core.config import settings
 from src.foundation.core.hooks import HookEvent, emit
 
 log = logging.getLogger(__name__)
@@ -44,27 +42,11 @@ class WebhookHandlerGroup(BillingBaseService):
             organization_id=organization_id,
         )
 
-    async def _notify_subscription_managers(
-        self,
-        organization_id: int,
-        email_template: str,
-        data: dict,
-    ) -> None:
-        organization = await self.repos.organization.get(organization_id)
-        if not organization:
-            return
-        await notify_subscription_managers(
-            self.repos,
-            organization,
-            email_template,
-            data,
-        )
-
     async def _notify_payment_uncollectible(self, sub: Subscription) -> None:
-        await self._notify_subscription_managers(
-            sub.organization_id,
-            "payment-uncollectible",
-            {"billing_url": f"{settings.frontend_url}/settings/billing"},
+        await emit(
+            BillingHookEvent.PAYMENT_UNCOLLECTIBLE,
+            repos=self.repos,
+            organization_id=sub.organization_id,
         )
 
     async def _downgrade_to_free(
@@ -170,8 +152,8 @@ class WebhookHandlerGroup(BillingBaseService):
                 "refunded_amount": refunded,
             },
         )
-        await self._notify_subscription_managers(
-            organization_id,
-            "duplicate-subscription-refunded",
-            {"billing_url": f"{settings.frontend_url}/settings/billing"},
+        await emit(
+            BillingHookEvent.DUPLICATE_SUBSCRIPTION_REFUNDED,
+            repos=self.repos,
+            organization_id=organization_id,
         )

@@ -1,9 +1,14 @@
 """Billing's emails (templates in `templates/emails/`): subject lines keyed
-[locale][template], the UTM medium of each tagged template, and the
-notification category each belongs to. Installed with the module's manifest."""
+[locale][template], the UTM medium of each tagged template, the notification
+categories, and the rules sending each email and in-app notification when a
+billing event happens. Installed with the module's manifest."""
 
-from src.billing.enums import BillingNotificationCategory, BillingPermission
-from src.foundation.core.module import NotificationCategory
+from src.billing.enums import (
+    BillingHookEvent,
+    BillingNotificationCategory,
+    BillingPermission,
+)
+from src.foundation.core.module import NotificationCategory, NotificationRule
 
 BILLING_EMAIL_SUBJECTS: dict[str, dict[str, str]] = {
     "en": {
@@ -65,16 +70,70 @@ BILLING_NOTIFICATION_CATEGORIES = [
     ),
 ]
 
-# Template -> the notification category it is sent under. Every template sent
-# by `notify_subscription_managers` must be listed.
-BILLING_EMAIL_CATEGORIES: dict[str, BillingNotificationCategory] = {
-    "trial-available": BillingNotificationCategory.TRIAL,
-    "trial-ending": BillingNotificationCategory.TRIAL,
-    "trial-ended": BillingNotificationCategory.TRIAL,
-    "payment-failed": BillingNotificationCategory.PAYMENT,
-    "payment-action-required": BillingNotificationCategory.PAYMENT,
-    "payment-uncollectible": BillingNotificationCategory.PAYMENT,
-    "subscription-paused": BillingNotificationCategory.SUBSCRIPTION,
-    "subscription-resumed": BillingNotificationCategory.SUBSCRIPTION,
-    "duplicate-subscription-refunded": BillingNotificationCategory.SUBSCRIPTION,
+# Event -> (email template, category, the event kwargs the notification shows).
+# The in-app notification's type is `billing.<email template>`.
+_NOTIFICATIONS: dict[
+    BillingHookEvent,
+    tuple[str, BillingNotificationCategory, list[str]],
+] = {
+    BillingHookEvent.TRIAL_AVAILABLE: (
+        "trial-available",
+        BillingNotificationCategory.TRIAL,
+        ["trial_days"],
+    ),
+    BillingHookEvent.TRIAL_ENDING: (
+        "trial-ending",
+        BillingNotificationCategory.TRIAL,
+        ["trial_end_date", "has_payment_method"],
+    ),
+    BillingHookEvent.TRIAL_ENDED: (
+        "trial-ended",
+        BillingNotificationCategory.TRIAL,
+        [],
+    ),
+    BillingHookEvent.PAYMENT_FAILED: (
+        "payment-failed",
+        BillingNotificationCategory.PAYMENT,
+        [],
+    ),
+    BillingHookEvent.PAYMENT_ACTION_REQUIRED: (
+        "payment-action-required",
+        BillingNotificationCategory.PAYMENT,
+        [],
+    ),
+    BillingHookEvent.PAYMENT_UNCOLLECTIBLE: (
+        "payment-uncollectible",
+        BillingNotificationCategory.PAYMENT,
+        [],
+    ),
+    BillingHookEvent.SUBSCRIPTION_PAUSED: (
+        "subscription-paused",
+        BillingNotificationCategory.SUBSCRIPTION,
+        [],
+    ),
+    BillingHookEvent.SUBSCRIPTION_RESUMED: (
+        "subscription-resumed",
+        BillingNotificationCategory.SUBSCRIPTION,
+        [],
+    ),
+    BillingHookEvent.DUPLICATE_SUBSCRIPTION_REFUNDED: (
+        "duplicate-subscription-refunded",
+        BillingNotificationCategory.SUBSCRIPTION,
+        [],
+    ),
 }
+
+# Each event notifies the organization's subscription managers, carried out by
+# the foundation's notification service - billing's services only emit events.
+BILLING_NOTIFICATION_RULES = [
+    NotificationRule(
+        event=event,
+        category=category,
+        notification_type=f"billing.{template}",
+        email_template=template,
+        recipients=BillingPermission.MANAGE_SUBSCRIPTION,
+        data=data,
+        links={"billing_url": "/settings/billing"},
+    )
+    for event, (template, category, data) in _NOTIFICATIONS.items()
+]

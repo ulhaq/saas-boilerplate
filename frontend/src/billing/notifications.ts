@@ -1,6 +1,6 @@
 /**
  * Presenters for the in-app notifications the backend writes alongside billing
- * emails (`notify_subscription_managers`): type `billing.<email template>`,
+ * emails (the backend's `BILLING_NOTIFICATION_RULES`): type `billing.<email template>`,
  * payload = the email's data (dates as ISO strings). Registered by the billing
  * module's `setup()`.
  */

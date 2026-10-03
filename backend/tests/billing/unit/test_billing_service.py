@@ -24,7 +24,6 @@ from src.billing.services import (
     run_trial_reminder_loop,
 )
 from src.billing.services.common import _get_period_field
-from src.billing.services.webhooks.invoices import InvoiceWebhookHandlers
 from src.foundation.core.exceptions import (
     AlreadyExistsException,
     NotFoundException,
@@ -2306,18 +2305,6 @@ async def test_checkout_completed_invalid_org_id_in_metadata(mock_billing_provid
             },
         }
         await service._dispatch("checkout.session.completed", raw)
-
-
-async def test_notify_subscription_managers_org_not_found(mock_billing_provider):
-    """_notify_subscription_managers returns early when org not found."""
-    async with TestSessionLocal() as session, session.begin():
-        repos = BillingRepositoryManager(session)
-        handlers = InvoiceWebhookHandlers(repos, mock_billing_provider)
-        await handlers._notify_subscription_managers(
-            organization_id=9999,
-            email_template="test-template",
-            data={},
-        )
 
 
 async def test_invoice_no_sub_id_and_no_customer_returns_none(mock_billing_provider):

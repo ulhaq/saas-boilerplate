@@ -1,12 +1,6 @@
-from datetime import UTC, date, datetime
+from datetime import UTC, datetime
 
-from src.billing.emails import BILLING_EMAIL_CATEGORIES
-from src.billing.enums import BillingPermission
 from src.billing.models.billing import Subscription
-from src.billing.repositories.manager import BillingRepositoryManager
-from src.foundation.models.organization import Organization
-from src.foundation.services.email_content import format_date
-from src.foundation.services.notification import deliver_notification
 
 
 def _ts(ts: int | None) -> datetime | None:
@@ -31,57 +25,3 @@ def _is_active_free_sub(sub: Subscription | None) -> bool:
         and sub.plan_price is not None
         and sub.plan_price.amount == 0
     )
-
-
-def _notification_payload(data: dict) -> dict:
-    """The email data, made JSON-safe for the notification: dates as ISO
-    strings (the app formats them per locale) and no absolute URLs (the app
-    links to its own pages)."""
-    return {
-        key: value.isoformat() if isinstance(value, date) else value
-        for key, value in data.items()
-        if not key.endswith("_url")
-    }
-
-
-async def notify_subscription_managers(
-    repos: BillingRepositoryManager,
-    organization: Organization,
-    email_template: str,
-    data: dict,
-) -> int:
-    """Notify every member of ``organization`` who can manage the subscription:
-    an in-app notification (``billing.<email_template>``) and an email, which
-    the worker sends once the caller's transaction commits - each only if the
-    recipient's preference for the template's category allows it.
-
-    Returns the number of recipients. Used both by webhook handlers and by the
-    trial reminder loop, so it takes an Organization rather than reading one
-    through a request-scoped service.
-    """
-    sent = 0
-    for user in organization.users:
-        if not any(
-            p.name == BillingPermission.MANAGE_SUBSCRIPTION
-            for role in user.roles
-            for p in role.permissions
-        ):
-            continue
-        # Render any date in the recipient's locale; everything else passes
-        # through. Subject is derived per recipient locale when it is sent.
-        localized_data = {
-            key: format_date(value, user.locale) if isinstance(value, date) else value
-            for key, value in data.items()
-        }
-        await deliver_notification(
-            repos,
-            user=user,
-            organization_id=organization.id,
-            category=BILLING_EMAIL_CATEGORIES[email_template],
-            notification_type=f"billing.{email_template}",
-            payload=_notification_payload(data),
-            email_template=email_template,
-            email_data=localized_data,
-        )
-        sent += 1
-    return sent

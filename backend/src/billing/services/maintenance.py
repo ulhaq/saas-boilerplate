@@ -6,14 +6,14 @@ from typing import Annotated, Any
 from fastapi import Depends
 
 from src.billing.config import billing_settings
+from src.billing.enums import BillingHookEvent
 from src.billing.exceptions import BillingProviderException
 from src.billing.provider.abc import BillingProviderABC
 from src.billing.provider.dependencies import get_billing_provider
 from src.billing.repositories.manager import BillingRepositoryManager
 from src.billing.services.base import BillingBaseService
-from src.billing.services.common import notify_subscription_managers
-from src.foundation.core.config import settings
 from src.foundation.core.database import try_job_lock
+from src.foundation.core.hooks import emit
 from src.foundation.core.telemetry import track_worker_run
 
 log = logging.getLogger(__name__)
@@ -42,13 +42,14 @@ class BillingMaintenanceService(BillingBaseService):
 
     async def send_trial_reminders(self) -> int:
         """
-        Emails organizations that still have an unused trial sitting on their
-        account, once the signup has had time to settle.
+        Reminds organizations that still have an unused trial sitting on their
+        account, once the signup has had time to settle (`TRIAL_AVAILABLE`,
+        which notifies their subscription managers).
 
         Targets organizations created more than ``billing_trial_reminder_delay_days``
         ago that never started their trial and are not blocked from starting one.
         Each organization is stamped with ``trial_reminder_sent_at`` after its
-        managers are emailed, so the reminder goes out exactly once - a crash
+        managers are notified, so the reminder goes out exactly once - a crash
         mid-batch rolls back the whole transaction and the batch is retried on
         the next tick.
         """
@@ -62,27 +63,20 @@ class BillingMaintenanceService(BillingBaseService):
             created_before,
         )
 
-        reminded = 0
         for account in accounts:
-            recipients = await notify_subscription_managers(
-                self.repos,
-                account.organization,
-                "trial-available",
-                {
-                    "trial_days": billing_settings.billing_trial_period_days,
-                    "billing_url": f"{settings.frontend_url}/settings/billing",
-                },
+            await emit(
+                BillingHookEvent.TRIAL_AVAILABLE,
+                repos=self.repos,
+                organization_id=account.organization_id,
+                trial_days=billing_settings.billing_trial_period_days,
             )
-            # Stamp regardless of recipient count: an organization with no
-            # subscription manager has nobody to remind, and leaving it unstamped
-            # would re-scan it on every tick forever.
+            # Stamped even when the organization has no subscription manager to
+            # notify: leaving it unstamped would re-scan it on every tick forever.
             await self.repos.billing_account.update(
                 account,
                 trial_reminder_sent_at=datetime.now(UTC),
             )
-            if recipients:
-                reminded += 1
-        return reminded
+        return len(accounts)
 
 
 # A push failing this often is given up (logged as an error, left pending):
@@ -217,7 +211,7 @@ async def run_trial_reminder_loop(session_factory: Any) -> None:
                             )
                             count = await service.send_trial_reminders()
                             log.info(
-                                "Trial reminder: %d organization(s) emailed",
+                                "Trial reminder: %d organization(s) reminded",
                                 count,
                             )
                         else:

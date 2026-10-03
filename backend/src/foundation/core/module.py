@@ -61,7 +61,8 @@ class NotificationRule:
     recipients: StrEnum
     # The event kwarg holding a user id not to notify (whoever caused it).
     exclude_user: str | None = None
-    # Event kwargs copied into the notification payload and the email data.
+    # Event kwargs copied into the notification payload and the email data;
+    # JSON-safe, except a `date`, which each recipient sees in their locale.
     data: Sequence[str] = ()
     # Email-only links: data key -> path in the app (e.g. "/projects").
     links: Mapping[str, str] = field(default_factory=dict)

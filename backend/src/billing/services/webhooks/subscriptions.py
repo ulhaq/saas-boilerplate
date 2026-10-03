@@ -2,12 +2,14 @@ import logging
 from datetime import UTC, date, datetime
 from zoneinfo import ZoneInfo
 
+from src.billing.enums import BillingHookEvent
 from src.billing.services.common import _get_period_field, _ts
 from src.billing.services.webhooks.base import (
     WebhookHandler,
     WebhookHandlerGroup,
 )
 from src.foundation.core.config import settings
+from src.foundation.core.hooks import emit
 
 log = logging.getLogger(__name__)
 
@@ -220,8 +222,8 @@ class SubscriptionWebhookHandlers(WebhookHandlerGroup):
                 trial_end=datetime.fromtimestamp(trial_end_ts, tz=UTC),
             )
 
-        # Pass a date object; _notify_subscription_managers renders it in each
-        # recipient's locale. The calendar day is taken in the display timezone.
+        # Pass a date object; the notification renders it in each recipient's
+        # locale. The calendar day is taken in the display timezone.
         trial_end_date: date | str = (
             datetime.fromtimestamp(
                 trial_end_ts,
@@ -236,14 +238,12 @@ class SubscriptionWebhookHandlers(WebhookHandlerGroup):
         )
         has_payment_method = account.has_payment_method if account else False
 
-        await self._notify_subscription_managers(
-            sub.organization_id,
-            "trial-ending",
-            {
-                "trial_end_date": trial_end_date,
-                "billing_url": f"{settings.frontend_url}/settings/billing",
-                "has_payment_method": has_payment_method,
-            },
+        await emit(
+            BillingHookEvent.TRIAL_ENDING,
+            repos=self.repos,
+            organization_id=sub.organization_id,
+            trial_end_date=trial_end_date,
+            has_payment_method=has_payment_method,
         )
 
     async def _handle_subscription_paused(self, raw: dict) -> None:
@@ -262,10 +262,10 @@ class SubscriptionWebhookHandlers(WebhookHandlerGroup):
 
         if not is_trial_end_pause:
             await self.repos.subscription.update(sub, status="paused")
-            await self._notify_subscription_managers(
-                sub.organization_id,
-                "subscription-paused",
-                {"billing_url": f"{settings.frontend_url}/settings/billing"},
+            await emit(
+                BillingHookEvent.SUBSCRIPTION_PAUSED,
+                repos=self.repos,
+                organization_id=sub.organization_id,
             )
             return
 
@@ -275,10 +275,10 @@ class SubscriptionWebhookHandlers(WebhookHandlerGroup):
         if not await self._downgrade_to_free(sub):
             return
 
-        await self._notify_subscription_managers(
-            sub.organization_id,
-            "trial-ended",
-            {"billing_url": f"{settings.frontend_url}/settings/billing"},
+        await emit(
+            BillingHookEvent.TRIAL_ENDED,
+            repos=self.repos,
+            organization_id=sub.organization_id,
         )
 
     async def _handle_subscription_resumed(self, raw: dict) -> None:
@@ -301,8 +301,8 @@ class SubscriptionWebhookHandlers(WebhookHandlerGroup):
         if not sub:
             return
 
-        await self._notify_subscription_managers(
-            sub.organization_id,
-            "subscription-resumed",
-            {"billing_url": f"{settings.frontend_url}/settings/billing"},
+        await emit(
+            BillingHookEvent.SUBSCRIPTION_RESUMED,
+            repos=self.repos,
+            organization_id=sub.organization_id,
         )

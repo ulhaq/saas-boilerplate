@@ -1,5 +1,6 @@
 import builtins
 from dataclasses import dataclass
+from datetime import date
 from enum import StrEnum
 from typing import Annotated, Any
 
@@ -22,6 +23,7 @@ from src.foundation.schemas.notification import (
     UnreadCountOut,
 )
 from src.foundation.services.access import authenticate
+from src.foundation.services.email_content import format_date
 from src.foundation.services.email_outbox import queue_email
 
 
@@ -83,8 +85,10 @@ async def deliver_notification(  # noqa: PLR0913 - keyword-only
 @dataclass(frozen=True)
 class RuleHandler:
     """The hook handler that carries out ``rule`` when its event is emitted.
-    Compares by its rule, so composing the same modules twice gives an equal
-    `Composition`."""
+    A `date` in the rule's data is stored as an ISO string on the in-app
+    notification (the app formats it) and written in each recipient's locale
+    in their email. Compares by its rule, so composing the same modules twice
+    gives an equal `Composition`."""
 
     rule: NotificationRule
 
@@ -102,6 +106,10 @@ class RuleHandler:
         organization_id: int = kwargs["organization_id"]
         excluded = kwargs[rule.exclude_user] if rule.exclude_user else None
         data = {key: kwargs[key] for key in rule.data}
+        payload = {
+            key: value.isoformat() if isinstance(value, date) else value
+            for key, value in data.items()
+        }
         links = {
             key: f"{settings.frontend_url}{path}" for key, path in rule.links.items()
         }
@@ -116,9 +124,17 @@ class RuleHandler:
                 organization_id=organization_id,
                 category=rule.category,
                 notification_type=rule.notification_type,
-                payload=data,
+                payload=payload,
                 email_template=rule.email_template,
-                email_data={**data, **links},
+                email_data={
+                    **{
+                        key: format_date(value, user.locale)
+                        if isinstance(value, date)
+                        else value
+                        for key, value in data.items()
+                    },
+                    **links,
+                },
             )
 
 

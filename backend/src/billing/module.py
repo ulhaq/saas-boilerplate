@@ -9,10 +9,12 @@ from src.billing.emails import (
     BILLING_EMAIL_CAMPAIGNS,
     BILLING_EMAIL_SUBJECTS,
     BILLING_NOTIFICATION_CATEGORIES,
+    BILLING_NOTIFICATION_RULES,
 )
 from src.billing.enums import (
     BILLING_PERMISSION_DESCRIPTIONS,
     BillingAuditAction,
+    BillingHookEvent,
     BillingPermission,
 )
 from src.billing.gdpr import export_user_data
@@ -52,6 +54,8 @@ BILLING = Module(
             public=False,
         ),
     ],
+    # Emitted by the webhook handlers and the trial reminder loop.
+    hook_events=list(BillingHookEvent),
     hooks={
         HookEvent.ORGANIZATION_CREATED: [open_billing_account],
         HookEvent.ORGANIZATION_DELETING: [refuse_deleting_a_paying_organization],
@@ -66,6 +70,7 @@ BILLING = Module(
     email_campaigns=BILLING_EMAIL_CAMPAIGNS,
     email_link_keys=["billing_url"],
     notification_categories=BILLING_NOTIFICATION_CATEGORIES,
+    notification_rules=BILLING_NOTIFICATION_RULES,
     template_directory=Path(__file__).resolve().parent / "templates",
     entitlements=PlanEntitlements(),
     user_data_export=export_user_data,

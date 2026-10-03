@@ -1,18 +1,19 @@
-"""Tests for the in-app notifications billing writes alongside its emails
-(`notify_subscription_managers`)."""
+"""Tests for the notifications billing sends: each billing event notifies the
+organization's subscription managers through `BILLING_NOTIFICATION_RULES`."""
 
 from datetime import date
 
 import pytest
 from sqlalchemy import select
 
-from src.billing.emails import BILLING_EMAIL_CATEGORIES, BILLING_EMAIL_SUBJECTS
-from src.billing.enums import BillingNotificationCategory
+from src.billing.emails import BILLING_EMAIL_SUBJECTS, BILLING_NOTIFICATION_RULES
+from src.billing.enums import BillingHookEvent, BillingNotificationCategory
 from src.billing.repositories.manager import BillingRepositoryManager
-from src.billing.services.common import notify_subscription_managers
 from src.foundation.core import composition
+from src.foundation.core.hooks import emit
 from src.foundation.models.email_outbox import EmailOutbox
 from src.foundation.models.notification import Notification
+from src.foundation.models.user_organization import UserOrganization
 from tests.conftest import TestSessionLocal
 
 # Seeded: in organization 1 only user 1 (Owner) can manage the subscription;
@@ -26,27 +27,22 @@ async def _notifications() -> list[Notification]:
         return list(rs.scalars().all())
 
 
-# ---------------------------------------------------------------------------
-# notify_subscription_managers - the billing notifications it writes
-# ---------------------------------------------------------------------------
-
-
 async def _emails() -> list[EmailOutbox]:
     async with TestSessionLocal() as session:
         rs = await session.execute(select(EmailOutbox).order_by(EmailOutbox.id))
         return list(rs.scalars().all())
 
 
-async def _notify(data: dict, template: str = "trial-ending") -> int:
+async def _emit(
+    event: BillingHookEvent = BillingHookEvent.TRIAL_ENDED,
+    **data: object,
+) -> None:
     async with TestSessionLocal() as session, session.begin():
-        repos = BillingRepositoryManager(session)
-        organization = await repos.organization.get(1)
-        assert organization
-        return await notify_subscription_managers(
-            repos,
-            organization,
-            template,
-            data,
+        await emit(
+            event,
+            repos=BillingRepositoryManager(session),
+            organization_id=1,
+            **data,
         )
 
 
@@ -60,31 +56,44 @@ async def _prefer(category: str, *, in_app: bool, email: bool) -> None:
         )
 
 
+# ---------------------------------------------------------------------------
+# Who is notified, and with what
+# ---------------------------------------------------------------------------
+
+
 async def test_only_subscription_managers_are_notified():
-    assert await _notify({}) == 1
+    # Dave joins Acme without a role there: managing Globex's subscription
+    # doesn't make him a manager of Acme's.
+    async with TestSessionLocal() as session, session.begin():
+        session.add(UserOrganization(user_id=ADMIN2, organization_id=1))
+
+    await _emit()
 
     [notification] = await _notifications()
     assert (notification.user_id, notification.organization_id) == (ADMIN, 1)
-    assert notification.notification_type == "billing.trial-ending"
+    assert notification.notification_type == "billing.trial-ended"
+    [email] = await _emails()
+    assert email.email_template == "trial-ended"
+    assert email.data["billing_url"].endswith("/settings/billing")
 
 
-async def test_the_notification_payload_is_json_safe():
-    await _notify(
-        {
-            "trial_end_date": date(2026, 10, 15),
-            "trial_days": 14,
-            "has_payment_method": False,
-            "billing_url": "https://app.test/settings/billing",
-        },
+async def test_a_date_is_iso_in_the_app_and_localized_in_the_email():
+    await _emit(
+        BillingHookEvent.TRIAL_ENDING,
+        trial_end_date=date(2026, 10, 15),
+        has_payment_method=False,
     )
 
     [notification] = await _notifications()
-    # Dates as ISO strings (the app formats them per locale); no absolute URLs.
+    # The app formats the date itself and links to its own pages: no URL.
     assert notification.payload == {
         "trial_end_date": "2026-10-15",
-        "trial_days": 14,
         "has_payment_method": False,
     }
+    [email] = await _emails()
+    # In the recipient's locale - seeded users have the default, Danish.
+    assert email.data["trial_end_date"] == "15. oktober 2026"
+    assert email.data["has_payment_method"] is False
 
 
 async def test_a_rolled_back_change_creates_no_notification():
@@ -93,16 +102,18 @@ async def test_a_rolled_back_change_creates_no_notification():
 
     async def notify_then_fail() -> None:
         async with TestSessionLocal() as session, session.begin():
-            repos = BillingRepositoryManager(session)
-            organization = await repos.organization.get(1)
-            assert organization
-            await notify_subscription_managers(repos, organization, "trial-ending", {})
+            await emit(
+                BillingHookEvent.TRIAL_ENDED,
+                repos=BillingRepositoryManager(session),
+                organization_id=1,
+            )
             raise RollbackError
 
     with pytest.raises(RollbackError):
         await notify_then_fail()
 
     assert await _notifications() == []
+    assert await _emails() == []
 
 
 # ---------------------------------------------------------------------------
@@ -110,17 +121,22 @@ async def test_a_rolled_back_change_creates_no_notification():
 # ---------------------------------------------------------------------------
 
 
-def test_every_billing_email_has_a_declared_category():
+def test_every_billing_email_is_sent_by_a_rule_under_a_declared_category():
     categories = composition.current().notification_categories
-    assert set(BILLING_EMAIL_CATEGORIES) == set(BILLING_EMAIL_SUBJECTS["en"])
-    assert set(BILLING_EMAIL_CATEGORIES.values()) <= set(categories)
+    assert {rule.email_template for rule in BILLING_NOTIFICATION_RULES} == set(
+        BILLING_EMAIL_SUBJECTS["en"],
+    )
+    assert {rule.event for rule in BILLING_NOTIFICATION_RULES} == set(
+        BillingHookEvent,
+    )
+    assert {rule.category for rule in BILLING_NOTIFICATION_RULES} <= set(categories)
 
 
 async def test_a_manager_can_opt_out_of_trial_notifications():
     await _prefer(BillingNotificationCategory.TRIAL, in_app=False, email=False)
 
-    # Still counted: the manager was a recipient, they just chose silence.
-    assert await _notify({}) == 1
+    await _emit()
+
     assert await _notifications() == []
     assert await _emails() == []
 
@@ -128,7 +144,7 @@ async def test_a_manager_can_opt_out_of_trial_notifications():
 async def test_a_failed_payment_emails_even_when_turned_off():
     await _prefer(BillingNotificationCategory.PAYMENT, in_app=False, email=False)
 
-    await _notify({}, template="payment-failed")
+    await _emit(BillingHookEvent.PAYMENT_FAILED)
 
     assert await _notifications() == []
     [email] = await _emails()
