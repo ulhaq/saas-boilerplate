@@ -44,6 +44,24 @@ export default {
     deleted: 'Project deleted',
     deleteFailed: 'Could not delete the project',
   },
+  notifications: {
+    example: {
+      projectCreated: {
+        title: 'New project',
+        description: '{creator} created {project}',
+      },
+    },
+  },
+  notificationPreferences: {
+    categories: {
+      example: {
+        projects: {
+          title: 'New projects',
+          description: 'When someone in your organization creates a project.',
+        },
+      },
+    },
+  },
   planDescriptions: {
     Free: 'For individuals getting started',
     Basic: 'For small teams',

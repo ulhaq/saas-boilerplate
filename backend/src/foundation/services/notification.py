@@ -1,12 +1,14 @@
 import builtins
+from dataclasses import dataclass
 from enum import StrEnum
 from typing import Annotated, Any
 
 from fastapi import Depends, HTTPException, status
 
 from src.foundation.core import composition
+from src.foundation.core.config import settings
 from src.foundation.core.exceptions import ValidationException
-from src.foundation.core.module import NotificationCategory
+from src.foundation.core.module import NotificationCategory, NotificationRule
 from src.foundation.core.security import Auth
 from src.foundation.enums import ErrorCode
 from src.foundation.models.notification_preference import NotificationPreference
@@ -76,6 +78,48 @@ async def deliver_notification(  # noqa: PLR0913 - keyword-only
             notification_type=notification_type,
             payload=payload,
         )
+
+
+@dataclass(frozen=True)
+class RuleHandler:
+    """The hook handler that carries out ``rule`` when its event is emitted.
+    Compares by its rule, so composing the same modules twice gives an equal
+    `Composition`."""
+
+    rule: NotificationRule
+
+    async def __call__(self, **kwargs: Any) -> None:
+        rule = self.rule
+        required = {"repos", "organization_id", *rule.data}
+        if rule.exclude_user is not None:
+            required.add(rule.exclude_user)
+        if missing := required - kwargs.keys():
+            raise TypeError(
+                f"Hook event {rule.event!r} lacks {sorted(missing)} "
+                f"for notification {rule.notification_type!r}",
+            )
+        repos: RepositoryManager = kwargs["repos"]
+        organization_id: int = kwargs["organization_id"]
+        excluded = kwargs[rule.exclude_user] if rule.exclude_user else None
+        data = {key: kwargs[key] for key in rule.data}
+        links = {
+            key: f"{settings.frontend_url}{path}" for key, path in rule.links.items()
+        }
+        members = RepositoryManager(repos.db).user
+        members.set_organization_scope(organization_id)
+        for user in await members.list_with_permission(rule.recipients):
+            if user.id == excluded:
+                continue
+            await deliver_notification(
+                repos,
+                user=user,
+                organization_id=organization_id,
+                category=rule.category,
+                notification_type=rule.notification_type,
+                payload=data,
+                email_template=rule.email_template,
+                email_data={**data, **links},
+            )
 
 
 class NotificationService:

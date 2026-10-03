@@ -5,11 +5,19 @@ at well-defined lifecycle points; other modules handle them. This keeps the
 core free of imports from billing and product packages - a new module
 registers its own handlers (or none) without touching core services.
 
+The foundation's events are `HookEvent`. A module declares its own as a
+`StrEnum` listed in its manifest's `hook_events`, with values prefixed by the
+module name (`"example.project_created"`) - values must be unique across the
+installed modules - and emits them with `emit` like the foundation does.
+Subscribing to another module's event means importing its enum, so the
+subscriber depends on that module (narrow the import-linter independence
+contract for it).
+
 Modules list their handlers in their manifest; the composition root
-(`src.bootstrap`) installs them with the rest of the `Composition`. Handlers
-receive keyword arguments only. Every event includes
-`repos` (the request/job-scoped RepositoryManager) so handlers participate in
-the caller's transaction.
+(`src.bootstrap`) installs them with the rest of the `Composition`, refusing a
+handler for an event no installed module declares. Handlers receive keyword
+arguments only. Every event includes `repos` (the request/job-scoped
+RepositoryManager) so handlers participate in the caller's transaction.
 """
 
 import logging
@@ -44,7 +52,7 @@ class HookEvent(StrEnum):
     OWNERSHIP_TRANSFERRED = "ownership_transferred"
 
 
-async def emit(event: HookEvent, **kwargs: object) -> None:
+async def emit(event: StrEnum, **kwargs: object) -> None:
     """Run all handlers for an event, in registration order.
 
     Handlers run inside the caller's transaction and exceptions propagate:

@@ -1,11 +1,19 @@
 """The example product's manifest: everything it plugs into the foundation."""
 
+from pathlib import Path
+
 from src.example import models
+from src.example.emails import (
+    EXAMPLE_EMAIL_SUBJECTS,
+    EXAMPLE_NOTIFICATION_CATEGORIES,
+    EXAMPLE_NOTIFICATION_RULES,
+)
 from src.example.enums import (
     EXAMPLE_DEFAULT_ROLE_DESCRIPTIONS,
     EXAMPLE_DEFAULT_ROLE_PERMISSIONS,
     EXAMPLE_PERMISSION_DESCRIPTIONS,
     ExampleAuditAction,
+    ExampleHookEvent,
     ExamplePermission,
 )
 from src.example.hooks import log_projects_over_plan_limit
@@ -24,9 +32,12 @@ EXAMPLE = Module(
     default_role_permissions=EXAMPLE_DEFAULT_ROLE_PERMISSIONS,
     default_role_descriptions=EXAMPLE_DEFAULT_ROLE_DESCRIPTIONS,
     routers=[RouterMount(router=projects.router, tags=["Projects"])],
+    # Emitted by `ProjectService`; other modules may handle them.
+    hook_events=list(ExampleHookEvent),
     hooks={HookEvent.PLAN_CHANGED: [log_projects_over_plan_limit]},
     worker_loops=[run_example_loop],
-    # A product that sends its own email also sets:
-    #   email_subjects=EXAMPLE_EMAIL_SUBJECTS,
-    #   template_directory=Path(__file__).resolve().parent / "templates",
+    email_subjects=EXAMPLE_EMAIL_SUBJECTS,
+    template_directory=Path(__file__).resolve().parent / "templates",
+    notification_categories=EXAMPLE_NOTIFICATION_CATEGORIES,
+    notification_rules=EXAMPLE_NOTIFICATION_RULES,
 )

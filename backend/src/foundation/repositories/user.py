@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import Any, ClassVar
 
@@ -56,6 +57,9 @@ class UserRepositoryABC(SoftDeleteRepositoryABC[User], ABC):
         permission: str,
         exclude_user_id: int,
     ) -> bool: ...
+
+    @abstractmethod
+    async def list_with_permission(self, permission: str) -> Sequence[User]: ...
 
     @abstractmethod
     async def has_other_user_with_role(
@@ -148,6 +152,19 @@ class UserRepository(OrganizationScopedRepository[User], UserRepositoryABC):
         stmt = self._include_deleted(stmt)
         rs = await self.db.execute(stmt)
         return rs.unique().scalar_one_or_none() is not None
+
+    async def list_with_permission(self, permission: str) -> Sequence[User]:
+        """Members of the scoped organization holding ``permission`` through
+        one of its roles."""
+        stmt = self._apply_organization_scope(
+            select(User).join(User.roles).join(Role.permissions),
+        ).where(
+            Permission.name == permission,
+            Role.organization_id == self._organization_id,
+        )
+        stmt = self._include_deleted(stmt)
+        rs = await self.db.execute(stmt)
+        return rs.unique().scalars().all()
 
     async def has_other_user_with_role(
         self,

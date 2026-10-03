@@ -5,6 +5,7 @@
 import { FolderOpen, LayoutDashboard } from 'lucide-vue-next'
 import da from '@/example/locales/da'
 import en from '@/example/locales/en'
+import { registerExampleNotifications } from '@/example/notifications'
 import { registerNavItems } from '@/foundation/navigation'
 import type { Module } from '@/foundation/module'
 
@@ -17,6 +18,7 @@ const example: Module = {
       { to: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard, order: 10 },
       { to: '/projects', labelKey: 'nav.projects', icon: FolderOpen, order: 20 },
     ])
+    registerExampleNotifications()
   },
 }
 

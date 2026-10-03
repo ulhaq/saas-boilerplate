@@ -1,7 +1,12 @@
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 
-from src.example.enums import ExampleUsageMetric
+from src.example.enums import ExampleNotificationCategory, ExampleUsageMetric
+from src.foundation.models.email_outbox import EmailOutbox
+from src.foundation.models.notification import Notification
+from src.foundation.models.user_organization import UserOrganization
+from src.foundation.repositories.repository_manager import RepositoryManager
 from tests.conftest import TestSessionLocal
 
 _FREE_PLAN_ID = 1  # seeded in conftest
@@ -189,3 +194,59 @@ def test_cannot_create_project_without_permission(
 
 def test_projects_require_authentication(client: TestClient) -> None:
     assert client.get("/v1/projects").status_code == 401
+
+
+async def _notifications_and_emails() -> tuple[list, list]:
+    async with TestSessionLocal() as session:
+        notifications = (await session.execute(select(Notification))).scalars().all()
+        emails = (await session.execute(select(EmailOutbox))).scalars().all()
+        return list(notifications), list(emails)
+
+
+async def test_creating_a_project_notifies_the_other_members_who_can_see_it(
+    admin_authenticated: TestClient,
+) -> None:
+    # Dave (Globex's owner) also joins Acme without a role there: his Globex
+    # role's permissions don't count in Acme.
+    async with TestSessionLocal() as session:
+        session.add(UserOrganization(user_id=4, organization_id=1))
+        await session.commit()
+
+    project = _create(admin_authenticated, "Website relaunch")
+
+    notifications, emails = await _notifications_and_emails()
+    # Bob only: not Alice, who created it, nor Carol, who can't read projects.
+    [notification] = notifications
+    assert notification.user_id == 2
+    assert notification.organization_id == 1
+    assert notification.notification_type == "example.project-created"
+    assert notification.payload == {
+        "project_name": project["name"],
+        "creator_name": "Alice Owner",
+    }
+    # Email is opt-in for this category.
+    assert emails == []
+
+
+async def test_a_member_who_opts_in_gets_new_projects_by_email(
+    admin_authenticated: TestClient,
+) -> None:
+    async with TestSessionLocal() as session:
+        await RepositoryManager(session).notification_preference.upsert(
+            user_id=2,
+            category=ExampleNotificationCategory.PROJECTS,
+            in_app=False,
+            email=True,
+        )
+        await session.commit()
+
+    _create(admin_authenticated, "Website relaunch")
+
+    notifications, emails = await _notifications_and_emails()
+    assert notifications == []
+    [email] = emails
+    assert email.address == "standard@example.org"
+    assert email.email_template == "project-created"
+    assert email.data["project_name"] == "Website relaunch"
+    assert email.data["creator_name"] == "Alice Owner"
+    assert email.data["projects_url"].endswith("/projects")

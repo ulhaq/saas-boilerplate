@@ -52,8 +52,9 @@ src/
 │   ├── api/projects.ts · stores/projects.ts · components/projects/
 │   ├── pages/        # dashboard.vue, projects/index.vue
 │   ├── components/, types/, constants.ts
+│   ├── notifications.ts # presenter for `example.project-created` in-app notifications
 │   ├── locales/      # product i18n strings, deep-merged over foundation messages
-│   └── index.ts      # manifest (Module): messages, homeRoute, nav setup
+│   └── index.ts      # manifest (Module): messages, homeRoute, nav + notification setup
 ├── brand.ts          # product identity: name, marketing + app origins
 ├── plugins/          # i18n setup (merges foundation + product messages)
 ├── router/           # Router config + navigation guards, seo.ts (head tags)

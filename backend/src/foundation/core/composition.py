@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from src.foundation.core.entitlements import Entitlements
-    from src.foundation.core.hooks import Handler, HookEvent
+    from src.foundation.core.hooks import Handler
     from src.foundation.core.module import NotificationCategory, UserDataExporter
 
 type RoleSpec = tuple[str, str, Sequence[StrEnum]]
@@ -31,7 +31,7 @@ class Composition:
     # Seeded into every new organization: (name, description, permissions).
     default_roles: Sequence[RoleSpec]
     # Run in order by `hooks.emit`.
-    hooks: Mapping[HookEvent, Sequence[Handler]]
+    hooks: Mapping[StrEnum, Sequence[Handler]]
     # Product email subject lines, keyed [locale][template].
     email_subjects: Mapping[str, Mapping[str, str]]
     # Product template roots, searched after the foundation's own.

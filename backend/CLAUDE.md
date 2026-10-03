@@ -21,15 +21,16 @@ This file provides comprehensive guidance for working with this FastAPI multi-te
 
 | Path                              | Purpose                                                                                                                                 |
 | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/example/enums.py`            | `ExamplePermission`, `ExampleAuditAction`, `ExampleUsageMetric.PROJECTS`, `ExampleErrorCode`, permission descriptions + per-role grants |
+| `src/example/enums.py`            | `ExamplePermission`, `ExampleAuditAction`, `ExampleHookEvent.PROJECT_CREATED` (emitted by `ProjectService`), `ExampleUsageMetric.PROJECTS`, `ExampleErrorCode`, permission descriptions + per-role grants |
 | `src/example/models/project.py`   | Org-scoped, soft-deletable `Project`                                                                                                    |
 | `src/example/repositories/`       | `ProjectRepository(OrganizationScopedRepository)` + `ExampleRepositoryManager`                                                          |
 | `src/example/services/project.py` | `ProjectService(ResourceService)` - name uniqueness, plan capacity check, audit logging                                                 |
 | `src/example/routers/projects.py` | `/v1/projects` CRUD guarded by `require_permission(ExamplePermission.X)`                                                                |
 | `src/example/hooks.py`            | `PLAN_CHANGED` handler (reports orgs above their project limit)                                                                         |
+| `src/example/emails.py`           | `project-created` subjects (templates in `src/example/templates/`), the `example.projects` notification category (email opt-in) and the `NotificationRule` sending it on `PROJECT_CREATED` |
 | `src/example/worker.py`           | `run_example_loop` - heartbeat loop recording `worker_run` rows                                                                         |
 | `src/example/config.py`           | `ExampleSettings` (`env_prefix="example_"`)                                                                                             |
-| `src/example/product.py`          | `EXAMPLE` manifest (`Module`): permissions, role grants, routers, hooks, worker loops, models                                    |
+| `src/example/product.py`          | `EXAMPLE` manifest (`Module`): permissions, role grants, routers, hook events and handlers, notification rules, worker loops, models                                    |
 
 ---
 
@@ -47,7 +48,7 @@ through the same manifest, wired together in exactly one place:
 
 | Piece              | Path                           | Purpose                                                                                                                                                                                               |
 | ------------------ | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Hook registry      | `src/foundation/core/hooks.py`   | `HookEvent`s (`MEMBER_ADDED`, `MEMBER_REMOVED`, `ORGANIZATION_CREATED`, `ORGANIZATION_DELETING`, `OWNERSHIP_TRANSFERRED`, `PLAN_CHANGED`); modules list async handlers in their manifest       |
+| Hook registry      | `src/foundation/core/hooks.py`   | `HookEvent`s (`MEMBER_ADDED`, `MEMBER_REMOVED`, `ORGANIZATION_CREATED`, `ORGANIZATION_DELETING`, `OWNERSHIP_TRANSFERRED`, `PLAN_CHANGED`); a module declares its own events in its manifest (`hook_events`, a `StrEnum` with `"<module>.<event>"` values, e.g. `ExampleHookEvent`) and emits them with `emit`; modules list async handlers in their manifest, and `bootstrap()` refuses a handler for an event no installed module declares. Handling another module's event imports its enum - narrow the independence contract for that pair       |
 | Entitlements       | `src/foundation/core/entitlements.py` | What an organization may use (features, limits, usage). Billing provides `PlanEntitlements`; without it, `UNLIMITED`                                                                         |
 | Marketing module   | `src/marketing/`               | Waitlist sign-ups and the contact form (its email + migration); manifest `MARKETING` in `src/marketing/module.py`                                                                         |
 | Billing module     | `src/billing/`                 | Own layers, enums, settings (`BillingSettings`), templates, hooks and migration; manifest `BILLING` in `src/billing/module.py`; `BillingRepositoryManager` adds its repositories                  |

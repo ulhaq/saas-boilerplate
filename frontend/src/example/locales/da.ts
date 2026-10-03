@@ -44,6 +44,24 @@ export default {
     deleted: 'Projekt slettet',
     deleteFailed: 'Projektet kunne ikke slettes',
   },
+  notifications: {
+    example: {
+      projectCreated: {
+        title: 'Nyt projekt',
+        description: '{creator} har oprettet {project}',
+      },
+    },
+  },
+  notificationPreferences: {
+    categories: {
+      example: {
+        projects: {
+          title: 'Nye projekter',
+          description: 'Når nogen i din organisation opretter et projekt.',
+        },
+      },
+    },
+  },
   planDescriptions: {
     Free: 'Til enkeltpersoner, der vil i gang',
     Basic: 'Til små teams',

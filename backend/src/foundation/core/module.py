@@ -15,7 +15,7 @@ from types import ModuleType
 from typing import Any
 
 from src.foundation.core.entitlements import Entitlements
-from src.foundation.core.hooks import Handler, HookEvent
+from src.foundation.core.hooks import Handler
 from src.foundation.core.routing import RouterMount
 
 # Async; keyword arguments `repos`, `user_id`, `email`; returns JSON-safe data.
@@ -44,6 +44,30 @@ class NotificationCategory:
 
 
 @dataclass(frozen=True, kw_only=True)
+class NotificationRule:
+    """Notify members when a hook event happens - the foundation's notification
+    service subscribes to ``event`` for the module, so the emitting code knows
+    nothing about notifications. The event's kwargs must include ``repos`` and
+    ``organization_id``; each recipient gets it in-app and/or by email as their
+    preference for ``category`` says."""
+
+    event: StrEnum
+    # A category the installed modules declare (`notification_categories`).
+    category: StrEnum
+    # Stored on the in-app notification; the app presents it by this type.
+    notification_type: str
+    email_template: str
+    # Recipients: the organization's members holding this permission there.
+    recipients: StrEnum
+    # The event kwarg holding a user id not to notify (whoever caused it).
+    exclude_user: str | None = None
+    # Event kwargs copied into the notification payload and the email data.
+    data: Sequence[str] = ()
+    # Email-only links: data key -> path in the app (e.g. "/projects").
+    links: Mapping[str, str] = field(default_factory=dict)
+
+
+@dataclass(frozen=True, kw_only=True)
 class Module:
     name: str
     # Imported so the product's tables register on `Base.metadata` (Alembic).
@@ -58,7 +82,10 @@ class Module:
     )
     default_role_descriptions: Mapping[str, str] = field(default_factory=dict)
     routers: Sequence[RouterMount] = ()
-    hooks: Mapping[HookEvent, Sequence[Handler]] = field(default_factory=dict)
+    # Hook events the module emits, beyond the foundation's `HookEvent`.
+    hook_events: Sequence[StrEnum] = ()
+    # Handlers for foundation `HookEvent`s and installed modules' events.
+    hooks: Mapping[StrEnum, Sequence[Handler]] = field(default_factory=dict)
     # Started by `worker.py`; wrap each iteration in `track_worker_run`.
     worker_loops: Sequence[WorkerLoop] = ()
     # Product emails: subjects keyed [locale][template] and a template root.
@@ -71,6 +98,10 @@ class Module:
     # Notification groups users can opt out of, per channel (in-app, email).
     # Send them with `services.notification.deliver_notification`.
     notification_categories: Sequence[NotificationCategory] = ()
+    # Notifications sent when a hook event happens, without code of the
+    # module's own; for recipients a rule can't express, send them from a
+    # handler with `deliver_notification`.
+    notification_rules: Sequence[NotificationRule] = ()
     # Adds the module's personal data to a user's data export (GDPR): called
     # with `repos` (the request's RepositoryManager), `user_id` and `email`;
     # returns what it holds about that user, listed under the module's name.

@@ -52,7 +52,7 @@ backend/src/                            frontend/src/
 How the two halves connect without the foundation knowing about the product:
 
 - **Module manifest**: each module declares everything it plugs in - one `Module` per side (`src/example/product.py`, `src/billing/module.py`, `src/example/index.ts`, ...). The assembly layer reads the installed list (`src/products.py`, `src/products.ts`), so swapping the product or dropping a module is a small change on each side.
-- **Hooks** (backend): lifecycle events (`MEMBER_ADDED`, `MEMBER_REMOVED`, `ORGANIZATION_CREATED`, `ORGANIZATION_DELETING`, `OWNERSHIP_TRANSFERRED`, `PLAN_CHANGED`); modules list async handlers in their manifest.
+- **Hooks** (backend): lifecycle events (`MEMBER_ADDED`, `MEMBER_REMOVED`, `ORGANIZATION_CREATED`, `ORGANIZATION_DELETING`, `OWNERSHIP_TRANSFERRED`, `PLAN_CHANGED`) plus any a module declares and emits itself (e.g. `example.project_created`); modules list async handlers in their manifest.
 - **Entitlements** (both sides): the foundation asks "is this feature on, what's this limit?" through one interface; billing answers from the organization's plan, and without billing everything is on and unlimited.
 - **Composition** (backend): `bootstrap()` merges the modules' permissions, roles, audit actions, hooks, email subjects, templates and entitlements into one read-only `Composition` at startup.
 - **Registries** (frontend): manifests register sidebar and settings nav items, notification presenters, dashboard banners and route guards, and set the authenticated home route; their locale trees are deep-merged in the i18n plugin.

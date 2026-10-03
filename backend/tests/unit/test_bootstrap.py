@@ -1,6 +1,7 @@
 """Tests for composing product manifests (src/bootstrap.py) and the installed
 composition (src/foundation/core/composition.py)."""
 
+from dataclasses import replace
 from enum import StrEnum
 from types import ModuleType
 
@@ -17,9 +18,10 @@ from src.foundation import enums as core_enums
 from src.foundation.core import composition
 from src.foundation.core.entitlements import UNLIMITED
 from src.foundation.core.hooks import HookEvent, emit
-from src.foundation.core.module import Module
+from src.foundation.core.module import Module, NotificationCategory, NotificationRule
 from src.foundation.core.template import templates
 from src.foundation.services.email_content import subject_for
+from src.foundation.services.notification import RuleHandler
 from src.products import MODULES
 
 
@@ -109,6 +111,106 @@ def test_compose_merges_hooks_subjects_and_templates_in_product_order(tmp_path):
     assert composed.template_directories == [tmp_path / "first"]
 
 
+class _WidgetEvent(StrEnum):
+    WIDGET_BUILT = "widgets.widget_built"
+
+
+class _ClashingEvent(StrEnum):
+    WIDGET_BUILT = "widgets.widget_built"
+
+
+def test_compose_lets_a_module_handle_another_modules_hook_event():
+    widgets = _product("widgets", hook_events=list(_WidgetEvent))
+    gadgets = _product("gadgets", hooks={_WidgetEvent.WIDGET_BUILT: [_on_plan_changed]})
+
+    composed = compose([widgets, gadgets])
+
+    assert composed.hooks == {_WidgetEvent.WIDGET_BUILT: (_on_plan_changed,)}
+
+
+def test_compose_refuses_a_handler_for_an_undeclared_hook_event():
+    gadgets = _product("gadgets", hooks={_WidgetEvent.WIDGET_BUILT: [_on_plan_changed]})
+
+    with pytest.raises(ValueError, match="no installed module declares"):
+        compose([gadgets])
+
+
+def test_compose_refuses_a_handler_keyed_by_an_equal_but_different_event():
+    widgets = _product("widgets", hook_events=list(_WidgetEvent))
+    gadgets = _product(
+        "gadgets",
+        hooks={_ClashingEvent.WIDGET_BUILT: [_on_plan_changed]},
+    )
+
+    with pytest.raises(ValueError, match="no installed module declares"):
+        compose([widgets, gadgets])
+
+
+@pytest.mark.parametrize(
+    "second_events",
+    [list(_ClashingEvent), [HookEvent.PLAN_CHANGED]],
+    ids=["another module's", "the foundation's"],
+)
+def test_compose_refuses_a_hook_event_value_declared_twice(second_events):
+    widgets = _product("widgets", hook_events=list(_WidgetEvent))
+    clashing = _product("clashing", hook_events=second_events)
+
+    with pytest.raises(ValueError, match="declared twice"):
+        compose([widgets, clashing])
+
+
+class _Category(StrEnum):
+    WIDGETS = "widgets.widgets"
+
+
+_RULE = NotificationRule(
+    event=_WidgetEvent.WIDGET_BUILT,
+    category=_Category.WIDGETS,
+    notification_type="widgets.widget-built",
+    email_template="widget-built",
+    recipients=_Perm.READ_WIDGET,
+    exclude_user="builder_id",
+    data=["widget_name"],
+)
+
+
+def _widgets(*rules: NotificationRule) -> Module:
+    return _product(
+        "widgets",
+        hook_events=list(_WidgetEvent),
+        notification_categories=[NotificationCategory(key=_Category.WIDGETS)],
+        notification_rules=list(rules),
+    )
+
+
+def test_compose_subscribes_a_notification_rule_to_its_event():
+    rule = _RULE
+
+    composed = compose([_widgets(rule)])
+
+    assert composed.hooks == {_WidgetEvent.WIDGET_BUILT: (RuleHandler(rule),)}
+    # Composing again gives an equal composition, so bootstrap stays idempotent.
+    assert compose([_widgets(rule)]) == composed
+
+
+@pytest.mark.parametrize(
+    ("overrides", "message"),
+    [
+        ({"event": _ClashingEvent.WIDGET_BUILT}, "hook event"),
+        ({"category": core_enums.Permission.READ_USER}, "category"),
+    ],
+    ids=["undeclared event", "undeclared category"],
+)
+def test_compose_refuses_a_notification_rule_it_cannot_carry_out(overrides, message):
+    with pytest.raises(ValueError, match=f"{message}.*no installed module declares"):
+        compose([_widgets(replace(_RULE, **overrides))])
+
+
+async def test_a_notification_rule_refuses_an_event_lacking_its_data():
+    with pytest.raises(TypeError, match=r"lacks \['builder_id', 'widget_name'\]"):
+        await RuleHandler(_RULE)(repos=None, organization_id=1)
+
+
 def test_reading_the_composition_before_bootstrap_fails_loudly(monkeypatch):
     monkeypatch.setattr(composition, "_installed", None)
 
@@ -143,7 +245,11 @@ async def test_foundation_code_uses_the_installed_composition(monkeypatch, tmp_p
             [
                 _product(
                     "widgets",
-                    hooks={HookEvent.PLAN_CHANGED: [record]},
+                    hook_events=list(_WidgetEvent),
+                    hooks={
+                        HookEvent.PLAN_CHANGED: [record],
+                        _WidgetEvent.WIDGET_BUILT: [record],
+                    },
                     # Products can also override a foundation subject.
                     email_subjects={
                         "en": {"widget-ready": "{app_name} widget", "welcome": "Hi"},
@@ -155,7 +261,8 @@ async def test_foundation_code_uses_the_installed_composition(monkeypatch, tmp_p
     )
 
     await emit(HookEvent.PLAN_CHANGED, organization_id=1)
-    assert calls == [{"organization_id": 1}]
+    await emit(_WidgetEvent.WIDGET_BUILT, widget_id=2)
+    assert calls == [{"organization_id": 1}, {"widget_id": 2}]
     assert subject_for("widget-ready", "en", app_name="Acme") == "Acme widget"
     assert subject_for("welcome", "en") == "Hi"
     assert subject_for("verify-email", "en", app_name="Acme").endswith("Acme")

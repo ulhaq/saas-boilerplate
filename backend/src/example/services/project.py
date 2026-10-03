@@ -2,12 +2,18 @@ from typing import Annotated
 
 from fastapi import Depends
 
-from src.example.enums import ExampleAuditAction, ExampleErrorCode, ExampleUsageMetric
+from src.example.enums import (
+    ExampleAuditAction,
+    ExampleErrorCode,
+    ExampleHookEvent,
+    ExampleUsageMetric,
+)
 from src.example.models.project import Project
 from src.example.repositories.manager import ExampleRepositoryManager
 from src.example.repositories.project import ProjectRepository
 from src.example.schemas.project import ProjectIn, ProjectOut, ProjectPatch
 from src.foundation.core.exceptions import AlreadyExistsException
+from src.foundation.core.hooks import emit
 from src.foundation.core.security import Auth
 from src.foundation.services.access import authenticate
 from src.foundation.services.base import ResourceService
@@ -57,6 +63,15 @@ class ProjectService(
             resource_type="project",
             resource_id=project.id,
             details={"name": project.name},
+        )
+        await emit(
+            ExampleHookEvent.PROJECT_CREATED,
+            repos=self.repos,
+            organization_id=self.current_user.organization_id,
+            project_id=project.id,
+            project_name=project.name,
+            creator_id=self.current_user.id,
+            creator_name=self.current_user.name,
         )
         return ProjectOut.model_validate(project)
 

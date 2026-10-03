@@ -6,7 +6,7 @@ in a `Module` manifest. The core never imports domain code: it emits
 hooks and consumes the composed permission/role sets defined here.
 """
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from enum import StrEnum
 
 from src.foundation import enums as core_enums
@@ -14,7 +14,8 @@ from src.foundation.core import composition
 from src.foundation.core.composition import Composition, RoleSpec
 from src.foundation.core.entitlements import UNLIMITED
 from src.foundation.core.hooks import Handler, HookEvent
-from src.foundation.core.module import Module, NotificationCategory
+from src.foundation.core.module import Module, NotificationCategory, NotificationRule
+from src.foundation.services.notification import RuleHandler
 from src.products import MODULES
 
 ALL_PERMISSIONS: list[StrEnum] = [
@@ -63,17 +64,54 @@ def compose_default_roles(
     return composed
 
 
+def compose_hook_events(products: Sequence[Module]) -> dict[str, StrEnum]:
+    """The foundation's hook events plus each module's, by value. Values must be
+    unique: a `StrEnum` member compares equal to its value, so two events
+    sharing one would share their handlers."""
+    events: dict[str, StrEnum] = {event.value: event for event in HookEvent}
+    for product in products:
+        for event in product.hook_events:
+            if event.value in events:
+                raise ValueError(f"Hook event {event.value!r} is declared twice")
+            events[event.value] = event
+    return events
+
+
+def _check_notification_rule(
+    product: Module,
+    rule: NotificationRule,
+    hook_events: Mapping[str, StrEnum],
+    categories: Mapping[str, NotificationCategory],
+) -> None:
+    if hook_events.get(rule.event.value) is not rule.event:
+        raise ValueError(
+            f"Module {product.name!r} notifies on hook event {rule.event!r}, "
+            "which no installed module declares",
+        )
+    if rule.category not in categories:
+        raise ValueError(
+            f"Module {product.name!r} notifies under category {rule.category!r}, "
+            "which no installed module declares",
+        )
+
+
 def compose(products: Sequence[Module]) -> Composition:
     """Merge what ``products`` add to the foundation (in list order) into one
     read-only `Composition`."""
     providers = [p.entitlements for p in products if p.entitlements is not None]
     if len(providers) > 1:
         raise ValueError("More than one installed module provides entitlements")
-    hook_handlers: dict[HookEvent, list[Handler]] = {}
+    hook_events = compose_hook_events(products)
+    hook_handlers: dict[StrEnum, list[Handler]] = {}
     email_subjects: dict[str, dict[str, str]] = {}
     notification_categories: dict[str, NotificationCategory] = {}
     for product in products:
         for event, handlers in product.hooks.items():
+            if hook_events.get(event.value) is not event:
+                raise ValueError(
+                    f"Module {product.name!r} handles hook event {event!r}, "
+                    "which no installed module declares",
+                )
             hook_handlers.setdefault(event, []).extend(handlers)
         for locale, subjects in product.email_subjects.items():
             email_subjects.setdefault(locale, {}).update(subjects)
@@ -83,6 +121,16 @@ def compose(products: Sequence[Module]) -> Composition:
                     f"Notification category {category.key!r} is declared twice",
                 )
             notification_categories[category.key] = category
+    # After every module's categories are known: a rule may use another's.
+    for product in products:
+        for rule in product.notification_rules:
+            _check_notification_rule(
+                product,
+                rule,
+                hook_events,
+                notification_categories,
+            )
+            hook_handlers.setdefault(rule.event, []).append(RuleHandler(rule))
     return Composition(
         default_roles=compose_default_roles(core_enums.DEFAULT_ROLES, products),
         hooks={event: tuple(handlers) for event, handlers in hook_handlers.items()},

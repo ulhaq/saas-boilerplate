@@ -12,9 +12,9 @@ Mirror the layout of `src/example/`:
 src/acme/
 ├── __init__.py
 ├── enums.py          # AcmePermission, AcmeAuditAction, AcmeErrorCode, AcmePlanFeature,
-│                     # AcmeUsageMetric + ACME_PERMISSION_DESCRIPTIONS,
+│                     # AcmeUsageMetric, AcmeHookEvent + ACME_PERMISSION_DESCRIPTIONS,
 │                     # ACME_DEFAULT_ROLE_PERMISSIONS, ACME_DEFAULT_ROLE_DESCRIPTIONS
-├── hooks.py          # async handlers for foundation HookEvents (listed in product.py)
+├── hooks.py          # async handlers for HookEvents (listed in product.py)
 ├── models/           # SQLAlchemy models (import foundation mixins/Base); __init__.py imports all
 ├── repositories/     # repos extending the foundation base classes
 │   └── manager.py    # AcmeRepositoryManager(RepositoryManager) adding your repos
@@ -31,6 +31,8 @@ Conventions that carry over from `example`:
 - Models declare `organization_id` FKs toward foundation tables (never the reverse); repositories that hold tenant data extend `OrganizationScopedRepository` so unscoped queries fail loudly.
 - Services raise `ClientException(AcmeErrorCode.X)`; the foundation middleware renders the JSON error.
 - Routers/services depend on `AcmeRepositoryManager` (FastAPI instantiates it via `Depends()` exactly like the foundation one). Hook handlers receive the _foundation_ manager and wrap its session: `repos = AcmeRepositoryManager(repos.db)` - same transaction. A handler never calls an external service (a foundation operation must not fail because a provider is down) - record the wanted state and let a worker loop push it.
+- **Your own hook events**: declare them as a `StrEnum` (`AcmeHookEvent`, values prefixed `"acme."`), list it in the manifest's `hook_events`, and `await emit(AcmeHookEvent.X, repos=self.repos, ...)` from a service - see `ExampleHookEvent.PROJECT_CREATED`. Document each event's kwargs next to it. `bootstrap()` refuses a value declared twice and a handler for an event no installed module declares. Handling another module's event means importing its enum, so that module becomes a dependency: allow just that import in the independence contract (`ignore_imports = ["src.acme.** -> src.crm.enums"]`), and remove it together with the module.
+- **Notifications**: declare a category (`notification_categories`) and a `NotificationRule` (`notification_rules`) for the event - the foundation notifies the organization's members holding the rule's permission, in-app and/or by email as each prefers, with the event kwargs the rule lists as payload and email data; your services only emit events (see `src/example/emails.py`). Put what a notification shows in the event's kwargs (names, not just ids). Add an email template and subject for the rule's `email_template`, and a frontend presenter for its `notification_type` (`registerNotificationPresenter`). Use `deliver_notification` from a hook handler only when recipients aren't "members with a permission".
 - **Plan limits and features** go through the foundation, so they work with or without billing: "how many can exist" limits with `await self._require_capacity(AcmeUsageMetric.WIDGETS, organization_id, self.repo.count)` right before inserting (it takes a per-organization lock, so concurrent requests can't both take the last slot), features with `require_plan_feature(AcmePlanFeature.X)` on a route or `self._require_feature(...)` in a service, and `composition.current().entitlements.limit(...)` to read a limit (e.g. in a `PLAN_CHANGED` handler). Without billing installed every feature is on and nothing is limited.
 
 ### 2. Declare its manifest (`src/acme/product.py`)
@@ -46,6 +48,7 @@ ACME = Module(
     audit_actions=list(AcmeAuditAction),              # listed in the audit-log filter
     default_role_permissions=ACME_DEFAULT_ROLE_PERMISSIONS,
     routers=[RouterMount(router=widgets.router, tags=["Widgets"])],  # public=False hides it from the API schema
+    hook_events=list(AcmeHookEvent),                 # events you emit, for other modules to handle
     hooks={HookEvent.MEMBER_ADDED: [on_member_added]},
     worker_loops=[run_acme_loop],                    # wrap each iteration in track_worker_run("acme", interval)
     email_subjects=ACME_EMAIL_SUBJECTS,              # if you send email

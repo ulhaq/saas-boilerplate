@@ -26,6 +26,17 @@ class ExampleAuditAction(StrEnum):
     PROJECT_DELETE = "project.delete"
 
 
+class ExampleHookEvent(StrEnum):
+    # A project was created. kwargs: repos, organization_id, project_id,
+    # project_name, creator_id, creator_name
+    PROJECT_CREATED = "example.project_created"
+
+
+class ExampleNotificationCategory(StrEnum):
+    # Labelled in the app under `notificationPreferences.categories.example`.
+    PROJECTS = "example.projects"
+
+
 class ExampleUsageMetric(StrEnum):
     # Plan setting key capping how many projects an organization may hold.
     PROJECTS = "projects"
