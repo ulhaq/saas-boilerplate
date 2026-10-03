@@ -35,7 +35,7 @@ export const usersApi = {
   },
 
   changePassword(data: ChangePasswordIn) {
-    return api.put('/users/me/change-password', { body: data })
+    return api.post('/users/me/change-password', { body: data })
   },
 
   removeFromOrganization(id: number) {

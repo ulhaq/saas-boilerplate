@@ -36,7 +36,7 @@ export const billingApi = {
   },
 
   updateBillingEmail(data: { billing_email: string }) {
-    return api.put('/billing/subscriptions/current', { body: data })
+    return api.patch('/billing/subscriptions/current', { body: data })
   },
 
   getPortalUrl() {

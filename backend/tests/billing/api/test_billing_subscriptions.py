@@ -684,7 +684,7 @@ def test_update_billing_email_persists_without_customer(
 ) -> None:
     # No Stripe customer exists yet (no checkout), so the email is stored
     # locally and the provider is not contacted.
-    response = admin_authenticated.put(
+    response = admin_authenticated.patch(
         "/v1/billing/subscriptions/current",
         json={"billing_email": "finance@example.com"},
     )
@@ -705,7 +705,7 @@ def test_update_billing_email_syncs_to_provider_with_customer(
         json={"plan_price_id": price_id},
     )
 
-    response = admin_authenticated.put(
+    response = admin_authenticated.patch(
         "/v1/billing/subscriptions/current",
         json={"billing_email": "finance@example.com"},
     )
@@ -722,7 +722,7 @@ def test_checkout_uses_billing_email_when_set(
     mock_billing_provider: MagicMock,
 ) -> None:
     price_id = plan_with_price["price"]["id"]
-    admin_authenticated.put(
+    admin_authenticated.patch(
         "/v1/billing/subscriptions/current",
         json={"billing_email": "finance@example.com"},
     )

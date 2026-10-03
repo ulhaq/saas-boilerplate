@@ -942,12 +942,12 @@
           }
         ]
       },
-      "put": {
+      "patch": {
         "tags": [
           "Billing Subscriptions"
         ],
         "summary": "Update Billing Email",
-        "operationId": "update_billing_email_v1_billing_subscriptions_current_put",
+        "operationId": "update_billing_email_v1_billing_subscriptions_current_patch",
         "requestBody": {
           "content": {
             "application/json": {
@@ -981,16 +981,6 @@
           },
           "400": {
             "description": "Bad Request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {
@@ -2568,12 +2558,12 @@
       }
     },
     "/v1/users/me/change-password": {
-      "put": {
+      "post": {
         "tags": [
           "Users"
         ],
         "summary": "Change Password Of Authenticated User",
-        "operationId": "change_password_of_authenticated_user_v1_users_me_change_password_put",
+        "operationId": "change_password_of_authenticated_user_v1_users_me_change_password_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -2607,16 +2597,6 @@
           },
           "400": {
             "description": "Bad Request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
             "content": {
               "application/json": {
                 "schema": {

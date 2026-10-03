@@ -334,13 +334,13 @@ export interface paths {
     }
     /** Get Current Subscription */
     get: operations['get_current_subscription_v1_billing_subscriptions_current_get']
-    /** Update Billing Email */
-    put: operations['update_billing_email_v1_billing_subscriptions_current_put']
+    put?: never
     post?: never
     delete?: never
     options?: never
     head?: never
-    patch?: never
+    /** Update Billing Email */
+    patch: operations['update_billing_email_v1_billing_subscriptions_current_patch']
     trace?: never
   }
   '/v1/billing/subscriptions/current/cancel': {
@@ -671,9 +671,9 @@ export interface paths {
       cookie?: never
     }
     get?: never
+    put?: never
     /** Change Password Of Authenticated User */
-    put: operations['change_password_of_authenticated_user_v1_users_me_change_password_put']
-    post?: never
+    post: operations['change_password_of_authenticated_user_v1_users_me_change_password_post']
     delete?: never
     options?: never
     head?: never
@@ -2864,7 +2864,7 @@ export interface operations {
       }
     }
   }
-  update_billing_email_v1_billing_subscriptions_current_put: {
+  update_billing_email_v1_billing_subscriptions_current_patch: {
     parameters: {
       query?: never
       header?: never
@@ -2888,15 +2888,6 @@ export interface operations {
       }
       /** @description Bad Request */
       400: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['ErrorResponse']
-        }
-      }
-      /** @description Not Found */
-      404: {
         headers: {
           [name: string]: unknown
         }
@@ -4066,7 +4057,7 @@ export interface operations {
       }
     }
   }
-  change_password_of_authenticated_user_v1_users_me_change_password_put: {
+  change_password_of_authenticated_user_v1_users_me_change_password_post: {
     parameters: {
       query?: never
       header?: never
@@ -4090,15 +4081,6 @@ export interface operations {
       }
       /** @description Bad Request */
       400: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          'application/json': components['schemas']['ErrorResponse']
-        }
-      }
-      /** @description Not Found */
-      404: {
         headers: {
           [name: string]: unknown
         }

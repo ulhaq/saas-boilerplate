@@ -72,7 +72,7 @@ async def request_email_change(
     await service.request_email_change(schema_in, bg_tasks.add_task)
 
 
-@router.put("/me/change-password", status_code=status.HTTP_200_OK)
+@router.post("/me/change-password", status_code=status.HTTP_200_OK)
 async def change_password_of_authenticated_user(
     service: Annotated[UserService, Depends()],
     change_password_in: ChangePasswordIn,

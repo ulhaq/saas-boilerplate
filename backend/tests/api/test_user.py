@@ -86,7 +86,7 @@ def test_change_authenticated_user_password(
     admin_authenticated: TestClient,
     client: TestClient,
 ) -> None:
-    response = admin_authenticated.put(
+    response = admin_authenticated.post(
         "/v1/users/me/change-password",
         json={
             "password": "password",

@@ -138,7 +138,7 @@ async def switch_plan(
     return await service.switch_plan(switch_in)
 
 
-@subscription_router.put("/current", status_code=status.HTTP_200_OK)
+@subscription_router.patch("/current", status_code=status.HTTP_200_OK)
 @limiter.limit("5/minute")
 async def update_billing_email(
     request: Request,  # noqa: ARG001
