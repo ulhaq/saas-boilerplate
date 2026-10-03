@@ -53,12 +53,15 @@ export function useNotificationPresenter() {
 
   function getCategoryBadgeClass(n: NotificationOut, category: string): string {
     return (
-      registry.get(n.notification_type)?.getCategoryBadgeClass?.(category) ?? 'bg-muted text-muted-foreground'
+      registry.get(n.notification_type)?.getCategoryBadgeClass?.(category) ??
+      'bg-muted text-muted-foreground'
     )
   }
 
   function getCategoryDotClass(n: NotificationOut, category: string): string {
-    return registry.get(n.notification_type)?.getCategoryDotClass?.(category) ?? 'bg-muted-foreground'
+    return (
+      registry.get(n.notification_type)?.getCategoryDotClass?.(category) ?? 'bg-muted-foreground'
+    )
   }
 
   return {
