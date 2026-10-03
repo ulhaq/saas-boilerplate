@@ -41,14 +41,12 @@ from src.platform.routers import (
     api_token,
     audit_log,
     auth,
-    contact,
     invitation,
     notification,
     organization,
     permission,
     role,
     user,
-    waitlist,
 )
 from src.products import MODULES
 
@@ -260,8 +258,6 @@ ROUTERS: list[RouterMount] = [
         router=audit_log.build_router(AUDIT_ACTION), tags=["Audit Log"], public=False
     ),
     RouterMount(router=notification.router, tags=["Notifications"], public=False),
-    RouterMount(router=waitlist.router, tags=["Waitlists"], public=False),
-    RouterMount(router=contact.router, tags=["Contact"], public=False),
 ]
 
 for mount in ROUTERS:

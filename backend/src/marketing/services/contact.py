@@ -1,8 +1,8 @@
 import logging
 from collections.abc import Callable
 
+from src.marketing.schemas.contact import ContactMessageIn, ContactMessageOut
 from src.platform.core.config import settings
-from src.platform.schemas.contact import ContactMessageIn, ContactMessageOut
 from src.platform.services.mailer import send_email
 
 log = logging.getLogger(__name__)

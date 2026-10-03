@@ -50,7 +50,7 @@ dev = [
 lint = "bash -c 'ty check src tests && ruff check src tests && ruff format src tests --check && lint-imports'"
 format = "bash -c 'ruff check src tests --fix && ruff format src tests'"
 test = "pytest ./tests -n auto"
-test-without-billing = "bash -c 'TEST_WITHOUT_BILLING=1 pytest ./tests -n auto'"
+test-platform-only = "bash -c 'TEST_WITHOUT_MODULES=billing,marketing pytest ./tests -n auto'"
 test-cov = "pytest ./tests -n auto --cov=src --cov-report=term-missing --cov-report=html:htmlcov"
 dev = "fastapi dev src/main.py --host 0.0.0.0 --port 8000"
 openapi = "python generate_openapi.py"
@@ -89,18 +89,19 @@ exclude_lines = [
 root_packages = ["src"]
 
 [[tool.importlinter.contracts]]
-name = "Platform must not import billing or the product domain"
+name = "Platform must not import its modules or the product domain"
 type = "forbidden"
 source_modules = ["src.platform"]
-forbidden_modules = ["src.billing", "src.example"]
+forbidden_modules = ["src.billing", "src.marketing", "src.example"]
 
-# Billing is an optional platform module: products may build on it, but it
-# never depends on a product.
+# Billing and marketing are optional platform modules: none depends on another
+# or on the product, and the product reaches them only through the platform
+# (entitlements, hooks) - so each can be removed. If your product must import
+# one directly, narrow this contract.
 [[tool.importlinter.contracts]]
-name = "Billing must not import the product domain"
-type = "forbidden"
-source_modules = ["src.billing"]
-forbidden_modules = ["src.example"]
+name = "Optional modules and the product are independent of each other"
+type = "independence"
+modules = ["src.billing", "src.marketing", "src.example"]
 
 # Each layer may import the layers below it, never the ones above. Applied to
 # the platform, billing and the product package; `provider` (the payment
@@ -109,7 +110,7 @@ forbidden_modules = ["src.example"]
 [[tool.importlinter.contracts]]
 name = "Layers: routers > services > provider > repositories > models | schemas"
 type = "layers"
-containers = ["src.platform", "src.billing", "src.example"]
+containers = ["src.platform", "src.billing", "src.marketing", "src.example"]
 layers = [
     "routers",
     "services",
@@ -121,12 +122,19 @@ layers = [
 [[tool.importlinter.contracts]]
 name = "Routers reach data only through services"
 type = "forbidden"
-source_modules = ["src.platform.routers", "src.billing.routers", "src.example.routers"]
+source_modules = [
+    "src.platform.routers",
+    "src.billing.routers",
+    "src.marketing.routers",
+    "src.example.routers",
+]
 forbidden_modules = [
     "src.platform.repositories",
     "src.platform.models",
     "src.billing.repositories",
     "src.billing.models",
+    "src.marketing.repositories",
+    "src.marketing.models",
     "src.example.repositories",
     "src.example.models",
 ]

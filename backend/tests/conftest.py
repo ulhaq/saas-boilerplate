@@ -37,7 +37,7 @@ from src.platform.models.permission import Permission
 from src.platform.models.role import Role
 from src.platform.models.user import User
 from src.platform.models.user_organization import UserOrganization
-from tests.preload import WITHOUT_BILLING
+from tests.preload import WITHOUT_BILLING, WITHOUT_MODULES
 
 # Tests run against a real PostgreSQL server so Postgres-only behaviour (JSONB,
 # partial indexes, advisory locks, constraint semantics) is exercised. They use
@@ -248,7 +248,7 @@ def mock_send_email(mocker):
     mocker.patch("src.platform.services.auth.invites.send_email")
     mocker.patch("src.platform.services.auth.credentials.send_email")
     mocker.patch("src.platform.services.user.send_email")
-    mocker.patch("src.platform.services.contact.send_email")
+    mocker.patch("src.marketing.services.contact.send_email")
     mocker.patch("src.platform.services.mailer._MAX_EMAIL_ATTEMPTS", 1)
 
 
@@ -453,9 +453,8 @@ async def plan_with_price() -> dict:
 
 
 def pytest_collection_modifyitems(config, items) -> None:
-    if not WITHOUT_BILLING:
-        return
-    skip = pytest.mark.skip(reason="billing is not installed (TEST_WITHOUT_BILLING=1)")
-    for item in items:
-        if "tests/billing/" in item.nodeid or item.get_closest_marker("billing"):
-            item.add_marker(skip)
+    for module in WITHOUT_MODULES:
+        skip = pytest.mark.skip(reason=f"{module} is not installed")
+        for item in items:
+            if f"tests/{module}/" in item.nodeid or item.get_closest_marker(module):
+                item.add_marker(skip)

@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.platform.models.waitlist_entry import WaitlistEntry
+from src.marketing.models.waitlist_entry import WaitlistEntry
 
 
 class WaitlistEntryRepository:

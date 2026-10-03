@@ -20,7 +20,6 @@ from src.platform.repositories.refresh_token import RefreshTokenRepository
 from src.platform.repositories.role import RoleRepository
 from src.platform.repositories.user import UserRepository
 from src.platform.repositories.user_organization import UserOrganizationRepository
-from src.platform.repositories.waitlist_entry import WaitlistEntryRepository
 from src.platform.repositories.worker_run import WorkerRunRepository
 
 
@@ -77,10 +76,6 @@ class RepositoryManager:
     @cached_property
     def worker_run(self) -> WorkerRunRepository:
         return WorkerRunRepository(self.db)
-
-    @cached_property
-    def waitlist_entry(self) -> WaitlistEntryRepository:
-        return WaitlistEntryRepository(self.db)
 
     async def commit_before_raise(self) -> None:
         """Commit the request transaction now, ahead of an exception that

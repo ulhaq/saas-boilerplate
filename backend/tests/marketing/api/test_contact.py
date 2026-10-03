@@ -15,7 +15,7 @@ def test_submit_contact_message(client: TestClient) -> None:
 
 
 def test_submit_contact_message_emails_the_team(client: TestClient, mocker) -> None:
-    send_email = mocker.patch("src.platform.services.contact.send_email")
+    send_email = mocker.patch("src.marketing.services.contact.send_email")
 
     response = client.post("/v1/contact", json=VALID_PAYLOAD)
 

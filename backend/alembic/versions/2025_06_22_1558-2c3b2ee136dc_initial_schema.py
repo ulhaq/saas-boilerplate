@@ -232,21 +232,6 @@ def upgrade() -> None:
         unique=True,
     )
 
-    op.create_table(
-        "waitlist_entry",
-        sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column("email", sa.String(), nullable=False),
-        sa.Column("name", sa.String(), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.PrimaryKeyConstraint("id"),
-    )
-    op.create_index(
-        op.f("ix_waitlist_entry_email"),
-        "waitlist_entry",
-        ["email"],
-        unique=True,
-    )
-
     # ── audit log ──────────────────────────────────────────────────────────────
 
     op.create_table(
@@ -381,8 +366,6 @@ def downgrade() -> None:
     op.drop_index("ix_audit_log_organization_id", table_name="audit_log")
     op.drop_table("audit_log")
 
-    op.drop_index(op.f("ix_waitlist_entry_email"), table_name="waitlist_entry")
-    op.drop_table("waitlist_entry")
 
     op.drop_index(
         op.f("ix_email_verification_token_email"),

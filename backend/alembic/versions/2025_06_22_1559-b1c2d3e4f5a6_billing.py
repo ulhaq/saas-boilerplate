@@ -6,7 +6,7 @@ Create Date: 2025-06-22 15:59:00.000000
 
 Owned by `src.billing`; seeds the plans, their prices, the api_token feature
 and the platform's seat limits. Drop this file (and point the next revision at
-the initial schema) to run without billing.
+the one before it) to run without billing.
 """
 
 from collections.abc import Sequence

@@ -35,35 +35,38 @@ This file provides comprehensive guidance for working with this FastAPI multi-te
 
 ## Architecture
 
-### Platform core, billing module, product domain
+### Platform core, optional modules, product domain
 
 The backend is split into a **generic SaaS platform** (`src/platform/`: auth,
-organizations, users, RBAC, audit, GDPR, notifications), the optional **billing
-module** (`src/billing/`: plans, subscriptions, usage, Stripe) and the **product
-domain** (`src/example/`). The platform imports neither billing nor the product;
-billing and the product plug in through the same manifest, wired together in
-exactly one place:
+organizations, users, RBAC, audit, GDPR, notifications), the optional modules -
+**billing** (`src/billing/`: plans, subscriptions, usage, Stripe) and
+**marketing** (`src/marketing/`: the waitlist and contact-form endpoints the
+marketing site posts to) - and the **product domain** (`src/example/`). The
+platform imports none of them, and they don't import each other; all plug in
+through the same manifest, wired together in exactly one place:
 
 | Piece              | Path                           | Purpose                                                                                                                                                                                               |
 | ------------------ | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Hook registry      | `src/platform/core/hooks.py`   | `HookEvent`s (`MEMBER_ADDED`, `MEMBER_REMOVED`, `ORGANIZATION_CREATED`, `ORGANIZATION_DELETING`, `OWNERSHIP_TRANSFERRED`, `PLAN_CHANGED`); modules list async handlers in their manifest       |
 | Entitlements       | `src/platform/core/entitlements.py` | What an organization may use (features, limits, usage). Billing provides `PlanEntitlements`; without it, `UNLIMITED`                                                                         |
+| Marketing module   | `src/marketing/`               | Waitlist sign-ups and the contact form (its email + migration); manifest `MARKETING` in `src/marketing/module.py`                                                                         |
 | Billing module     | `src/billing/`                 | Own layers, enums, settings (`BillingSettings`), templates, hooks and migration; manifest `BILLING` in `src/billing/module.py`; `BillingRepositoryManager` adds its repositories                  |
 | Platform enums     | `src/platform/enums.py`        | Core `Permission`, `AuditAction`, `ErrorCode`, `PlanFeature`, `UsageMetric`, `DEFAULT_ROLES` - no domain members allowed                                                                              |
 | Domain enums       | `src/example/enums.py`         | Product permissions, audit actions, error codes, usage metrics, plus per-role grant/description contributions                                                                                         |
 | Domain hooks       | `src/example/hooks.py`         | Handlers for platform lifecycle events                                                                                                                                                                |
 | Domain settings    | `src/example/config.py`        | Independent settings namespace extending the shared `EnvSettings` base                                                                                                                                |
 | Product manifest   | `src/platform/core/module.py` | `Module`: everything a product contributes (permissions, role grants, routers, hooks, worker loops, models, emails)                                                                            |
-| Installed modules  | `src/products.py`              | `PRODUCTS` (the product) and `MODULES` (`BILLING` + products) - the only assembly file that names them                                                                                                |
+| Installed modules  | `src/products.py`              | `PRODUCTS` (the product) and `MODULES` (`BILLING`, `MARKETING` + products) - the only assembly file that names them                                                                                                |
 | Composition root   | `src/bootstrap.py`             | Merges core + every product's permissions (`ALL_PERMISSIONS`, `PERMISSION_DESCRIPTIONS`, for seeding) and, via `bootstrap()`, installs one read-only `Composition` (`src/platform/core/composition.py`: default roles, hooks, email subjects, template directories, entitlements) that platform code reads with `composition.current()`; `AUDIT_ACTION` composes every module's audit actions for the audit-log filter |
 
 `bootstrap()` is called at startup by `src/main.py` (API) and `worker.py` (worker).
 `src/main.py` includes each module's routers, `worker.py` starts its loops, and
 `alembic/env.py` registers its models - all by iterating `MODULES`.
-To run without plans and Stripe, drop `BILLING` from `MODULES`, delete the
-billing migration and point the product migration's `down_revision` at the
-initial schema (its project-limit seed skips itself without billing's tables):
-every feature is then on, with no limits.
+To run without an optional module, drop it from `MODULES`, delete its
+migration and point the next migration's `down_revision` at the one before it.
+Without billing every feature is on, with no limits (the product's
+project-limit seed skips itself without billing's tables); without marketing
+the `/v1/waitlist` and `/v1/contact` endpoints are gone.
 Seeding code (`src/sync_permissions.py`, `src/init_db.py`, `tests/conftest.py`) must
 import the composed sets from `src.bootstrap`, never from `src.platform.enums` directly.
 
@@ -132,7 +135,7 @@ The initial migration holds the platform schema; billing's migration its tables 
 - `tests/conftest.py` provides: async test client, pre-seeded organizations/users/roles/permissions, and per-test table truncation (`RESTART IDENTITY`, so seeded ids are stable)
 - `asyncio_mode = auto` (set in `pytest.ini`); all test functions can be `async`
 - Platform tests must not import product code - use a test-local enum where a metric/feature is needed
-- Billing's tests live in `tests/billing/`; a platform or product test that relies on billing behaviour (plan gating, free subscriptions, Stripe sync) is marked `@pytest.mark.billing`. `uv run poe test-without-billing` (`TEST_WITHOUT_BILLING=1`, set up by the `tests.preload` plugin) runs the suite on an app without the billing module and skips those - CI runs both, so the platform keeps working without billing. Don't hard-code counts that depend on installed modules (derive them from `ALL_PERMISSIONS`)
+- An optional module's tests live in `tests/<module>/` (`tests/billing/`, `tests/marketing/`); a platform or product test that relies on a module's behaviour (plan gating, free subscriptions, Stripe sync) is marked with its name (`@pytest.mark.billing`). `uv run poe test-platform-only` (`TEST_WITHOUT_MODULES=billing,marketing`, applied by the `tests.preload` plugin) runs the suite on an app without them and skips those - CI runs both, so the platform keeps working on its own. Don't hard-code counts that depend on installed modules (derive them from `ALL_PERMISSIONS`)
 
 ## Commands (`cd backend` first)
 
@@ -146,8 +149,8 @@ uv run poe lint
 # Run all tests
 uv run poe test
 
-# Run them on an app without the billing module (CI runs both)
-uv run poe test-without-billing
+# Run them on an app without the optional modules (CI runs both)
+uv run poe test-platform-only
 
 # Run a single test
 uv run pytest ./tests/api/test_auth.py::test_register_an_account -v

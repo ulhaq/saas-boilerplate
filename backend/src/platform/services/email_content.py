@@ -93,7 +93,6 @@ EMAIL_SUBJECTS: dict[str, dict[str, str]] = {
         "invite-user": "You've been invited to {organization_name}",
         "added-to-org": "You've been added to {organization_name}",
         "account-deletion": "Your {app_name} account has been deleted",
-        "contact-message": "Contact form: {message_subject}",
     },
     "da": {
         "welcome": "Velkommen til {app_name}",
@@ -107,7 +106,6 @@ EMAIL_SUBJECTS: dict[str, dict[str, str]] = {
         "invite-user": "Du er inviteret til {organization_name}",
         "added-to-org": "Du er blevet tilføjet til {organization_name}",
         "account-deletion": "Din {app_name}-konto er blevet slettet",
-        "contact-message": "Kontaktformular: {message_subject}",
     },
 }
 

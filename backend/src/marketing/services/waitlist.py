@@ -2,13 +2,15 @@ from typing import Annotated
 
 from fastapi import Depends
 
-from src.platform.repositories.repository_manager import RepositoryManager
-from src.platform.schemas.waitlist import WaitlistJoinIn, WaitlistJoinOut
+from src.marketing.repositories.manager import MarketingRepositoryManager
+from src.marketing.schemas.waitlist import WaitlistJoinIn, WaitlistJoinOut
 from src.platform.services.base import BaseService
 
 
 class WaitlistService(BaseService):
-    def __init__(self, repos: Annotated[RepositoryManager, Depends()]) -> None:
+    repos: MarketingRepositoryManager
+
+    def __init__(self, repos: Annotated[MarketingRepositoryManager, Depends()]) -> None:
         super().__init__(repos)
 
     async def join(self, schema_in: WaitlistJoinIn) -> WaitlistJoinOut:

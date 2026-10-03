@@ -1,7 +1,7 @@
 """example product: project table
 
 Revision ID: d4e5f6a7b8c9
-Revises: b1c2d3e4f5a6
+Revises: c2d3e4f5a6b7
 Create Date: 2026-09-13 12:00:00.000000
 
 """
@@ -14,7 +14,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "d4e5f6a7b8c9"
-down_revision: str | None = "b1c2d3e4f5a6"
+down_revision: str | None = "c2d3e4f5a6b7"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

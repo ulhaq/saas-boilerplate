@@ -12,7 +12,6 @@ from src.platform.models.refresh_token import RefreshToken
 from src.platform.models.role import Role
 from src.platform.models.user import User
 from src.platform.models.user_organization import UserOrganization
-from src.platform.models.waitlist_entry import WaitlistEntry
 from src.platform.models.worker_run import WorkerRun
 
 __all__ = [
@@ -30,6 +29,5 @@ __all__ = [
     "Role",
     "User",
     "UserOrganization",
-    "WaitlistEntry",
     "WorkerRun",
 ]
