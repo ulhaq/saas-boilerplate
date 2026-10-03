@@ -79,7 +79,7 @@ The frontend's API types are generated from the backend's schema, not hand-writt
 
 ## Permission Flow (Backend → Frontend)
 
-Platform permissions are a `Permission` StrEnum in `backend/src/platform/enums.py`; product permissions are `ExamplePermission` in `backend/src/example/enums.py`. The composition root (`backend/src/bootstrap.py`) merges both into the seeded `DEFAULT_ROLES`. At login, the API returns the user's flattened permission list; the frontend stores it in `stores/auth.ts` and checks it via `hasPermission()` / `usePermission()` / `<PermissionGuard>`.
+Platform permissions are a `Permission` StrEnum in `backend/src/platform/enums.py`; product permissions are `ExamplePermission` in `backend/src/example/enums.py`. The composition root (`backend/src/bootstrap.py`) merges them (with billing's) into `ALL_PERMISSIONS` and the seeded `DEFAULT_ROLES`. Permissions are not seeded by migrations: `python -m src.sync_permissions` (run on every deploy after `alembic upgrade head`, and by `init_db`) adds the declared ones the database lacks and grants them to every Owner role, so a new permission needs no migration. At login, the API returns the user's flattened permission list; the frontend stores it in `stores/auth.ts` and checks it via `hasPermission()` / `usePermission()` / `<PermissionGuard>`.
 
 When adding a new permission-gated feature:
 

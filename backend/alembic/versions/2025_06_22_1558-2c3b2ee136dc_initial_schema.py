@@ -7,12 +7,10 @@ Create Date: 2025-06-22 15:58:50.524796
 """
 
 from collections.abc import Sequence
-from datetime import UTC, datetime
 
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
-from src.bootstrap import ALL_PERMISSIONS, PERMISSION_DESCRIPTIONS
 
 revision: str = "2c3b2ee136dc"
 down_revision: str | None = None
@@ -21,14 +19,6 @@ depends_on: str | Sequence[str] | None = None
 
 # Auto-increment id sequences start here (260614 = YYMMDD).
 SEQUENCE_START = 260614
-
-_permission_table = sa.table(
-    "permission",
-    sa.Column("name", sa.String),
-    sa.Column("description", sa.String),
-    sa.Column("created_at", sa.DateTime),
-    sa.Column("updated_at", sa.DateTime),
-)
 
 
 def upgrade() -> None:
@@ -255,22 +245,6 @@ def upgrade() -> None:
         "waitlist_entry",
         ["email"],
         unique=True,
-    )
-
-    # ── seed all permissions ───────────────────────────────────────────────────
-
-    now = datetime.now(UTC)
-    op.bulk_insert(
-        _permission_table,
-        [
-            {
-                "name": p.value,
-                "description": PERMISSION_DESCRIPTIONS[p],
-                "created_at": now,
-                "updated_at": now,
-            }
-            for p in ALL_PERMISSIONS
-        ],
     )
 
     # ── audit log ──────────────────────────────────────────────────────────────

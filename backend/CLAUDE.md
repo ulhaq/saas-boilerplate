@@ -64,7 +64,7 @@ To run without plans and Stripe, drop `BILLING` from `MODULES`, delete the
 billing migration and point the product migration's `down_revision` at the
 initial schema (its project-limit seed skips itself without billing's tables):
 every feature is then on, with no limits.
-Seeding code (Alembic initial migration, `src/init_db.py`, `tests/conftest.py`) must
+Seeding code (`src/sync_permissions.py`, `src/init_db.py`, `tests/conftest.py`) must
 import the composed sets from `src.bootstrap`, never from `src.platform.enums` directly.
 
 The import-linter contracts in `pyproject.toml` forbid `src.platform` from importing
@@ -124,7 +124,7 @@ Enforced by import-linter (`uv run poe lint`), for `src/platform/`, `src/billing
 
 Add columns/tables in models, then `alembic revision --autogenerate`.
 Prefer adding to an existing staged migration file over creating a new one.
-The initial migration holds the platform schema and seeds (permissions, plans, seat limits); product tables and product plan limits go in product migrations.
+The initial migration holds the platform schema; billing's migration its tables and plan seeds (plans, prices, seat limits); product tables and product plan limits go in product migrations. Permissions are not migrated: `python -m src.sync_permissions` (`sync_permissions` in `services/permission.py`) runs after `alembic upgrade head` on every deploy and in `init_db` - it adds missing declared permissions and grants all of them to every Owner role, idempotently. Other roles are left to their owners; permissions no longer declared are reported, not deleted.
 
 ### Testing
 

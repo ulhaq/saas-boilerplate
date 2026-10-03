@@ -1,9 +1,13 @@
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
+from datetime import UTC, datetime
 from typing import ClassVar
 
+from sqlalchemy import literal, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.platform.models.permission import Permission
+from src.platform.models.permission import Permission, RolePermission
 from src.platform.models.role import Role
 from src.platform.repositories.abc import SoftDeleteRepositoryABC
 from src.platform.repositories.base import OrganizationScopedRepository
@@ -33,3 +37,36 @@ class RoleRepository(OrganizationScopedRepository[Role], RoleRepositoryABC):
 
     async def remove_permissions(self, role: Role, *permission_ids: int) -> None:
         await self.remove_relationship(role, "permissions", *permission_ids)
+
+    async def grant_to_protected_roles(
+        self, role_name: str, permission_names: Iterable[str]
+    ) -> int:
+        """Grant every named permission to every organization's protected
+        ``role_name`` role (the Owner) that lacks it - across all organizations.
+        Returns the number of grants added."""
+        now = datetime.now(UTC)
+        pairs = (
+            select(
+                Role.id,
+                Permission.id,
+                literal(now).label("created_at"),
+                literal(now).label("updated_at"),
+            )
+            .join(Permission, Permission.name.in_(list(permission_names)))
+            .where(
+                Role.name == role_name,
+                Role.is_protected.is_(True),
+                Role.deleted_at.is_(None),
+                Permission.deleted_at.is_(None),
+            )
+        )
+        stmt = (
+            pg_insert(RolePermission)
+            .from_select(
+                ["role_id", "permission_id", "created_at", "updated_at"], pairs
+            )
+            .on_conflict_do_nothing(constraint="uq_role_permission")
+            .returning(RolePermission.id)
+        )
+        rs = await self.db.execute(stmt)
+        return len(rs.all())

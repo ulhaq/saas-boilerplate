@@ -8,6 +8,7 @@ from alembic.command import downgrade, upgrade
 from alembic.config import Config
 from sqlalchemy import select
 
+from src import sync_permissions
 from src.bootstrap import ALL_PERMISSIONS, bootstrap
 from src.platform.core.database import ASYNC_SESSION_LOCAL
 from src.platform.core.hooks import HookEvent, emit
@@ -118,6 +119,7 @@ INIT_AUTH_DATA: dict = {
 async def up() -> None:
     upgrade(alembic_cfg, "head")
     bootstrap()
+    await sync_permissions.run()
 
     async with ASYNC_SESSION_LOCAL() as session:
         organizations = []

@@ -1,8 +1,11 @@
+from collections.abc import Mapping
+from dataclasses import dataclass
 from typing import Annotated
 
 from fastapi import Depends
 
 from src.platform.core.exceptions import AlreadyExistsException
+from src.platform.enums import OWNER_ROLE_NAME
 from src.platform.models.permission import Permission
 from src.platform.repositories.permission import PermissionRepository
 from src.platform.repositories.repository_manager import RepositoryManager
@@ -85,3 +88,28 @@ class PermissionService(
         self, identifier: int, force_delete: bool = False
     ) -> None:
         await super().delete(identifier, force_delete=force_delete)
+
+
+@dataclass(frozen=True)
+class PermissionSync:
+    added: set[str]
+    granted: int
+    undeclared: list[str]
+
+
+async def sync_permissions(
+    repos: RepositoryManager, declared: Mapping[str, str]
+) -> PermissionSync:
+    """Bring the database in line with the permissions the installed modules
+    declare (name -> description): add the missing ones and grant every
+    declared permission to every Owner role. Idempotent; run after migrations
+    on each deploy (`python -m src.sync_permissions`).
+
+    Other roles are never changed - owners manage them. Permissions no longer
+    declared are reported, not removed: roles may still hold them."""
+    added = await repos.permission.sync_declared(declared)
+    granted = await repos.role.unscoped.grant_to_protected_roles(
+        OWNER_ROLE_NAME, declared
+    )
+    undeclared = await repos.permission.get_undeclared_names(declared)
+    return PermissionSync(added=added, granted=granted, undeclared=undeclared)
