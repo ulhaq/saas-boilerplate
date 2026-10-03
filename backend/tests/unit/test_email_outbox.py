@@ -135,6 +135,7 @@ async def test_concurrent_senders_claim_different_emails():
     assert claimed_second == ["second@example.org"]
 
 
+@pytest.mark.billing
 async def test_a_webhook_queues_its_email_instead_of_sending_it(
     mocker, mock_billing_provider
 ):

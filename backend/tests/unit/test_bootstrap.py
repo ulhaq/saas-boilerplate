@@ -19,6 +19,7 @@ from src.platform.core.hooks import HookEvent, emit
 from src.platform.core.product import ProductModule
 from src.platform.core.template import templates
 from src.platform.services.email_content import subject_for
+from tests.preload import WITHOUT_BILLING
 
 
 class _Perm(StrEnum):
@@ -180,5 +181,6 @@ def test_the_audit_action_enum_lists_every_installed_modules_actions():
 
     assert AUDIT_ACTION.__name__ == "AuditAction"
     assert "auth.login" in actions
-    assert "billing.plan_switch" in actions
+    # Billing's actions are listed exactly when billing is installed.
+    assert ("billing.plan_switch" in actions) is not WITHOUT_BILLING
     assert "project.create" in actions

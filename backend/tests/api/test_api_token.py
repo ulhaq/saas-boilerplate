@@ -2,6 +2,7 @@ import hashlib
 import secrets
 from datetime import UTC, datetime, timedelta
 
+import pytest
 from fastapi.testclient import TestClient
 from httpx import Headers, Response
 from sqlalchemy import delete, select
@@ -139,6 +140,7 @@ async def _remove_api_access_feature() -> None:
         await session.commit()
 
 
+@pytest.mark.billing
 async def test_list_tokens_blocked_without_api_access_feature(
     admin_authenticated: TestClient,
 ) -> None:
@@ -148,6 +150,7 @@ async def test_list_tokens_blocked_without_api_access_feature(
     assert rs.json()["error_code"] == "plan_feature_unavailable"
 
 
+@pytest.mark.billing
 async def test_create_token_blocked_without_api_access_feature(
     admin_authenticated: TestClient,
 ) -> None:
@@ -157,6 +160,7 @@ async def test_create_token_blocked_without_api_access_feature(
     assert rs.json()["error_code"] == "plan_feature_unavailable"
 
 
+@pytest.mark.billing
 async def test_revoke_token_blocked_without_api_access_feature(
     admin_authenticated: TestClient,
 ) -> None:
@@ -201,6 +205,7 @@ def test_invalid_token_rejected(client: TestClient) -> None:
     assert rs.status_code == 401
 
 
+@pytest.mark.billing
 async def test_auth_blocked_without_api_access_feature(client: TestClient) -> None:
     _, plaintext = await _seed_token(user_id=1, organization_id=1)
     await _remove_api_access_feature()

@@ -111,6 +111,7 @@ async def test_require_feature_passes_when_feature_available(mock_billing_provid
             await service._require_feature(PlanFeature.API_TOKEN, organization_id=1)
 
 
+@pytest.mark.billing
 async def test_require_feature_raises_when_feature_unavailable(mock_billing_provider):
     """A feature the organization's plan doesn't include - should raise."""
 

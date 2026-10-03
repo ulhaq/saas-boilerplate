@@ -1,5 +1,7 @@
 from urllib.parse import parse_qs, urlsplit
 
+import pytest
+
 from src.platform.services.utm import append_utm, apply_utm
 
 
@@ -78,6 +80,7 @@ def test_apply_utm_returns_a_new_mapping() -> None:
     assert tagged is not data
 
 
+@pytest.mark.billing
 def test_apply_utm_tags_the_installed_modules_emails() -> None:
     """Billing lists its templates and the `billing_url` link key."""
     data = apply_utm(

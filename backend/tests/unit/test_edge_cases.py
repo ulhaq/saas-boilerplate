@@ -199,6 +199,7 @@ async def test_transfer_ownership_no_owner_role_raises(mock_billing_provider, mo
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.billing
 async def test_handle_payment_method_detached_no_customer_id(mock_billing_provider):
     """payment_method.detached returns early when no customer_id."""
     async with TestSessionLocal() as session:

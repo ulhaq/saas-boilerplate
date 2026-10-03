@@ -1,20 +1,15 @@
-"""Tests for creating in-app notifications: the repository, and the billing
-notifications `notify_subscription_managers` writes."""
-
-from datetime import date
+"""Tests for creating in-app notifications (the notification repository)."""
 
 import pytest
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from src.billing.repositories.manager import BillingRepositoryManager
-from src.billing.services.common import notify_subscription_managers
 from src.platform.models.notification import Notification
 from src.platform.repositories.repository_manager import RepositoryManager
 from tests.conftest import TestSessionLocal
 
-# Seeded: in organization 1 only user 1 (Owner) can manage the subscription;
-# user 2 (Member) and user 3 (no roles) can't. User 4 owns organization 2.
+# Seeded: user 1 (organization 1's Owner), user 2 (a Member of organization 1)
+# and user 4 (organization 2's Owner).
 ADMIN, STANDARD, ADMIN2 = 1, 2, 4
 
 
@@ -72,61 +67,4 @@ async def test_create_rejects_an_unknown_user():
             await RepositoryManager(session).notification.create(
                 user_id=999_999, organization_id=1, type="t", payload={}
             )
-    assert await _notifications() == []
-
-
-# ---------------------------------------------------------------------------
-# notify_subscription_managers - the billing notifications it writes
-# ---------------------------------------------------------------------------
-
-
-async def _notify(data: dict) -> int:
-    async with TestSessionLocal() as session, session.begin():
-        repos = BillingRepositoryManager(session)
-        organization = await repos.organization.get(1)
-        assert organization
-        return await notify_subscription_managers(
-            repos, organization, "trial-ending", data
-        )
-
-
-async def test_only_subscription_managers_are_notified():
-    assert await _notify({}) == 1
-
-    [notification] = await _notifications()
-    assert (notification.user_id, notification.organization_id) == (ADMIN, 1)
-    assert notification.type == "billing.trial-ending"
-
-
-async def test_the_notification_payload_is_json_safe():
-    await _notify(
-        {
-            "trial_end_date": date(2026, 10, 15),
-            "trial_days": 14,
-            "has_payment_method": False,
-            "billing_url": "https://app.test/settings/billing",
-        }
-    )
-
-    [notification] = await _notifications()
-    # Dates as ISO strings (the app formats them per locale); no absolute URLs.
-    assert notification.payload == {
-        "trial_end_date": "2026-10-15",
-        "trial_days": 14,
-        "has_payment_method": False,
-    }
-
-
-async def test_a_rolled_back_change_creates_no_notification():
-    class Rollback(Exception):
-        pass
-
-    with pytest.raises(Rollback):
-        async with TestSessionLocal() as session, session.begin():
-            repos = BillingRepositoryManager(session)
-            organization = await repos.organization.get(1)
-            assert organization
-            await notify_subscription_managers(repos, organization, "trial-ending", {})
-            raise Rollback
-
     assert await _notifications() == []

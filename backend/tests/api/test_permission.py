@@ -1,11 +1,21 @@
 import pytest
 from fastapi.testclient import TestClient
 
+from src.bootstrap import ALL_PERMISSIONS
 from tests.utils import (
     assert_filtering_of_items_list,
     assert_pagination,
     assert_sorting_of_items_list,
 )
+
+# Seeded in declaration order, so permission ids are 1..TOTAL - and the counts
+# depend on the installed modules (billing adds one).
+TOTAL = len(ALL_PERMISSIONS)
+_IDS = {permission.value: i for i, permission in enumerate(ALL_PERMISSIONS, 1)}
+
+
+def _count(predicate) -> int:
+    return sum(1 for name, i in _IDS.items() if predicate(name, i))
 
 
 def test_get_all_permissions(admin_authenticated: TestClient) -> None:
@@ -16,9 +26,9 @@ def test_get_all_permissions(admin_authenticated: TestClient) -> None:
 
     assert rs["page_number"] == 1
     assert rs["page_size"] == 100
-    assert rs["total"] == 17
+    assert rs["total"] == TOTAL
 
-    assert len(rs["items"]) == 17
+    assert len(rs["items"]) == TOTAL
     assert rs["items"][0]["id"] == 1
     assert rs["items"][0]["name"] == "update:organization"
     assert (
@@ -32,9 +42,9 @@ def test_get_all_permissions(admin_authenticated: TestClient) -> None:
 @pytest.mark.parametrize(
     "page_number, page_size, page_total, total",
     [
-        (1, 10, 10, 17),
-        (2, 10, 7, 17),
-        (3, 10, 0, 17),
+        (1, 10, 10, TOTAL),
+        (2, 10, TOTAL - 10, TOTAL),
+        (3, 10, 0, TOTAL),
     ],
 )
 def test_paginate_permissions(
@@ -86,27 +96,21 @@ def test_sort_permissions(sort: str, admin_authenticated: TestClient) -> None:
         # Single field, single value
         (["id"], [[1]], ["eq"], 1),
         (["name"], [["read:user"]], ["eq"], 1),
-        (
-            ["name"],
-            [["read:"]],
-            ["co"],
-            5,
-        ),  # read:user, read:role, read:permission,
-        # read:audit_log, read:project
-        (["id"], [[15]], ["gt"], 2),  # ids 16, 18
-        (["id"], [[10]], ["gte"], 8),  # ids 10-18
+        (["name"], [["read:"]], ["co"], _count(lambda n, _: "read:" in n)),
+        (["id"], [[15]], ["gt"], TOTAL - 15),
+        (["id"], [[10]], ["gte"], TOTAL - 9),
         # Single field, multiple values
         (["id"], [[0, 1]], ["between"], 1),
         (["id"], [[1, 2]], ["between"], 2),
         (["id"], [[2, 3]], ["between"], 2),
         (["id"], [[1, 5, 10]], ["in"], 3),
         (["name"], [["read:user", "read:role"]], ["in"], 2),
-        (["description"], [["allows"]], ["ico"], 17),
+        (["description"], [["allows"]], ["ico"], TOTAL),
         (
             ["created_at"],
             [["2025-04-22T14:04:38.586226", "2050-09-22T14:04:38.586226"]],
             ["between"],
-            17,
+            TOTAL,
         ),
     ],
 )
@@ -134,13 +138,15 @@ def test_filter_permissions(
 @pytest.mark.parametrize(
     "params, total",
     [
-        # AND: id <= 5 (5 permissions)
-        # AND name contains "read" (read:user=4, read:role=5) > 2
-        ("id__lte=5&name__ico=read", 2),
-        # AND: name contains "manage" (5) AND id >= 9 (manage:user_role=9 onwards) > 4
-        ("name__ico=manage&id__gte=9", 3),
-        # AND: id between 1 and 4 AND name ico "read" > 1 (read:user=4)
-        ("id__between=1,4&name__ico=read", 2),
+        ("id__lte=5&name__ico=read", _count(lambda n, i: i <= 5 and "read" in n)),
+        (
+            "name__ico=manage&id__gte=9",
+            _count(lambda n, i: i >= 9 and "manage" in n),
+        ),
+        (
+            "id__between=1,4&name__ico=read",
+            _count(lambda n, i: 1 <= i <= 4 and "read" in n),
+        ),
     ],
 )
 def test_filter_permissions_multi_field(

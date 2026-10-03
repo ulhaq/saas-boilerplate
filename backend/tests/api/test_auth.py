@@ -95,6 +95,7 @@ def test_complete_registration(mocker: MockerFixture, client: TestClient) -> Non
     assert rs["token_type"] == "bearer"
 
 
+@pytest.mark.billing
 def test_registration_seeds_billing_email_from_owner(
     mocker: MockerFixture, client: TestClient
 ) -> None:

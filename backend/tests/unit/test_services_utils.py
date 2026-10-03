@@ -18,6 +18,7 @@ from tests.conftest import TestSessionLocal
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.billing
 async def test_setup_new_organization_creates_roles_and_billing():
     async with TestSessionLocal() as session:
         async with session.begin():
@@ -51,6 +52,7 @@ async def test_setup_new_organization_creates_roles_and_billing():
             assert sub.status == "active"
 
 
+@pytest.mark.billing
 async def test_setup_new_organization_no_free_plan_logs_warning(caplog):
     """
     When no free price exists, billing's ORGANIZATION_CREATED handler logs a

@@ -132,6 +132,7 @@ The initial migration holds the platform schema; billing's migration its tables 
 - `tests/conftest.py` provides: async test client, pre-seeded organizations/users/roles/permissions, and per-test table truncation (`RESTART IDENTITY`, so seeded ids are stable)
 - `asyncio_mode = auto` (set in `pytest.ini`); all test functions can be `async`
 - Platform tests must not import product code - use a test-local enum where a metric/feature is needed
+- Billing's tests live in `tests/billing/`; a platform or product test that relies on billing behaviour (plan gating, free subscriptions, Stripe sync) is marked `@pytest.mark.billing`. `uv run poe test-without-billing` (`TEST_WITHOUT_BILLING=1`, set up by the `tests.preload` plugin) runs the suite on an app without the billing module and skips those - CI runs both, so the platform keeps working without billing. Don't hard-code counts that depend on installed modules (derive them from `ALL_PERMISSIONS`)
 
 ## Commands (`cd backend` first)
 
@@ -144,6 +145,9 @@ uv run poe lint
 
 # Run all tests
 uv run poe test
+
+# Run them on an app without the billing module (CI runs both)
+uv run poe test-without-billing
 
 # Run a single test
 uv run pytest ./tests/api/test_auth.py::test_register_an_account -v

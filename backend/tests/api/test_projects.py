@@ -1,3 +1,4 @@
+import pytest
 from fastapi.testclient import TestClient
 
 from src.billing.models.billing import PlanSetting
@@ -115,6 +116,7 @@ def test_cannot_create_project_with_empty_name(
     assert response.status_code == 422
 
 
+@pytest.mark.billing
 async def test_cannot_create_project_beyond_plan_limit(
     admin_authenticated: TestClient,
 ) -> None:
@@ -126,6 +128,7 @@ async def test_cannot_create_project_beyond_plan_limit(
     assert response.json()["error_code"] == "capacity_exceeded"
 
 
+@pytest.mark.billing
 async def test_unlimited_plan_allows_many_projects(
     admin_authenticated: TestClient,
 ) -> None:

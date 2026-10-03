@@ -9,12 +9,8 @@ from httpx import Headers
 from sqlalchemy import NullPool, create_engine, make_url, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-# Must run before any src imports: env vars are read at import time by
-# config/database modules
-os.environ["RATE_LIMIT_ENABLED"] = "false"
-# Never export telemetry from tests, even when .env enables it
-os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"] = ""
-
+# The environment the settings read at import time, and the installed modules,
+# are set up by the `tests.preload` plugin, which runs before this file.
 import src.platform.core.security as _security_mod
 from src.billing.models.account import BillingAccount
 from src.billing.models.billing import Plan, PlanPrice, Subscription
@@ -41,6 +37,7 @@ from src.platform.models.permission import Permission
 from src.platform.models.role import Role
 from src.platform.models.user import User
 from src.platform.models.user_organization import UserOrganization
+from tests.preload import WITHOUT_BILLING
 
 # Tests run against a real PostgreSQL server so Postgres-only behaviour (JSONB,
 # partial indexes, advisory locks, constraint semantics) is exercised. They use
@@ -124,6 +121,52 @@ def _truncate_all_tables() -> None:
         conn.execute(text(f"TRUNCATE {tables} RESTART IDENTITY CASCADE"))
 
 
+async def _seed_billing(session: AsyncSession, organizations: list) -> None:
+    """Billing's share of the seed (only when billing is installed)."""
+    # Seed free plan - local-only, no Stripe product/price IDs
+    free_plan = Plan(
+        name="Free",
+        description="Free plan",
+        external_product_id=None,
+        is_active=True,
+    )
+    session.add(free_plan)
+    await session.flush()
+    free_price = PlanPrice(
+        plan_id=free_plan.id,
+        amount=0,
+        currency="dkk",
+        interval="month",
+        interval_count=1,
+        external_price_id=None,
+        is_active=True,
+    )
+    session.add(free_price)
+    await session.flush()
+    session.add(PlanFeatureModel(plan_id=free_plan.id, feature=PlanFeature.API_TOKEN))
+    await session.flush()
+
+    # Seed a billing account and a free subscription for each test
+    # organization, matching what billing's ORGANIZATION_CREATED handler does
+    # in production. No Stripe customer is created at registration -
+    # external_customer_id is set when the organization starts a trial or
+    # paid checkout. Tests that need a paid subscription activate it via
+    # checkout + webhook helpers (which will stamp the ID).
+    for data, organization in zip(
+        INIT_AUTH_DATA["organizations"], organizations, strict=True
+    ):
+        session.add(
+            BillingAccount(organization_id=organization.id, billing_email=data["owner"])
+        )
+        session.add(
+            Subscription(
+                organization_id=organization.id,
+                plan_price_id=free_price.id,
+                status="active",
+            )
+        )
+
+
 @pytest.fixture(scope="function", autouse=True)
 async def prepare_database() -> AsyncGenerator[None]:
     hashed_password = hash_secret("password")
@@ -189,52 +232,8 @@ async def prepare_database() -> AsyncGenerator[None]:
             )
         session.add_all(user_organizations)
 
-        # Seed free plan - local-only, no Stripe product/price IDs
-        free_plan = Plan(
-            name="Free",
-            description="Free plan",
-            external_product_id=None,
-            is_active=True,
-        )
-        session.add(free_plan)
-        await session.flush()
-        free_price = PlanPrice(
-            plan_id=free_plan.id,
-            amount=0,
-            currency="dkk",
-            interval="month",
-            interval_count=1,
-            external_price_id=None,
-            is_active=True,
-        )
-        session.add(free_price)
-        await session.flush()
-        session.add(
-            PlanFeatureModel(plan_id=free_plan.id, feature=PlanFeature.API_TOKEN)
-        )
-        await session.flush()
-
-        # Seed a billing account and a free subscription for each test
-        # organization, matching what billing's ORGANIZATION_CREATED handler does
-        # in production. No Stripe customer is created at registration -
-        # external_customer_id is set when the organization starts a trial or
-        # paid checkout. Tests that need a paid subscription activate it via
-        # checkout + webhook helpers (which will stamp the ID).
-        for data, organization in zip(
-            INIT_AUTH_DATA["organizations"], organizations, strict=True
-        ):
-            session.add(
-                BillingAccount(
-                    organization_id=organization.id, billing_email=data["owner"]
-                )
-            )
-            session.add(
-                Subscription(
-                    organization_id=organization.id,
-                    plan_price_id=free_price.id,
-                    status="active",
-                )
-            )
+        if not WITHOUT_BILLING:
+            await _seed_billing(session, organizations)
 
         await session.commit()
     yield
@@ -255,7 +254,11 @@ def mock_send_email(mocker):
 
 @pytest.fixture(autouse=True)
 def mock_billing_provider(mocker):
-    """Auto-used fixture that mocks the billing provider for all tests."""
+    """Auto-used fixture that mocks the billing provider for all tests
+    (``None`` when billing isn't installed)."""
+    if WITHOUT_BILLING:
+        yield None
+        return
     mock = mocker.MagicMock(spec=BillingProviderABC)
 
     mock.create_product.return_value = ExternalProduct(external_id="prod_test123")
@@ -445,3 +448,12 @@ async def plan_with_price() -> dict:
             "is_active": True,
         },
     }
+
+
+def pytest_collection_modifyitems(config, items) -> None:
+    if not WITHOUT_BILLING:
+        return
+    skip = pytest.mark.skip(reason="billing is not installed (TEST_WITHOUT_BILLING=1)")
+    for item in items:
+        if "tests/billing/" in item.nodeid or item.get_closest_marker("billing"):
+            item.add_marker(skip)

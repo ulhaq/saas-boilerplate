@@ -55,6 +55,15 @@ jobs:
           DB_CONNECTION: postgresql+psycopg://postgres:postgres@localhost:5432/app
         run: uv run poe test
 
+      # The same suite on an app assembled without the billing module: the
+      # platform and the product must work on their own (billing's tests skip).
+      - name: Test without billing
+        env:
+          APP_SECRET: ci-test-secret-not-for-production
+          DB_CONNECTION: postgresql+psycopg://postgres:postgres@localhost:5432/app
+          TEST_WITHOUT_BILLING: "1"
+        run: uv run poe test
+
   frontend:
     name: Frontend - typecheck & lint
     runs-on: ubuntu-latest

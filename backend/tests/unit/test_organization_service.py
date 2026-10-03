@@ -134,6 +134,7 @@ async def test_delete_organization_wrong_org_raises(mock_billing_provider):
                 await service.delete_organization(2)
 
 
+@pytest.mark.billing
 async def test_delete_organization_with_active_subscription_raises(
     mock_billing_provider, plan_with_price
 ):
@@ -312,6 +313,7 @@ async def test_patch_organization_duplicate_name_raises(mock_billing_provider):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.billing
 async def test_transfer_ownership_syncs_stripe_customer(mock_billing_provider):
     """When org has external_customer_id, update_customer is called on transfer."""
     async with TestSessionLocal() as session:

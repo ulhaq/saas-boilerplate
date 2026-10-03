@@ -1,5 +1,6 @@
 from unittest.mock import MagicMock
 
+import pytest
 from fastapi.testclient import TestClient
 
 from tests.conftest import TestSessionLocal
@@ -64,6 +65,7 @@ def test_cannot_create_an_organization_with_already_existing_name(
     assert rs["msg"] == "Organization already exists. [name=Acme Corp]"
 
 
+@pytest.mark.billing
 def test_create_an_organization_creates_free_subscription(
     admin_authenticated: TestClient,
     mock_billing_provider: MagicMock,
@@ -89,6 +91,7 @@ def test_patch_an_organization(admin_authenticated: TestClient) -> None:
     assert rs["updated_at"]
 
 
+@pytest.mark.billing
 async def test_patch_organization_name_does_not_sync_to_stripe(
     admin_authenticated: TestClient, mock_billing_provider: MagicMock
 ) -> None:
@@ -173,6 +176,7 @@ def test_cannot_remove_owner_from_organization(admin_authenticated: TestClient) 
     assert rs["error_code"] == "owner_removal"
 
 
+@pytest.mark.billing
 async def test_transfer_ownership_success(
     admin_authenticated: TestClient, mock_billing_provider: MagicMock
 ) -> None:
