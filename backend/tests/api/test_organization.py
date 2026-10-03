@@ -167,3 +167,28 @@ def test_transfer_ownership_requires_owner(standard_authenticated: TestClient) -
         "/v1/organizations/1/transfer-ownership", json={"user_id": 3}
     )
     assert response.status_code == 403
+
+
+async def test_a_deleted_organizations_name_creates_a_new_organization(
+    admin_authenticated: TestClient,
+    organization2_admin_authenticated: TestClient,
+) -> None:
+    """Reusing a deleted organization's name never revives it: its data (here a
+    project, the audit log and roles) must not reach whoever picks the name."""
+    admin_authenticated.post("/v1/projects", json={"name": "A's private project"})
+    assert admin_authenticated.delete("/v1/organizations/1").status_code == 204
+
+    other = organization2_admin_authenticated
+    response = other.post("/v1/organizations", json={"name": "Acme Corp"})
+    assert response.status_code == 201
+    new_id = response.json()["id"]
+    assert new_id != 1
+
+    switched = other.post(
+        "/v1/auth/switch-organization", json={"organization_id": new_id}
+    )
+    other.headers["Authorization"] = f"Bearer {switched.json()['access_token']}"
+    assert other.get("/v1/projects").json()["items"] == []
+    assert [r["name"] for r in other.get("/v1/roles").json()["items"]] == ["Owner"]
+    actions = {e["action"] for e in other.get("/v1/audit-logs").json()["items"]}
+    assert actions <= {"org.create"}

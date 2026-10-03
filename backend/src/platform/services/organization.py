@@ -140,17 +140,13 @@ class OrganizationService(
                 error_code=ErrorCode.MULTIPLE_ORGANIZATIONS_DISABLED,
             )
 
-        existing = await self.repo.get_by_name(schema_in.name, include_deleted=True)
-        if existing is not None and existing.deleted_at is None:
+        if await self.repo.get_by_name(schema_in.name) is not None:
             raise AlreadyExistsException(
                 f"Organization already exists. [name={schema_in.name}]",
                 error_code=ErrorCode.ORG_NAME_TAKEN,
             )
 
-        if existing is not None and existing.deleted_at is not None:
-            organization = await self.repo.restore(existing)
-        else:
-            organization = await self.repo.create(name=schema_in.name)
+        organization = await self.repo.create(name=schema_in.name)
 
         await self.repos.user_organization.create(
             user_id=self.current_user.id,

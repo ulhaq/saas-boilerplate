@@ -229,45 +229,6 @@ async def test_paginate_organizations():
 
 
 # ---------------------------------------------------------------------------
-# create_organization - restore soft-deleted org (line 108)
-# ---------------------------------------------------------------------------
-
-
-async def test_create_organization_restores_soft_deleted():
-    """Re-creating a soft-deleted org name restores the record rather than inserting."""
-    # First create, then delete org
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            service = _make_service(session, _admin_auth())
-            await service.create_organization(OrganizationBase(name="Deletable Corp"))
-
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            service = _make_service(session, _admin_auth())
-            await service.delete_organization(1)
-
-    # Delete the NEW active org (the one we just created)
-    # Actually - we need a different approach: directly soft-delete an org in DB
-    # and then create one with the same name
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            repos = RepositoryManager(session)
-            # Create and soft-delete a fresh org
-            org = await repos.organization.create(
-                name="Revivable Corp",
-            )
-            await repos.organization.delete(org)
-            org_name = "Revivable Corp"
-
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            service = _make_service(session, _admin_auth())
-            out = await service.create_organization(OrganizationBase(name=org_name))
-
-    assert out.name == org_name
-
-
-# ---------------------------------------------------------------------------
 # patch_organization - duplicate name raises (line 135)
 # ---------------------------------------------------------------------------
 
