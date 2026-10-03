@@ -145,6 +145,9 @@ class UserDataExportOut(BaseModel):
     organizations: list[dict[str, Any]]
     api_tokens: list[dict[str, Any]]
     audit_logs: list[dict[str, Any]]
+    notifications: list[dict[str, Any]]
+    # What each installed module holds about the user, by module name.
+    modules: dict[str, dict[str, Any]]
 
 
 class AcceptInviteIn(BaseModel):

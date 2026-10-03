@@ -5,6 +5,7 @@ from typing import Annotated
 
 from fastapi import Depends
 
+from src.platform.core import composition
 from src.platform.core.config import settings
 from src.platform.core.exceptions import (
     AlreadyExistsException,
@@ -474,6 +475,11 @@ class UserService(
         memberships = await self.repos.user_organization.get_all_for_user(user.id)
         api_tokens = await self.repos.api_token.list_all_for_user(user.id)
         audit_logs = await self.repos.audit_log.get_all_for_user(user.id)
+        notifications = await self.repos.notification.list_all_for_user(user.id)
+        modules = {
+            name: await export(repos=self.repos, user_id=user.id, email=user.email)
+            for name, export in composition.current().user_data_exporters.items()
+        }
 
         return UserDataExportOut(
             user={
@@ -521,6 +527,17 @@ class UserService(
                 }
                 for log in audit_logs
             ],
+            notifications=[
+                {
+                    "organization_id": n.organization_id,
+                    "type": n.type,
+                    "payload": n.payload,
+                    "read_at": n.read_at.isoformat() if n.read_at else None,
+                    "created_at": n.created_at.isoformat(),
+                }
+                for n in notifications
+            ],
+            modules=modules,
         )
 
     async def delete_me(self, schema_in: DeleteMeIn, schedule_task: Callable) -> None:

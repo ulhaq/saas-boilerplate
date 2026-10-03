@@ -104,3 +104,12 @@ class NotificationRepository(RepositoryABC[Notification]):
             .values(read_at=datetime.now(UTC))
         )
         await self.db.execute(stmt)
+
+    async def list_all_for_user(self, user_id: int) -> list[Notification]:
+        """Every notification of the user, across organizations (data export)."""
+        rs = await self.db.execute(
+            select(Notification)
+            .where(Notification.user_id == user_id)
+            .order_by(Notification.created_at.desc(), Notification.id.desc())
+        )
+        return list(rs.scalars().all())

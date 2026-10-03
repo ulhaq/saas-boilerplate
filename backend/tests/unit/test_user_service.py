@@ -19,6 +19,7 @@ from src.platform.schemas.user import (
     UserRoleIn,
 )
 from src.platform.services.user import UserService
+from src.products import MODULES
 from tests.conftest import TestSessionLocal
 
 
@@ -496,3 +497,22 @@ async def test_export_me_returns_data():
     assert out.user["email"] == "admin@example.org"
     assert isinstance(out.organizations, list)
     assert isinstance(out.audit_logs, list)
+
+
+async def test_export_me_includes_the_users_notifications_and_module_data():
+    async with TestSessionLocal() as session, session.begin():
+        repos = RepositoryManager(session)
+        for user_id, org_id in [(1, 1), (1, 2), (2, 1)]:
+            await repos.notification.create(
+                user_id=user_id, organization_id=org_id, type="t", payload={"n": 1}
+            )
+
+    async with TestSessionLocal() as session, session.begin():
+        out = await _make_service(session, _admin_auth()).export_me()
+
+    # Only the user's own, from every organization.
+    assert sorted(n["organization_id"] for n in out.notifications) == [1, 2]
+    # A section per installed module that holds personal data.
+    assert set(out.modules) == {
+        module.name for module in MODULES if module.user_data_export is not None
+    }

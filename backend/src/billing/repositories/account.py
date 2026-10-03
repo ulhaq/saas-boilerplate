@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Select, and_, exists, or_, select, update
+from sqlalchemy import Select, and_, exists, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.billing.models.account import BillingAccount
@@ -49,6 +49,15 @@ class BillingAccountRepository(SQLResourceRepository[BillingAccount]):
             .join(Organization, Organization.id == self.model.organization_id)
             .filter(Organization.deleted_at.is_(None))
         )
+
+    async def list_billed_to(self, email: str) -> list[BillingAccount]:
+        """Accounts whose billing email is ``email`` (case-insensitive)."""
+        rs = await self.db.execute(
+            select(self.model)
+            .where(func.lower(self.model.billing_email) == email.lower())
+            .order_by(self.model.organization_id)
+        )
+        return list(rs.unique().scalars().all())
 
     async def get_pending_customer_syncs(
         self, limit: int = 100

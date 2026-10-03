@@ -1892,6 +1892,16 @@ export interface components {
       audit_logs: {
         [key: string]: unknown
       }[]
+      /** Notifications */
+      notifications: {
+        [key: string]: unknown
+      }[]
+      /** Modules */
+      modules: {
+        [key: string]: {
+          [key: string]: unknown
+        }
+      }
     }
     /** UserOut */
     UserOut: {

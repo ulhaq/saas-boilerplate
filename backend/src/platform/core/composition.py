@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from src.platform.core.entitlements import Entitlements
     from src.platform.core.hooks import Handler, HookEvent
+    from src.platform.core.module import UserDataExporter
 
 type RoleSpec = tuple[str, str, Sequence[StrEnum]]
 
@@ -38,6 +39,8 @@ class Composition:
     # UTM tagging of module emails: template -> medium, and link data keys.
     email_campaigns: Mapping[str, str]
     email_link_keys: frozenset[str]
+    # Each module's share of a user's data export, by module name.
+    user_data_exporters: Mapping[str, UserDataExporter]
     # Features and limits per organization (`UNLIMITED` without a plan module).
     entitlements: Entitlements
 

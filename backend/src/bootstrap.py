@@ -84,6 +84,11 @@ def compose(products: Sequence[Module]) -> Composition:
             if product.template_directory
         ],
         entitlements=providers[0] if providers else UNLIMITED,
+        user_data_exporters={
+            product.name: product.user_data_export
+            for product in products
+            if product.user_data_export is not None
+        },
         email_campaigns={
             template: medium
             for product in products

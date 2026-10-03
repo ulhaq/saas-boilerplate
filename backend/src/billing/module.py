@@ -11,6 +11,7 @@ from src.billing.enums import (
     BillingAuditAction,
     BillingPermission,
 )
+from src.billing.gdpr import export_user_data
 from src.billing.hooks import (
     bill_the_new_owner,
     open_billing_account,
@@ -60,4 +61,5 @@ BILLING = Module(
     email_link_keys=["billing_url"],
     template_directory=Path(__file__).resolve().parent / "templates",
     entitlements=PlanEntitlements(),
+    user_data_export=export_user_data,
 )

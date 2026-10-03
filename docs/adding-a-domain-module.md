@@ -53,7 +53,7 @@ ACME = Module(
 )
 ```
 
-Also available: `default_role_descriptions`, and `email_campaigns` / `email_link_keys` (UTM tagging of your emails' links). `entitlements` is for a module that sells plans - billing provides it.
+Also available: `default_role_descriptions`, `email_campaigns` / `email_link_keys` (UTM tagging of your emails' links), and `user_data_export` - if your module stores personal data about a user (anything keyed by their id or email), an async function returning it, which the GDPR export (`GET /v1/users/me/export`) lists under your module's name (see `src/billing/gdpr.py`). `entitlements` is for a module that sells plans - billing provides it.
 
 ### 3. Install it
 
