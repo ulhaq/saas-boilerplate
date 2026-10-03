@@ -134,7 +134,9 @@ Same steps - but delete `src/example/` on both sides (and `backend/tests/api/tes
 
 ## Keeping or dropping the optional modules
 
-Billing (plans, subscriptions, Stripe; both sides) and marketing (the waitlist and contact-form endpoints the `site/` posts to; backend only) are installed by default. CI already checks that the platform and the product work without them (`poe test-platform-only`, and the frontend's "Without billing" steps). To drop one for good, in `backend/`:
+Billing (plans, subscriptions, Stripe; both sides) and marketing (the waitlist and contact-form endpoints the `site/` posts to; backend only) are installed by default. CI already checks that the platform and the product work without them: it removes them from a throwaway checkout with the scripts below and runs lint, the migrations and the tests again (backend), and build, type-check, lint and tests (frontend).
+
+To drop one for good, in `backend/` run `uv run python scripts/remove_module.py billing` (or `marketing`), then `uv run poe format && uv run poe lint && uv run poe test` and reset the database. The script does these steps, which you can also do by hand:
 
 1. Remove it from `MODULES` (and its import) in `src/products.py`.
 2. Delete its package (`src/billing/`) and its migration (`alembic/versions/*_billing.py`), and point the next migration's `down_revision` (and `Revises:`) at the one before it.
