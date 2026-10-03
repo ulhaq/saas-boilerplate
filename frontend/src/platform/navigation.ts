@@ -35,3 +35,33 @@ export function registerNavItems(group: NavGroup, items: NavItem[]): void {
 export function navItemsFor(group: NavGroup): NavItem[] {
   return registry[group]
 }
+
+/**
+ * Settings sub-navigation: modules add pages to the settings groups (e.g.
+ * billing's subscription page under "organization"). Shown after the
+ * platform's own items, sorted by `order`, to users with `permission`.
+ */
+export interface SettingsNavItem {
+  to: string
+  /** i18n key resolved by the settings page at render time. */
+  labelKey: string
+  icon: Component
+  order: number
+  permission?: string
+}
+
+export type SettingsNavGroup = 'organization' | 'advanced'
+
+const settingsRegistry: Record<SettingsNavGroup, SettingsNavItem[]> = {
+  organization: [],
+  advanced: [],
+}
+
+export function registerSettingsNavItems(group: SettingsNavGroup, items: SettingsNavItem[]): void {
+  settingsRegistry[group].push(...items)
+  settingsRegistry[group].sort((a, b) => a.order - b.order)
+}
+
+export function settingsNavItemsFor(group: SettingsNavGroup): SettingsNavItem[] {
+  return settingsRegistry[group]
+}

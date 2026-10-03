@@ -13,6 +13,7 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
+from src.platform.core.entitlements import Entitlements
 from src.platform.core.hooks import Handler, HookEvent
 from src.platform.core.routing import RouterMount
 
@@ -27,6 +28,8 @@ class ProductModule:
     models: ModuleType
     permissions: Sequence[StrEnum] = ()
     permission_descriptions: Mapping[StrEnum, str] = field(default_factory=dict)
+    # Recorded in the audit log; listed in its action filter.
+    audit_actions: Sequence[StrEnum] = ()
     # Extra grants and description overrides per platform default role name.
     default_role_permissions: Mapping[str, Sequence[StrEnum]] = field(
         default_factory=dict
@@ -39,3 +42,10 @@ class ProductModule:
     # Product emails: subjects keyed [locale][template] and a template root.
     email_subjects: Mapping[str, Mapping[str, str]] = field(default_factory=dict)
     template_directory: Path | None = None
+    # UTM tagging of the module's email links: template -> utm_medium (the
+    # template is the campaign), and the template data keys holding links.
+    email_campaigns: Mapping[str, str] = field(default_factory=dict)
+    email_link_keys: Sequence[str] = ()
+    # Answers the platform's feature and limit checks; at most one installed
+    # module provides it (`src.billing`, from its plans).
+    entitlements: Entitlements | None = None

@@ -5,8 +5,8 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 from fastapi.testclient import TestClient
 
+from src.billing.models.billing import PlanSetting, PlanUsage
 from src.main import app
-from src.platform.models.billing import PlanSetting, PlanUsage
 from src.platform.services.access import require_limit
 from tests.conftest import TestSessionLocal
 

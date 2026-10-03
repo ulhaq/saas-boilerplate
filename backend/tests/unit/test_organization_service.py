@@ -2,6 +2,7 @@
 
 import pytest
 
+from src.billing.repositories.manager import BillingRepositoryManager
 from src.platform.core.exceptions import (
     AlreadyExistsException,
     NotFoundException,
@@ -32,9 +33,9 @@ def _admin_auth(user_id: int = 1, org_id: int = 1) -> Auth:
     )
 
 
-def _make_service(session, auth: Auth, provider) -> OrganizationService:
+def _make_service(session, auth: Auth) -> OrganizationService:
     repos = RepositoryManager(session)
-    return OrganizationService(repos, auth, provider)
+    return OrganizationService(repos, auth)
 
 
 # ---------------------------------------------------------------------------
@@ -45,7 +46,7 @@ def _make_service(session, auth: Auth, provider) -> OrganizationService:
 async def test_get_organization_member_access(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(session, _admin_auth(), mock_billing_provider)
+            service = _make_service(session, _admin_auth())
             org = await service.get_organization(1)
     assert org.name == "Acme Corp"
 
@@ -53,9 +54,7 @@ async def test_get_organization_member_access(mock_billing_provider):
 async def test_get_organization_non_member_raises(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(
-                session, _admin_auth(org_id=1), mock_billing_provider
-            )
+            service = _make_service(session, _admin_auth(org_id=1))
             # Admin belongs to org 1, not org 2
             with pytest.raises(PermissionDeniedException):
                 await service.get_organization(2)
@@ -69,7 +68,7 @@ async def test_get_organization_non_member_raises(mock_billing_provider):
 async def test_get_all_organizations_returns_own_org(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(session, _admin_auth(), mock_billing_provider)
+            service = _make_service(session, _admin_auth())
             orgs = await service.get_all_organizations()
     assert any(o.name == "Acme Corp" for o in orgs)
     assert any(o.is_owner for o in orgs)
@@ -83,7 +82,7 @@ async def test_get_all_organizations_returns_own_org(mock_billing_provider):
 async def test_create_organization_new_name(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(session, _admin_auth(), mock_billing_provider)
+            service = _make_service(session, _admin_auth())
             out = await service.create_organization(
                 OrganizationBase(name="Brand New Corp")
             )
@@ -93,7 +92,7 @@ async def test_create_organization_new_name(mock_billing_provider):
 async def test_create_organization_duplicate_name_raises(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(session, _admin_auth(), mock_billing_provider)
+            service = _make_service(session, _admin_auth())
             with pytest.raises(AlreadyExistsException):
                 await service.create_organization(OrganizationBase(name="Acme Corp"))
 
@@ -106,7 +105,7 @@ async def test_create_organization_duplicate_name_raises(mock_billing_provider):
 async def test_patch_organization_success(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(session, _admin_auth(), mock_billing_provider)
+            service = _make_service(session, _admin_auth())
             out = await service.patch_organization(
                 1, OrganizationPatch(name="Acme Corp 2")
             )
@@ -117,9 +116,7 @@ async def test_patch_organization_wrong_org_raises(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
             # User active org is 1, tries to patch org 2
-            service = _make_service(
-                session, _admin_auth(org_id=1), mock_billing_provider
-            )
+            service = _make_service(session, _admin_auth(org_id=1))
             with pytest.raises(PermissionDeniedException):
                 await service.patch_organization(2, OrganizationPatch(name="X"))
 
@@ -132,9 +129,7 @@ async def test_patch_organization_wrong_org_raises(mock_billing_provider):
 async def test_delete_organization_wrong_org_raises(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(
-                session, _admin_auth(org_id=1), mock_billing_provider
-            )
+            service = _make_service(session, _admin_auth(org_id=1))
             with pytest.raises(PermissionDeniedException):
                 await service.delete_organization(2)
 
@@ -145,7 +140,7 @@ async def test_delete_organization_with_active_subscription_raises(
     price_id = plan_with_price["price"]["id"]
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub
             await repos.subscription.update(
@@ -156,9 +151,7 @@ async def test_delete_organization_with_active_subscription_raises(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(
-                session, _admin_auth(org_id=1), mock_billing_provider
-            )
+            service = _make_service(session, _admin_auth(org_id=1))
             with pytest.raises(PermissionDeniedException):
                 await service.delete_organization(1)
 
@@ -166,9 +159,7 @@ async def test_delete_organization_with_active_subscription_raises(
 async def test_delete_organization_success(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(
-                session, _admin_auth(org_id=1), mock_billing_provider
-            )
+            service = _make_service(session, _admin_auth(org_id=1))
             await service.delete_organization(1)
 
 
@@ -176,9 +167,7 @@ async def test_delete_organization_force_delete(mock_billing_provider):
     """force_delete=True calls repo.force_delete (base.py line 118)."""
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(
-                session, _admin_auth(org_id=1), mock_billing_provider
-            )
+            service = _make_service(session, _admin_auth(org_id=1))
             await service.delete_organization(1, force_delete=True)
 
 
@@ -190,7 +179,7 @@ async def test_delete_organization_force_delete(mock_billing_provider):
 async def test_get_organization_users(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(session, _admin_auth(), mock_billing_provider)
+            service = _make_service(session, _admin_auth())
             result = await service.get_organization_users(
                 1,
                 PageQueryParams(page_number=1, page_size=10, sort=[], filters=[]),
@@ -207,9 +196,7 @@ async def test_transfer_ownership_wrong_org_raises(mock_billing_provider):
     """Trying to transfer ownership of an org that's not current active raises."""
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(
-                session, _admin_auth(user_id=1, org_id=1), mock_billing_provider
-            )
+            service = _make_service(session, _admin_auth(user_id=1, org_id=1))
             with pytest.raises(PermissionDeniedException):
                 # current active org is 1, trying to transfer org 2
                 await service.transfer_ownership(2, TransferOwnershipIn(user_id=2))
@@ -218,9 +205,7 @@ async def test_transfer_ownership_wrong_org_raises(mock_billing_provider):
 async def test_transfer_ownership_to_self_raises(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(
-                session, _admin_auth(user_id=1, org_id=1), mock_billing_provider
-            )
+            service = _make_service(session, _admin_auth(user_id=1, org_id=1))
             with pytest.raises(PermissionDeniedException):
                 await service.transfer_ownership(1, TransferOwnershipIn(user_id=1))
 
@@ -228,9 +213,7 @@ async def test_transfer_ownership_to_self_raises(mock_billing_provider):
 async def test_transfer_ownership_to_non_member_raises(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(
-                session, _admin_auth(user_id=1, org_id=1), mock_billing_provider
-            )
+            service = _make_service(session, _admin_auth(user_id=1, org_id=1))
             with pytest.raises(NotFoundException):
                 await service.transfer_ownership(1, TransferOwnershipIn(user_id=999))
 
@@ -239,9 +222,7 @@ async def test_transfer_ownership_success(mock_billing_provider):
     # standard user (id=2) is a member of org 1
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(
-                session, _admin_auth(user_id=1, org_id=1), mock_billing_provider
-            )
+            service = _make_service(session, _admin_auth(user_id=1, org_id=1))
             await service.transfer_ownership(1, TransferOwnershipIn(user_id=2))
 
     # Verify: user 2 now has owner role, user 1 does not
@@ -262,7 +243,7 @@ async def test_transfer_ownership_success(mock_billing_provider):
 async def test_paginate_organizations(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(session, _admin_auth(), mock_billing_provider)
+            service = _make_service(session, _admin_auth())
             result = await service.paginate(
                 OrganizationOut,
                 PageQueryParams(page_number=1, page_size=10, sort=[], filters=[]),
@@ -280,12 +261,12 @@ async def test_create_organization_restores_soft_deleted(mock_billing_provider):
     # First create, then delete org
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(session, _admin_auth(), mock_billing_provider)
+            service = _make_service(session, _admin_auth())
             await service.create_organization(OrganizationBase(name="Deletable Corp"))
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(session, _admin_auth(), mock_billing_provider)
+            service = _make_service(session, _admin_auth())
             await service.delete_organization(1)
 
     # Delete the NEW active org (the one we just created)
@@ -296,14 +277,14 @@ async def test_create_organization_restores_soft_deleted(mock_billing_provider):
             repos = RepositoryManager(session)
             # Create and soft-delete a fresh org
             org = await repos.organization.create(
-                name="Revivable Corp", billing_email="billing@example.org"
+                name="Revivable Corp",
             )
             await repos.organization.delete(org)
             org_name = "Revivable Corp"
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(session, _admin_auth(), mock_billing_provider)
+            service = _make_service(session, _admin_auth())
             out = await service.create_organization(OrganizationBase(name=org_name))
 
     assert out.name == org_name
@@ -318,7 +299,7 @@ async def test_patch_organization_duplicate_name_raises(mock_billing_provider):
     """Patching to an already-taken name raises AlreadyExistsException."""
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(session, _admin_auth(), mock_billing_provider)
+            service = _make_service(session, _admin_auth())
             # "Globex Ltd" is org 2's name; try to rename org 1 to that
             with pytest.raises(AlreadyExistsException):
                 await service.patch_organization(
@@ -335,16 +316,14 @@ async def test_transfer_ownership_syncs_stripe_customer(mock_billing_provider):
     """When org has external_customer_id, update_customer is called on transfer."""
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
-            org = await repos.organization.get(1)
+            repos = BillingRepositoryManager(session)
+            org = await repos.billing_account.get_for_organization(1)
             assert org
-            await repos.organization.update(org, external_customer_id="cus_transfer")
+            await repos.billing_account.update(org, external_customer_id="cus_transfer")
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(
-                session, _admin_auth(user_id=1, org_id=1), mock_billing_provider
-            )
+            service = _make_service(session, _admin_auth(user_id=1, org_id=1))
             await service.transfer_ownership(1, TransferOwnershipIn(user_id=2))
 
     mock_billing_provider.update_customer.assert_called()

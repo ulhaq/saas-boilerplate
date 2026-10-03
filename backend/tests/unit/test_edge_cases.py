@@ -1,11 +1,13 @@
 """Targeted tests for specific coverage gaps not covered by other test files."""
 
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 import pytest
 from pydantic import ValidationError
 
+from src.billing.repositories.manager import BillingRepositoryManager
+from src.billing.services import WebhookService
 from src.platform.core.exceptions import (
     NotFoundException,
 )
@@ -19,7 +21,6 @@ from src.platform.schemas.common import FilterItem
 from src.platform.schemas.organization import TransferOwnershipIn
 from src.platform.schemas.permission import PermissionIn
 from src.platform.schemas.user import ChangePasswordIn, CompleteInviteIn
-from src.platform.services.billing import WebhookService
 from src.platform.services.organization import OrganizationService
 from src.platform.services.permission import PermissionService
 from tests.conftest import TestSessionLocal
@@ -162,7 +163,7 @@ async def test_delete_organization_skips_orphaned_membership():
     async with TestSessionLocal() as session:
         async with session.begin():
             repos = RepositoryManager(session)
-            service = OrganizationService(repos, _admin_auth(org_id=1), MagicMock())
+            service = OrganizationService(repos, _admin_auth(org_id=1))
             # Should not raise; the soft-deleted user is silently skipped
             await service.delete_organization(1)
 
@@ -184,7 +185,7 @@ async def test_transfer_ownership_no_owner_role_raises(mock_billing_provider, mo
     async with TestSessionLocal() as session:
         async with session.begin():
             repos = RepositoryManager(session)
-            service = OrganizationService(repos, _admin_auth(), mock_billing_provider)
+            service = OrganizationService(repos, _admin_auth())
 
             # Simulate missing Owner role by patching the lookup
             mocker.patch.object(repos.role, "get_by_name", AsyncMock(return_value=None))
@@ -202,7 +203,7 @@ async def test_handle_payment_method_detached_no_customer_id(mock_billing_provid
     """payment_method.detached returns early when no customer_id."""
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
 
             raw = {

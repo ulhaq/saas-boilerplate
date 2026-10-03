@@ -7,15 +7,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.platform.core.database import DbSession
 from src.platform.repositories.api_token import ApiTokenRepository
 from src.platform.repositories.audit_log import AuditLogRepository
-from src.platform.repositories.billing import (
-    PlanFeatureRepository,
-    PlanPriceRepository,
-    PlanRepository,
-    PlanSettingRepository,
-    PlanUsageRepository,
-    SubscriptionRepository,
-    WebhookEventRepository,
-)
 from src.platform.repositories.email_outbox import EmailOutboxRepository
 from src.platform.repositories.email_verification_token import (
     EmailVerificationTokenRepository,
@@ -70,34 +61,6 @@ class RepositoryManager:
     @cached_property
     def user_organization(self) -> UserOrganizationRepository:
         return UserOrganizationRepository(self.db)
-
-    @cached_property
-    def plan(self) -> PlanRepository:
-        return PlanRepository(self.db)
-
-    @cached_property
-    def plan_price(self) -> PlanPriceRepository:
-        return PlanPriceRepository(self.db)
-
-    @cached_property
-    def plan_feature(self) -> PlanFeatureRepository:
-        return PlanFeatureRepository(self.db)
-
-    @cached_property
-    def plan_setting(self) -> PlanSettingRepository:
-        return PlanSettingRepository(self.db)
-
-    @cached_property
-    def plan_usage(self) -> PlanUsageRepository:
-        return PlanUsageRepository(self.db)
-
-    @cached_property
-    def subscription(self) -> SubscriptionRepository:
-        return SubscriptionRepository(self.db)
-
-    @cached_property
-    def webhook_event(self) -> WebhookEventRepository:
-        return WebhookEventRepository(self.db)
 
     @cached_property
     def email_verification_token(self) -> EmailVerificationTokenRepository:

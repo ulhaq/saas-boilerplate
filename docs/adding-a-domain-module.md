@@ -55,7 +55,7 @@ ACME = ProductModule(
 
 | Where             | What                                                                                                                                                                                                                                             |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `src/products.py` | add `ACME` to `PRODUCTS` - `bootstrap()`, the API router includes, the worker loops and Alembic's model registration all iterate this list                                                                                                       |
+| `src/products.py` | add `ACME` to `PRODUCTS` - `bootstrap()`, the API router includes, the worker loops and Alembic's model registration all iterate `MODULES`, which includes it                                                                                                       |
 | `pyproject.toml`  | in the import-linter contracts, add `src.acme` next to (or instead of) `src.example`: the platform contract's `forbidden_modules` (so the platform can't import it), the layers contract's `containers`, and the routers contract's module lists |
 
 Never start loops in `main.py` - `worker.py` runs them in a single process.
@@ -108,7 +108,7 @@ export default acme
 | Where                | What                                                                                                                                    |
 | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | `src/products.ts`    | import the manifest and add it to `products` - `main.ts` runs its `setup()` and home route, `plugins/i18n.ts` merges its messages       |
-| `products.config.js` | add `'acme'` to `productPackages` - Vite reads it for `src/acme/pages` and `src/acme/components`, ESLint for the platform boundary rule |
+| `products.config.js` | add `'acme'` to `productPackages` - Vite reads it (via `modulePackages`) for `src/acme/pages` and `src/acme/components`, ESLint for the boundary rules |
 
 ### 4. Verify
 

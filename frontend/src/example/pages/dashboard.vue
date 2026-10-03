@@ -21,13 +21,14 @@ meta:
         :to="canReadProjects ? '/projects' : undefined"
       />
       <StatCard
+        v-if="plan"
         :label="$t('dashboard.plan')"
-        :value="planStatusLabel"
+        :value="plan.label"
         :icon="CreditCard"
         :loading="loading"
         icon-bg="bg-emerald-50 dark:bg-emerald-950"
         icon-color="text-emerald-500"
-        :to="hasPermission('manage:subscription') ? '/settings/billing' : undefined"
+        :to="plan.route ?? undefined"
       />
       <StatCard
         :label="$t('dashboard.notifications')"
@@ -104,18 +105,18 @@ import PermissionGuard from '@/platform/components/common/PermissionGuard.vue'
 import { Button } from '@/platform/components/ui/button'
 import { Skeleton } from '@/platform/components/ui/skeleton'
 import { useProjectsStore } from '@/example/stores/projects'
-import { useSubscriptionStore } from '@/platform/stores/subscription'
+import { useEntitlements } from '@/platform/entitlements'
 import { useNotificationsStore } from '@/platform/stores/notifications'
 import { usePermission } from '@/platform/composables/usePermission'
 import { useFormatDate } from '@/platform/composables/useFormatDate'
 import { ExampleUsageMetric } from '@/example/constants'
 import type { ProjectOut } from '@/example/types/project'
 
-const { t, te } = useI18n()
+const { t } = useI18n()
 const { hasPermission } = usePermission()
 const { formatRelativeTime } = useFormatDate()
 const projectsStore = useProjectsStore()
-const subscription = useSubscriptionStore()
+const entitlements = useEntitlements()
 const notificationsStore = useNotificationsStore()
 
 const loading = ref(true)
@@ -125,20 +126,16 @@ const recentProjects = ref<ProjectOut[]>([])
 const canReadProjects = computed(() => hasPermission('read:project'))
 
 const projectHint = computed(() => {
-  const limit = subscription.limitFor(ExampleUsageMetric.PROJECTS)
+  const limit = entitlements.limitFor(ExampleUsageMetric.PROJECTS)
   return limit === null ? undefined : t('dashboard.ofLimit', { limit })
 })
 
-const planStatusLabel = computed(() => {
-  const status = subscription.subscriptionStatus
-  if (!status) return '-'
-  const key = `subscription.status.${status}`
-  return te(key) ? t(key) : status
-})
+// Shown only when a plan module (billing) is installed.
+const plan = computed(() => entitlements.planSummary())
 
 onMounted(async () => {
   try {
-    const tasks: Promise<unknown>[] = [subscription.fetchUsage()]
+    const tasks: Promise<unknown>[] = [entitlements.loadLimits()]
     if (canReadProjects.value) {
       tasks.push(
         projectsStore.list({ page_size: 5, sort: '-created_at' }).then((page) => {

@@ -5,10 +5,11 @@ from datetime import UTC, datetime
 import pytest
 from sqlalchemy import select
 
+from src.billing.repositories.manager import BillingRepositoryManager
+from src.billing.services import WebhookService
 from src.platform.models.email_outbox import EmailOutbox
 from src.platform.models.notification import Notification
 from src.platform.repositories.repository_manager import RepositoryManager
-from src.platform.services.billing import WebhookService
 from src.platform.services.email_outbox import (
     MAX_ATTEMPTS,
     deliver_due_emails,
@@ -139,13 +140,15 @@ async def test_a_webhook_queues_its_email_instead_of_sending_it(
 ):
     send = mocker.patch("src.platform.services.email_outbox.send_email")
     async with TestSessionLocal() as session, session.begin():
-        repos = RepositoryManager(session)
+        repos = BillingRepositoryManager(session)
         sub = await repos.subscription.get_active_for_organization(1)
         assert sub
         await repos.subscription.update(sub, external_subscription_id="sub_paid")
 
     async with TestSessionLocal() as session, session.begin():
-        service = WebhookService(RepositoryManager(session), mock_billing_provider)
+        service = WebhookService(
+            BillingRepositoryManager(session), mock_billing_provider
+        )
         raw = {"data": {"object": {"subscription": "sub_paid"}}}
         await service._dispatch("invoice.payment_failed", raw)
 

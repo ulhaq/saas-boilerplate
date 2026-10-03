@@ -7,9 +7,10 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
+from src.billing.repositories.manager import BillingRepositoryManager
+from src.billing.services.common import notify_subscription_managers
 from src.platform.models.notification import Notification
 from src.platform.repositories.repository_manager import RepositoryManager
-from src.platform.services.billing.common import notify_subscription_managers
 from tests.conftest import TestSessionLocal
 
 # Seeded: in organization 1 only user 1 (Owner) can manage the subscription;
@@ -81,7 +82,7 @@ async def test_create_rejects_an_unknown_user():
 
 async def _notify(data: dict) -> int:
     async with TestSessionLocal() as session, session.begin():
-        repos = RepositoryManager(session)
+        repos = BillingRepositoryManager(session)
         organization = await repos.organization.get(1)
         assert organization
         return await notify_subscription_managers(
@@ -122,7 +123,7 @@ async def test_a_rolled_back_change_creates_no_notification():
 
     with pytest.raises(Rollback):
         async with TestSessionLocal() as session, session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             organization = await repos.organization.get(1)
             assert organization
             await notify_subscription_managers(repos, organization, "trial-ending", {})

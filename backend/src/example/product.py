@@ -5,6 +5,7 @@ from src.example.enums import (
     EXAMPLE_DEFAULT_ROLE_DESCRIPTIONS,
     EXAMPLE_DEFAULT_ROLE_PERMISSIONS,
     EXAMPLE_PERMISSION_DESCRIPTIONS,
+    ExampleAuditAction,
     ExamplePermission,
 )
 from src.example.hooks import log_projects_over_plan_limit
@@ -19,6 +20,7 @@ EXAMPLE = ProductModule(
     models=models,
     permissions=list(ExamplePermission),
     permission_descriptions={**EXAMPLE_PERMISSION_DESCRIPTIONS},
+    audit_actions=list(ExampleAuditAction),
     default_role_permissions=EXAMPLE_DEFAULT_ROLE_PERMISSIONS,
     default_role_descriptions=EXAMPLE_DEFAULT_ROLE_DESCRIPTIONS,
     routers=[RouterMount(router=projects.router, tags=["Projects"])],

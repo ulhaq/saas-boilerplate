@@ -11,7 +11,7 @@
       <!-- Main content -->
       <div class="flex-1 flex flex-col min-w-0">
         <AppTopbar />
-        <SubscriptionBanner />
+        <component :is="banner" v-for="(banner, i) in banners" :key="i" />
         <main class="flex-1 p-6 overflow-auto">
           <slot />
         </main>
@@ -30,10 +30,12 @@
 import AppSidebar from '@/platform/components/layout/AppSidebar.vue'
 import AppTopbar from '@/platform/components/layout/AppTopbar.vue'
 import MobileSidebar from '@/platform/components/layout/MobileSidebar.vue'
-import SubscriptionBanner from '@/platform/components/layout/SubscriptionBanner.vue'
 import ConfirmDialog from '@/platform/components/common/ConfirmDialog.vue'
 import { TooltipProvider } from '@/platform/components/ui/tooltip'
 import { useTawkChat } from '@/platform/composables/useTawkChat'
+import { registeredBanners } from '@/platform/banners'
+
+const banners = registeredBanners()
 
 useTawkChat()
 </script>

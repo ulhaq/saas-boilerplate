@@ -428,7 +428,7 @@ async def test_remove_user_last_admin_raises(mock_billing_provider):
 
             # Fresh org with no pre-existing users
             org = Organization(
-                name="Solo Admin Org", billing_email="billing@example.org"
+                name="Solo Admin Org",
             )
             session.add(org)
             await session.flush()

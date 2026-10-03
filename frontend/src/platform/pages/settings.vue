@@ -82,7 +82,6 @@ import { useI18n } from 'vue-i18n'
 import {
   User,
   Lock,
-  Receipt,
   Settings2,
   ShieldCheck,
   ScrollText,
@@ -90,14 +89,22 @@ import {
   LockKeyhole,
 } from 'lucide-vue-next'
 import { usePermission } from '@/platform/composables/usePermission'
-import { usePlanFeature } from '@/platform/composables/usePlanFeature'
+import { useEntitlements } from '@/platform/entitlements'
 import { PlanFeature } from '@/platform/constants'
+import { settingsNavItemsFor, type SettingsNavGroup } from '@/platform/navigation'
 
 const route = useRoute()
 const { t } = useI18n()
 
 const { hasPermission, isOwner } = usePermission()
-const { hasFeature } = usePlanFeature()
+const { hasFeature } = useEntitlements()
+
+/** What modules add to a settings group, for this user. */
+function registeredItems(group: SettingsNavGroup) {
+  return settingsNavItemsFor(group)
+    .filter((item) => !item.permission || hasPermission(item.permission))
+    .map((item) => ({ to: item.to, label: t(item.labelKey), icon: item.icon, locked: false }))
+}
 
 const accountItems = computed(() => [
   { to: '/settings', label: t('settings.profile'), icon: User, exact: true },
@@ -113,9 +120,7 @@ const organizationItems = computed(() => [
   ...(canViewThisOrganization.value
     ? [{ to: '/settings/general', label: t('settings.thisOrganization'), icon: Settings2 }]
     : []),
-  ...(hasPermission('manage:subscription')
-    ? [{ to: '/settings/billing', label: t('nav.subscription'), icon: Receipt }]
-    : []),
+  ...registeredItems('organization'),
 ])
 
 const adminItems = computed(() => [
@@ -132,6 +137,7 @@ const adminItems = computed(() => [
   ...(hasPermission('read:audit_log')
     ? [{ to: '/settings/audit-log', label: t('nav.auditLog'), icon: ScrollText }]
     : []),
+  ...registeredItems('advanced'),
 ])
 
 function isActive(path: string, exact = false): boolean {

@@ -6,8 +6,15 @@ from types import ModuleType
 
 import pytest
 
-from src.bootstrap import RoleSpec, bootstrap, compose, compose_default_roles
+from src.bootstrap import (
+    AUDIT_ACTION,
+    RoleSpec,
+    bootstrap,
+    compose,
+    compose_default_roles,
+)
 from src.platform.core import composition
+from src.platform.core.entitlements import UNLIMITED
 from src.platform.core.hooks import HookEvent, emit
 from src.platform.core.product import ProductModule
 from src.platform.core.template import templates
@@ -149,3 +156,29 @@ async def test_platform_code_uses_the_installed_composition(monkeypatch, tmp_pat
     assert subject_for("verify-email", "en", app_name="Acme").endswith("Acme")
     rendered = templates.get_template("emails/en/widget-ready.html").render(name="<b>")
     assert rendered == "<p>&lt;b&gt;</p>"
+
+
+async def test_without_a_plan_module_every_feature_is_on_with_no_limits():
+    entitlements = compose([_product("widgets")]).entitlements
+
+    assert entitlements is UNLIMITED
+    assert await entitlements.has_feature(None, 1, "api_token")  # ty: ignore[invalid-argument-type]
+    assert await entitlements.limit(None, 1, "seats") is None  # ty: ignore[invalid-argument-type]
+
+
+def test_only_one_module_may_provide_entitlements():
+    plans = _product("plans", entitlements=UNLIMITED)
+    other = _product("other", entitlements=UNLIMITED)
+
+    assert compose([plans]).entitlements is UNLIMITED
+    with pytest.raises(ValueError, match="entitlements"):
+        compose([plans, other])
+
+
+def test_the_audit_action_enum_lists_every_installed_modules_actions():
+    actions = {action.value for action in AUDIT_ACTION}
+
+    assert AUDIT_ACTION.__name__ == "AuditAction"
+    assert "auth.login" in actions
+    assert "billing.plan_switch" in actions
+    assert "project.create" in actions

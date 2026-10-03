@@ -20,13 +20,9 @@ from src.bootstrap import bootstrap
 from src.platform.core.database import ASYNC_SESSION_LOCAL
 from src.platform.core.logging import setup_logging
 from src.platform.core.telemetry import setup_telemetry
-from src.platform.services.billing import (
-    run_stale_checkout_cleanup_loop,
-    run_trial_reminder_loop,
-)
 from src.platform.services.email_outbox import run_email_outbox_loop
 from src.platform.services.gdpr import run_gdpr_retention_loop
-from src.products import PRODUCTS
+from src.products import MODULES
 
 setup_logging("worker")
 setup_telemetry("worker")
@@ -43,11 +39,9 @@ async def main() -> None:
         loop.add_signal_handler(sig, stop.set)
 
     worker_loops = [
-        *(run for product in PRODUCTS for run in product.worker_loops),
+        *(run for module in MODULES for run in module.worker_loops),
         run_email_outbox_loop,
         run_gdpr_retention_loop,
-        run_stale_checkout_cleanup_loop,
-        run_trial_reminder_loop,
     ]
     tasks = [asyncio.create_task(run(ASYNC_SESSION_LOCAL)) for run in worker_loops]
 

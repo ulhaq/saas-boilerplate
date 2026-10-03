@@ -8,22 +8,19 @@ from alembic.command import downgrade, upgrade
 from alembic.config import Config
 from sqlalchemy import select
 
-from src.bootstrap import ALL_PERMISSIONS
+from src.bootstrap import ALL_PERMISSIONS, bootstrap
 from src.platform.core.database import ASYNC_SESSION_LOCAL
+from src.platform.core.hooks import HookEvent, emit
 from src.platform.core.logging import setup_logging
 from src.platform.core.security import hash_secret
 from src.platform.enums import OWNER_ROLE_NAME
 from src.platform.models.api_token import ApiToken  # noqa: F401
-from src.platform.models.billing import (
-    Plan,
-    PlanPrice,
-    Subscription,
-)
 from src.platform.models.organization import Organization
 from src.platform.models.permission import Permission as PermissionModel
 from src.platform.models.role import Role
 from src.platform.models.user import User
 from src.platform.models.user_organization import UserOrganization
+from src.platform.repositories.repository_manager import RepositoryManager
 
 setup_logging("init_db")
 log = logging.getLogger(__name__)
@@ -50,8 +47,8 @@ _MEMBER_ROLE_PERMISSIONS: list = [
 
 INIT_AUTH_DATA: dict = {
     "organizations": [
-        {"name": "Acme Corp", "billing_email": "admin@example.org"},
-        {"name": "Globex Ltd", "billing_email": "admin2@example.org"},
+        {"name": "Acme Corp", "owner": "admin@example.org"},
+        {"name": "Globex Ltd", "owner": "admin2@example.org"},
     ],
     "roles": [
         # Org 1 - index 1
@@ -120,16 +117,12 @@ INIT_AUTH_DATA: dict = {
 
 async def up() -> None:
     upgrade(alembic_cfg, "head")
+    bootstrap()
 
     async with ASYNC_SESSION_LOCAL() as session:
         organizations = []
         for organization in INIT_AUTH_DATA["organizations"]:
-            organizations.append(
-                Organization(
-                    name=organization["name"],
-                    billing_email=organization["billing_email"],
-                )
-            )
+            organizations.append(Organization(name=organization["name"]))
         session.add_all(organizations)
 
         result = await session.execute(select(PermissionModel))
@@ -181,21 +174,17 @@ async def up() -> None:
             )
         session.add_all(user_organizations)
 
-        result = await session.execute(select(Plan).where(Plan.name == "Free"))
-        free_plan = result.scalars().one()
-
-        result = await session.execute(
-            select(PlanPrice).where(PlanPrice.plan_id == free_plan.id)
-        )
-        free_price = result.scalars().one()
-
-        for organization in organizations:
-            session.add(
-                Subscription(
-                    organization_id=organization.id,
-                    plan_price_id=free_price.id,
-                    status="active",
-                )
+        # What the installed modules set up for a new organization (billing:
+        # its account and free subscription), as registration would.
+        owners = {user.email: user for user in users}
+        for data, organization in zip(
+            INIT_AUTH_DATA["organizations"], organizations, strict=True
+        ):
+            await emit(
+                HookEvent.ORGANIZATION_CREATED,
+                repos=RepositoryManager(session),
+                organization_id=organization.id,
+                user_id=owners[data["owner"]].id,
             )
 
         await session.commit()

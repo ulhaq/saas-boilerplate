@@ -4,6 +4,7 @@ import { routes as fileRoutes } from 'vue-router/auto-routes'
 import { useAuthStore } from '@/platform/stores/auth'
 import { useProfileStore } from '@/platform/stores/profile'
 import { appConfig } from '@/platform/config'
+import { routeGuards } from '@/platform/routeGuards'
 
 // The app has no page at `/`: it sends visitors to the home route, and the
 // guard below bounces anyone signed out to the login page from there. The
@@ -48,16 +49,11 @@ export function createAppRouter(): Router {
       return { path: appConfig.homeRoute }
     }
 
-    const billingPaths = ['/settings/billing', '/billing/success', '/billing/cancel']
-    const isBillingRoute = billingPaths.some((p) => to.path.startsWith(p))
-    if (
-      authStore.isAuthenticated &&
-      !authStore.hasAppAccess &&
-      to.meta.requiresAuth &&
-      !isBillingRoute &&
-      profileStore.hasPermission('manage:subscription')
-    ) {
-      return { path: '/settings/billing' }
+    if (authStore.isAuthenticated) {
+      for (const guard of routeGuards()) {
+        const redirect = guard(to)
+        if (redirect) return redirect
+      }
     }
   })
 

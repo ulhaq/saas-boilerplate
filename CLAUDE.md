@@ -12,22 +12,23 @@ Starting a new product from this template:
 
 - Replace/rename the `example` package on both sides - see `docs/adding-a-domain-module.md`.
 - Set the product identity in `frontend/src/brand.ts` (name, app and marketing domains) and `APP_NAME` / `EMAIL_FROM_*` in `backend/.env`.
-- Adapt plan seeds (initial migration + product migration), and plan copy (`planComparisonRows` / `planDescriptions` in the product locales). Mirror plan and brand changes in the marketing site (`site/src/config.ts`, `site/src/content/plans.ts`); the app links to its terms/privacy pages (`LEGAL_PATHS` in `frontend/src/platform/constants.ts`).
+- Adapt plan seeds (billing migration + product migration), and plan copy (`planComparisonRows` / `planDescriptions` in the product locales). Mirror plan and brand changes in the marketing site (`site/src/config.ts`, `site/src/content/plans.ts`); the app links to its terms/privacy pages (`LEGAL_PATHS` in `frontend/src/platform/constants.ts`).
 - Replace `frontend/public/{favicon.svg,logo.png}`.
 
 ## Repository Structure
 
 Full-stack multi-tenant SaaS:
 
-- `backend/` - FastAPI + Python, PostgreSQL, async SQLAlchemy, Alembic migrations. See `backend/CLAUDE.md`.
+- `backend/` - FastAPI + Python, PostgreSQL, async SQLAlchemy, Alembic migrations. Billing (plans, subscriptions, Stripe) is an optional module, `backend/src/billing/`. See `backend/CLAUDE.md`.
 - `frontend/` - the signed-in app: Vue 3 + TypeScript SPA, Vite, Pinia, file-based routing. See `frontend/CLAUDE.md`.
 - `site/` - the marketing site (landing, features, pricing, about, contact, legal pages): standalone static Astro site, da/en. See `site/CLAUDE.md`.
 
-The backend and frontend are each split into a generic SaaS **platform** package and the
-**product** package (`src/platform/` + `src/example/`), wired together by a thin
-assembly layer driven by a product manifest list (`src/products.py` /
-`src/products.ts`). The platform never imports product
-code - enforced by import-linter (backend) and ESLint (frontend).
+The backend and frontend are each split into a generic SaaS **platform** package, the
+optional **billing** module and the **product** package (`src/platform/` +
+`src/billing/` + `src/example/`), wired together by a thin assembly layer driven by
+a module manifest list (`src/products.py` / `src/products.ts`). The platform never
+imports billing or product code, and billing never imports the product - enforced by
+import-linter (backend) and ESLint (frontend).
 
 ## Running Locally
 
@@ -91,4 +92,4 @@ When adding a new permission-gated feature:
 ## Email / Notifications
 
 Outbound email uses SMTP (mailpit in local dev).
-Templates live in `backend/src/platform/templates/` (platform emails; edit the MJML source in `emails/mjml/<locale>/` and compile it from `templates/emails/` with `npx mjml@4 mjml/<locale>/<name>.mjml -o <locale>/<name>.html`, which reproduces the committed HTML exactly; add the subject to both locales in `services/email_content.py`) and an optional product `templates/` directory (product emails, declared in the product manifest and registered by `bootstrap()`). Email that reports a change made inside a transaction (webhooks, worker jobs) is queued with `queue_email` (`services/email_outbox.py`) and sent by the worker's outbox loop after commit, with retries - never call `send_email` while holding a transaction open. Emails from a request go out after it commits via `BackgroundTasks`. SMTP calls are bounded by `EMAIL_TIMEOUT_SECONDS` and run in a thread (`asyncio.to_thread`) so they don't block the event loop. Billing emails to subscription managers (`notify_subscription_managers`) also write an in-app notification per recipient, in the same transaction: type `billing.<email template>`, shown in the bell and on the notifications page by the presenters in `frontend/src/platform/notifications/billing.ts` - add one there (with en/da copy under `notifications.billing`) when adding a billing email. Product notifications register their own presenters (`registerNotificationPresenter`).
+Templates live in `backend/src/platform/templates/` (platform emails) and `backend/src/billing/templates/` (billing's, whose MJML includes the platform's shared partials); edit the MJML source in `emails/mjml/<locale>/` and compile it from that `templates/emails/` with `npx mjml@4 mjml/<locale>/<name>.mjml -o <locale>/<name>.html`, which reproduces the committed HTML exactly; add the subject to both locales in `services/email_content.py`, or `src/billing/emails.py` for billing's (with its UTM medium in `BILLING_EMAIL_CAMPAIGNS`) and an optional product `templates/` directory (product emails, declared in the product manifest and registered by `bootstrap()`). Email that reports a change made inside a transaction (webhooks, worker jobs) is queued with `queue_email` (`services/email_outbox.py`) and sent by the worker's outbox loop after commit, with retries - never call `send_email` while holding a transaction open. Emails from a request go out after it commits via `BackgroundTasks`. SMTP calls are bounded by `EMAIL_TIMEOUT_SECONDS` and run in a thread (`asyncio.to_thread`) so they don't block the event loop. Billing emails to subscription managers (`notify_subscription_managers`) also write an in-app notification per recipient, in the same transaction: type `billing.<email template>`, shown in the bell and on the notifications page by the presenters in `frontend/src/billing/notifications.ts` - add one there (with en/da copy under `notifications.billing`) when adding a billing email. Product notifications register their own presenters (`registerNotificationPresenter`).

@@ -4,7 +4,7 @@ import { authApi } from '@/platform/api/auth'
 import { useSessionStore } from '@/platform/stores/session'
 import { useProfileStore } from '@/platform/stores/profile'
 import { useOrganizationsStore } from '@/platform/stores/organizations'
-import { useSubscriptionStore } from '@/platform/stores/subscription'
+import { useEntitlements } from '@/platform/entitlements'
 import { useNotificationsStore } from '@/platform/stores/notifications'
 import type {
   Token,
@@ -23,13 +23,11 @@ export const useAuthStore = defineStore('auth', () => {
   const session = useSessionStore()
   const profile = useProfileStore()
   const organizationStore = useOrganizationsStore()
-  const subscription = useSubscriptionStore()
+  const entitlements = useEntitlements()
   const notificationsStore = useNotificationsStore()
 
   const isInitialized = computed(() => session.isInitialized)
   const isAuthenticated = computed(() => session.isAuthenticated)
-  const hasActiveSubscription = computed(() => subscription.hasActiveSubscription)
-  const hasAppAccess = computed(() => subscription.hasAppAccess)
 
   function setSession(token: Token): void {
     session.setToken(token.access_token)
@@ -45,7 +43,7 @@ export const useAuthStore = defineStore('auth', () => {
     await Promise.all([
       profile.fetchMe(),
       organizationStore.fetchOrganizations(),
-      subscription.fetchSubscriptionStatus(),
+      entitlements.load(),
     ])
     notificationsStore.startPolling()
   }
@@ -54,7 +52,7 @@ export const useAuthStore = defineStore('auth', () => {
     session.clear()
     profile.clear()
     organizationStore.clear()
-    subscription.clear()
+    entitlements.clear()
     notificationsStore.clear()
   }
 
@@ -65,7 +63,7 @@ export const useAuthStore = defineStore('auth', () => {
       await Promise.all([
         profile.fetchMe(),
         organizationStore.fetchOrganizations(),
-        subscription.fetchSubscriptionStatus(),
+        entitlements.load(),
       ])
       notificationsStore.startPolling()
     } catch {
@@ -160,7 +158,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function switchOrganization(organizationId: number): Promise<void> {
     const { data: token } = await authApi.switchOrganization({ organization_id: organizationId })
     setSession(token)
-    await Promise.all([profile.fetchMe(), subscription.fetchSubscriptionStatus()])
+    await Promise.all([profile.fetchMe(), entitlements.load()])
     notificationsStore.clear()
     notificationsStore.startPolling()
     // organizations list does not change on switch
@@ -169,8 +167,6 @@ export const useAuthStore = defineStore('auth', () => {
   return {
     isInitialized,
     isAuthenticated,
-    hasActiveSubscription,
-    hasAppAccess,
     setSession,
     clearSession,
     initialize,

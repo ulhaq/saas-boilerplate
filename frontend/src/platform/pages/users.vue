@@ -10,7 +10,7 @@ meta:
   <div class="animate-fade-in">
     <PageHeader :title="$t('users.title')" :description="$t('users.description')">
       <template #title-suffix>
-        <PlanQuota :count="total" :limit="subscriptionStore.seatLimit" variant="bar" />
+        <PlanQuota :count="total" :limit="entitlements.limitFor(UsageMetric.SEATS)" variant="bar" />
       </template>
       <template #actions>
         <PermissionGuard permission="manage:organization_user">
@@ -152,7 +152,8 @@ import InviteUserDialog from '@/platform/components/users/InviteUserDialog.vue'
 import PendingInvitations from '@/platform/components/users/PendingInvitations.vue'
 import { useUsersStore } from '@/platform/stores/users'
 import { useInvitationsStore } from '@/platform/stores/invitations'
-import { useSubscriptionStore } from '@/platform/stores/subscription'
+import { useEntitlements } from '@/platform/entitlements'
+import { UsageMetric } from '@/platform/constants'
 import { useDataTable } from '@/platform/composables/useDataTable'
 import { usePermission } from '@/platform/composables/usePermission'
 import { useConfirm } from '@/platform/composables/useConfirm'
@@ -163,7 +164,7 @@ import { BADGE_MAX } from '@/platform/constants'
 import type { UserOut } from '@/platform/types'
 
 const { t } = useI18n()
-const subscriptionStore = useSubscriptionStore()
+const entitlements = useEntitlements()
 const usersStore = useUsersStore()
 const invitationsStore = useInvitationsStore()
 const { formatDate } = useFormatDate()
@@ -206,7 +207,7 @@ function clearSearch() {
   setSearch(undefined)
 }
 
-onMounted(() => subscriptionStore.fetchUsage())
+onMounted(() => entitlements.loadLimits())
 
 const showForm = ref(false)
 const showRoles = ref(false)

@@ -146,18 +146,3 @@ def track_worker_run(worker: str, interval_seconds: float) -> Iterator[None]:
             _worker_duration.record(time.perf_counter() - start, attributes)
             if outcome == "success":
                 _last_success[worker] = time.time()
-
-
-# --- Billing webhooks --------------------------------------------------------
-
-_webhook_events = _meter.create_counter(
-    "billing.webhook.events",
-    unit="{event}",
-    description="Stripe webhook events by type and outcome",
-)
-
-
-def record_webhook_event(event_type: str, outcome: str) -> None:
-    """outcome: processed / duplicate / retry (transient, Stripe retries) /
-    failed (permanent, acknowledged)."""
-    _webhook_events.add(1, {"event_type": event_type, "outcome": outcome})

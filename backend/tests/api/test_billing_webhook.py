@@ -6,14 +6,11 @@ from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 from sqlalchemy import delete, select
 
-from src.platform.billing.types import WebhookPayload
-from src.platform.core.exceptions import (
-    BillingProviderException,
-    BillingWebhookException,
-)
-from src.platform.models.billing import PlanPrice, Subscription
-from src.platform.models.organization import Organization
+from src.billing.exceptions import BillingProviderException, BillingWebhookException
+from src.billing.models.billing import PlanPrice, Subscription
+from src.billing.provider.types import WebhookPayload
 from tests.conftest import TestSessionLocal
+from tests.utils import get_billing_account
 
 
 def test_webhook_valid_payload(
@@ -592,7 +589,7 @@ def test_webhook_subscription_updated_noop_skips_plan_changed_hook(
         "/v1/billing/webhook", content=b"{}", headers={"stripe-signature": "s"}
     )
 
-    emit_mock = mocker.patch("src.platform.services.billing.webhooks.base.emit")
+    emit_mock = mocker.patch("src.billing.services.webhooks.base.emit")
 
     # Same status, same price - only the billing period moved.
     now_ts = int(datetime.now(UTC).timestamp())
@@ -872,9 +869,8 @@ async def free_plan_subscription(plan_with_price: dict) -> dict:
     Simulates a user assigned the free plan by _setup_new_organization.
     """
     async with TestSessionLocal() as session:
-        organization = await session.get(Organization, 1)
-        assert organization is not None
-        organization.external_customer_id = "cus_free123"
+        account = await get_billing_account(session, 1)
+        account.external_customer_id = "cus_free123"
         free_price = (
             await session.execute(select(PlanPrice).where(PlanPrice.amount == 0))
         ).scalar_one()
@@ -953,9 +949,9 @@ async def trialing_subscription(plan_with_price: dict) -> dict:
     """Set the existing subscription for organization 1 to trialing state."""
     price_id = plan_with_price["price"]["id"]
     async with TestSessionLocal() as session:
-        organization = await session.get(Organization, 1)
-        if organization and not organization.external_customer_id:
-            organization.external_customer_id = "cus_test123"
+        account = await get_billing_account(session, 1)
+        if not account.external_customer_id:
+            account.external_customer_id = "cus_test123"
         sub = (
             await session.execute(
                 select(Subscription).where(Subscription.organization_id == 1)
@@ -975,7 +971,7 @@ def test_webhook_subscription_trial_will_end_sends_email(
     mocker: MockerFixture,
 ) -> None:
     trial_end_ts = int(datetime(2026, 5, 1, tzinfo=UTC).timestamp())
-    mock_send = mocker.patch("src.platform.services.billing.common.queue_email")
+    mock_send = mocker.patch("src.billing.services.common.queue_email")
 
     mock_billing_provider.construct_webhook_event.return_value = WebhookPayload(
         external_event_id="evt_trial_will_end",
@@ -1122,7 +1118,7 @@ def test_webhook_subscription_paused_trial_end_downgrades_to_free(
     should be immediately downgraded to the free plan locally and the Stripe
     subscription cancelled.
     """
-    mock_send = mocker.patch("src.platform.services.billing.common.queue_email")
+    mock_send = mocker.patch("src.billing.services.common.queue_email")
 
     mock_billing_provider.construct_webhook_event.return_value = WebhookPayload(
         external_event_id="evt_sub_paused_trial_end",

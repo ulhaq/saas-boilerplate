@@ -15,7 +15,7 @@ from typing import Annotated
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.platform.billing.dependencies import _current_period_start
+from src.platform.core import composition
 from src.platform.core.context import auth_context_var
 from src.platform.core.database import DbSession
 from src.platform.core.exceptions import (
@@ -27,8 +27,6 @@ from src.platform.core.exceptions import (
 from src.platform.core.security import BEARER_HEADERS, Auth, decode_token, oauth2_scheme
 from src.platform.enums import OWNER_ROLE_NAME, ErrorCode, PlanFeature
 from src.platform.repositories.api_token import ApiTokenRepository
-from src.platform.repositories.billing import PlanFeatureRepository
-from src.platform.repositories.repository_manager import RepositoryManager
 from src.platform.repositories.user import UserRepository
 from src.platform.repositories.user_organization import UserOrganizationRepository
 
@@ -72,10 +70,9 @@ async def _authenticate_api_token(token: str, db: AsyncSession) -> Auth:
     if not user:
         raise NotAuthenticatedException(headers=BEARER_HEADERS)
 
-    features = await PlanFeatureRepository(db).get_features_for_organization(
-        api_token.organization_id
-    )
-    if PlanFeature.API_TOKEN not in features:
+    if not await composition.current().entitlements.has_feature(
+        db, api_token.organization_id, PlanFeature.API_TOKEN
+    ):
         raise PlanFeatureUnavailableException
 
     # Throttled: last_used_at is informational, and writing it on every call
@@ -156,12 +153,11 @@ def require_permission(permission: StrEnum) -> Callable:
 def require_plan_feature(feature: StrEnum) -> Callable:
     async def _check(
         current_user: Annotated[Auth, Depends(authenticate)],
-        repos: Annotated[RepositoryManager, Depends()],
+        db: DbSession,
     ) -> Auth:
-        features = await repos.plan_feature.get_features_for_organization(
-            current_user.organization_id
-        )
-        if feature not in features:
+        if not await composition.current().entitlements.has_feature(
+            db, current_user.organization_id, feature
+        ):
             raise PlanFeatureUnavailableException
         return current_user
 
@@ -192,18 +188,23 @@ def require_limit(metric: StrEnum) -> Callable:
     """
 
     async def _check(
-        repos: Annotated[RepositoryManager, Depends()],
+        db: DbSession,
         current_user: Annotated[Auth, Depends(authenticate)],
     ) -> None:
-        limit = await repos.plan_setting.get_for_organization(
-            current_user.organization_id, metric
-        )
-        if limit is None or limit.value is None:
+        entitlements = composition.current().entitlements
+        organization_id = current_user.organization_id
+        limit = await entitlements.limit(db, organization_id, metric)
+        if limit is None:
             return
-        count = await repos.plan_usage.get_count(
-            current_user.organization_id, metric, _current_period_start()
-        )
-        if count >= limit.value:
+        if await entitlements.usage(db, organization_id, metric) >= limit:
             raise LimitExceededException()
 
     return _check
+
+
+async def track_usage(db: AsyncSession, organization_id: int, metric: StrEnum) -> int:
+    """Count one use of a per-period ``metric`` (checked by `require_limit`);
+    returns the new count."""
+    return await composition.current().entitlements.record_usage(
+        db, organization_id, metric
+    )

@@ -153,7 +153,6 @@ class RegistrationService(AuthBaseService):
 
         organization = await self.repos.organization.create(
             name=f"{schema_in.name}'s Organisation",
-            billing_email=email,
         )
         await self.repos.user_organization.create(
             user_id=user.id,

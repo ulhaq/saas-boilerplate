@@ -79,10 +79,10 @@ async def test_create_subscription(client: AsyncClient) -> None:
 - Follows the existing test patterns in `frontend/CLAUDE.md` or existing test files
 - Example:
 ```typescript
-// frontend/tests/unit/platform/stores/subscription.test.ts (mirrors src/platform/stores/subscription.ts)
+// frontend/tests/unit/billing/stores/subscription.test.ts (mirrors src/billing/stores/subscription.ts)
 import { describe, it, expect, beforeEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
-import { useSubscriptionStore } from '@/platform/stores/subscription'
+import { useSubscriptionStore } from '@/billing/stores/subscription'
 
 describe('useSubscriptionStore', () => {
   beforeEach(() => {
@@ -109,7 +109,7 @@ describe('useSubscriptionStore', () => {
 ### Frontend Gaps Fixed
 | Source Module | Test File Created |
 |---|---|
-| src/platform/stores/subscription.ts | tests/unit/platform/stores/subscription.test.ts |
+| src/billing/stores/subscription.ts | tests/unit/billing/stores/subscription.test.ts |
 
 ### Already Covered (no action needed)
 - app/routers/auth.py → tests/routers/test_auth.py ✓

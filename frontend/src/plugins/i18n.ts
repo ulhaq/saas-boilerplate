@@ -2,9 +2,9 @@ import { createI18n } from 'vue-i18n'
 import platformEn from '@/platform/locales/en'
 import platformDa from '@/platform/locales/da'
 import type { MessageTree } from '@/platform/product'
-import { products } from '@/products'
+import { modules } from '@/products'
 
-/** Deep-merge product messages into the platform tree (objects merge, leaves/arrays replace). */
+/** Deep-merge module messages into the platform tree (objects merge, leaves/arrays replace). */
 function mergeMessages<T extends MessageTree>(base: T, extra: MessageTree): T {
   const out: MessageTree = { ...base }
   for (const [key, value] of Object.entries(extra)) {
@@ -22,8 +22,8 @@ function mergeMessages<T extends MessageTree>(base: T, extra: MessageTree): T {
 }
 
 const messages = {
-  da: products.reduce((tree, product) => mergeMessages(tree, product.messages.da), platformDa),
-  en: products.reduce((tree, product) => mergeMessages(tree, product.messages.en), platformEn),
+  da: modules.reduce((tree, module) => mergeMessages(tree, module.messages.da), platformDa),
+  en: modules.reduce((tree, module) => mergeMessages(tree, module.messages.en), platformEn),
 }
 
 export type SupportedLocale = keyof typeof messages

@@ -84,6 +84,7 @@ import { Input } from '@/platform/components/ui/input'
 import { Label } from '@/platform/components/ui/label'
 import { Button } from '@/platform/components/ui/button'
 import { useAuthStore } from '@/platform/stores/auth'
+import { appConfig } from '@/platform/config'
 import { useErrorHandler } from '@/platform/composables/useErrorHandler'
 import { useValidation } from '@/platform/composables/useValidation'
 import { useRules } from '@/platform/composables/useRules'
@@ -134,7 +135,7 @@ async function onSubmit() {
   errorMessage.value = ''
   try {
     await authStore.completeRegistration(setupToken.value, form.name, form.password)
-    router.push('/settings/billing')
+    router.push(appConfig.onboardingRoute ?? appConfig.homeRoute)
   } catch (err: unknown) {
     errorMessage.value = resolveError(err)
   } finally {

@@ -9,6 +9,11 @@ export const PlanFeature = {
 // Product modules define their own feature constants; values are validated
 // against the org's plan at runtime, so the type stays open.
 export type PlanFeatureValue = string
+
+// Platform limit metrics (the backend's `UsageMetric`); products add their own.
+export const UsageMetric = {
+  SEATS: 'seats',
+} as const
 export const PASSWORD_MIN_LENGTH = 8
 
 export const PAGE_SIZE = 100

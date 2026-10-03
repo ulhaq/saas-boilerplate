@@ -16,10 +16,10 @@ os.environ["RATE_LIMIT_ENABLED"] = "false"
 os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"] = ""
 
 import src.platform.core.security as _security_mod
-from src.bootstrap import ALL_PERMISSIONS, PERMISSION_DESCRIPTIONS
-from src.init_db import INIT_AUTH_DATA
-from src.main import app
-from src.platform.billing import (
+from src.billing.models.account import BillingAccount
+from src.billing.models.billing import Plan, PlanPrice, Subscription
+from src.billing.models.billing import PlanFeature as PlanFeatureModel
+from src.billing.provider import (
     BillingProviderABC,
     CheckoutResult,
     CustomerPortalResult,
@@ -29,12 +29,13 @@ from src.platform.billing import (
     WebhookPayload,
     get_billing_provider,
 )
+from src.bootstrap import ALL_PERMISSIONS, PERMISSION_DESCRIPTIONS
+from src.init_db import INIT_AUTH_DATA
+from src.main import app
 from src.platform.core.config import settings
 from src.platform.core.database import Base, get_db
 from src.platform.core.security import hash_secret
 from src.platform.enums import PlanFeature
-from src.platform.models.billing import Plan, PlanPrice, Subscription
-from src.platform.models.billing import PlanFeature as PlanFeatureModel
 from src.platform.models.organization import Organization
 from src.platform.models.permission import Permission
 from src.platform.models.role import Role
@@ -129,12 +130,7 @@ async def prepare_database() -> AsyncGenerator[None]:
     async with TestSessionLocal() as session:
         organizations = []
         for organization in INIT_AUTH_DATA["organizations"]:
-            organizations.append(
-                Organization(
-                    name=organization["name"],
-                    billing_email=organization["billing_email"],
-                )
-            )
+            organizations.append(Organization(name=organization["name"]))
         session.add_all(organizations)
 
         permissions = []
@@ -218,12 +214,20 @@ async def prepare_database() -> AsyncGenerator[None]:
         )
         await session.flush()
 
-        # Seed a free subscription for each test organization, matching what
-        # _setup_new_organization does in production. No Stripe customer is created
-        # at registration - external_customer_id is set when the organization starts
-        # a trial or paid checkout. Tests that need a paid subscription
-        # activate it via checkout + webhook helpers (which will stamp the ID).
-        for organization in organizations:
+        # Seed a billing account and a free subscription for each test
+        # organization, matching what billing's ORGANIZATION_CREATED handler does
+        # in production. No Stripe customer is created at registration -
+        # external_customer_id is set when the organization starts a trial or
+        # paid checkout. Tests that need a paid subscription activate it via
+        # checkout + webhook helpers (which will stamp the ID).
+        for data, organization in zip(
+            INIT_AUTH_DATA["organizations"], organizations, strict=True
+        ):
+            session.add(
+                BillingAccount(
+                    organization_id=organization.id, billing_email=data["owner"]
+                )
+            )
             session.add(
                 Subscription(
                     organization_id=organization.id,
@@ -320,6 +324,8 @@ def mock_billing_provider(mocker):
     )
 
     app.dependency_overrides[get_billing_provider] = lambda: mock
+    # Hook handlers call the factory directly, outside FastAPI's DI.
+    mocker.patch("src.billing.hooks.get_billing_provider", return_value=mock)
     yield mock
     app.dependency_overrides.pop(get_billing_provider, None)
 

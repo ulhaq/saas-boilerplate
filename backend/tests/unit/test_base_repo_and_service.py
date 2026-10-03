@@ -104,7 +104,7 @@ async def test_require_feature_passes_when_feature_available(mock_billing_provid
     async with TestSessionLocal() as session:
         async with session.begin():
             repos = RepositoryManager(session)
-            service = OrganizationService(repos, _admin_auth(), mock_billing_provider)
+            service = OrganizationService(repos, _admin_auth())
             # Should complete without raising
             await service._require_feature(PlanFeature.API_TOKEN, organization_id=1)
 
@@ -115,9 +115,7 @@ async def test_require_feature_raises_when_feature_unavailable(mock_billing_prov
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            org = Organization(
-                name="No Feature Org", billing_email="billing@example.org"
-            )
+            org = Organization(name="No Feature Org")
             session.add(org)
             await session.flush()
             org_id = org.id
@@ -125,7 +123,7 @@ async def test_require_feature_raises_when_feature_unavailable(mock_billing_prov
     async with TestSessionLocal() as session:
         async with session.begin():
             repos = RepositoryManager(session)
-            service = OrganizationService(repos, _admin_auth(), mock_billing_provider)
+            service = OrganizationService(repos, _admin_auth())
             with pytest.raises(PlanFeatureUnavailableException):
                 await service._require_feature(
                     PlanFeature.API_TOKEN, organization_id=org_id

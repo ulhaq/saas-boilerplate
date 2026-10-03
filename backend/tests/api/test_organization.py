@@ -2,17 +2,16 @@ from unittest.mock import MagicMock
 
 from fastapi.testclient import TestClient
 
-from src.platform.models.organization import Organization
 from tests.conftest import TestSessionLocal
+from tests.utils import get_billing_account
 
 
 async def _seed_external_customer(
     organization_id: int, external_customer_id: str
 ) -> None:
     async with TestSessionLocal() as session:
-        org = await session.get(Organization, organization_id)
-        assert org is not None
-        org.external_customer_id = external_customer_id
+        account = await get_billing_account(session, organization_id)
+        account.external_customer_id = external_customer_id
         await session.commit()
 
 

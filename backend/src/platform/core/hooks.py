@@ -1,11 +1,11 @@
 """Extension hooks for the generic SaaS core.
 
-The core (auth, organizations, users, billing) emits events at well-defined
-lifecycle points; domain modules register async handlers for them. This keeps
-the core free of imports from product-specific packages - a new product
+The core (auth, organizations, users) and modules such as billing emit events
+at well-defined lifecycle points; other modules handle them. This keeps the
+core free of imports from billing and product packages - a new module
 registers its own handlers (or none) without touching core services.
 
-Products list their handlers in their manifest; the composition root
+Modules list their handlers in their manifest; the composition root
 (`src.bootstrap`) installs them with the rest of the `Composition`. Handlers
 receive keyword arguments only. Every event includes
 `repos` (the request/job-scoped RepositoryManager) so handlers participate in
@@ -33,6 +33,15 @@ class HookEvent(StrEnum):
     # An organization's plan or subscription state changed (checkout,
     # switch, cancellation, webhook update). kwargs: repos, organization_id
     PLAN_CHANGED = "plan_changed"
+    # A new (or restored) organization was set up, after its roles are seeded.
+    # kwargs: repos, organization_id, user_id (its owner)
+    ORGANIZATION_CREATED = "organization_created"
+    # An organization is about to be deleted; a handler raises to refuse it.
+    # kwargs: repos, organization_id
+    ORGANIZATION_DELETING = "organization_deleting"
+    # An organization's ownership moved to another member.
+    # kwargs: repos, organization_id, user_id (the new owner)
+    OWNERSHIP_TRANSFERRED = "ownership_transferred"
 
 
 async def emit(event: HookEvent, **kwargs: object) -> None:

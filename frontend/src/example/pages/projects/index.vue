@@ -109,7 +109,7 @@ import PermissionGuard from '@/platform/components/common/PermissionGuard.vue'
 import PlanQuota from '@/platform/components/common/PlanQuota.vue'
 import ProjectForm from '@/example/components/projects/ProjectForm.vue'
 import { useProjectsStore } from '@/example/stores/projects'
-import { useSubscriptionStore } from '@/platform/stores/subscription'
+import { useEntitlements } from '@/platform/entitlements'
 import { useDataTable } from '@/platform/composables/useDataTable'
 import { usePermission } from '@/platform/composables/usePermission'
 import { useConfirm } from '@/platform/composables/useConfirm'
@@ -121,7 +121,7 @@ import type { ProjectOut } from '@/example/types/project'
 
 const { t } = useI18n()
 const projectsStore = useProjectsStore()
-const subscriptionStore = useSubscriptionStore()
+const entitlements = useEntitlements()
 const { formatDate } = useFormatDate()
 const { toast } = useToast()
 const { handleError } = useErrorHandler()
@@ -147,7 +147,7 @@ const {
   refresh,
 } = useDataTable<ProjectOut>({ fetcher: projectsStore.list })
 
-const projectLimit = computed(() => subscriptionStore.limitFor(ExampleUsageMetric.PROJECTS))
+const projectLimit = computed(() => entitlements.limitFor(ExampleUsageMetric.PROJECTS))
 
 const searchQuery = ref('')
 let searchTimeout: ReturnType<typeof setTimeout>
@@ -164,7 +164,7 @@ function clearSearch() {
   setSearch(undefined)
 }
 
-onMounted(() => subscriptionStore.fetchUsage())
+onMounted(() => entitlements.loadLimits())
 
 const showForm = ref(false)
 const selectedProject = ref<ProjectOut | null>(null)

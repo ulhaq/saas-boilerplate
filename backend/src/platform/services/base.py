@@ -4,6 +4,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from src.platform.core import composition
 from src.platform.core.context import client_ip_var
 from src.platform.core.exceptions import (
     CapacityExceededException,
@@ -42,21 +43,19 @@ class BaseService:
         )
 
     async def _require_feature(self, feature: StrEnum, organization_id: int) -> None:
-        features = await self.repos.plan_feature.get_features_for_organization(
-            organization_id
-        )
-        if feature not in features:
+        if not await composition.current().entitlements.has_feature(
+            self.repos.db, organization_id, feature
+        ):
             raise PlanFeatureUnavailableException
 
     async def _require_capacity(
         self, metric: StrEnum, organization_id: int, current_count: int
     ) -> None:
-        limit = await self.repos.plan_setting.get_for_organization(
-            organization_id, metric
+        limit = await composition.current().entitlements.limit(
+            self.repos.db, organization_id, metric
         )
-        if limit is not None and limit.value is not None:
-            if current_count >= limit.value:
-                raise CapacityExceededException()
+        if limit is not None and current_count >= limit:
+            raise CapacityExceededException()
 
 
 class ResourceService[

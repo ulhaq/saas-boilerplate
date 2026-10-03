@@ -10,18 +10,11 @@ from typing import Any
 import pytest
 from sqlalchemy import select, text
 
-from src.platform.core.config import settings
-from src.platform.core.exceptions import (
-    AlreadyExistsException,
-    BillingProviderException,
-    NotFoundException,
-    ValidationException,
-)
-from src.platform.core.security import Auth
-from src.platform.models.audit_log import AuditLog
-from src.platform.repositories.repository_manager import RepositoryManager
-from src.platform.schemas.billing import CheckoutIn, StartTrialIn, SwitchPlanIn
-from src.platform.services.billing import (
+from src.billing.config import billing_settings
+from src.billing.exceptions import BillingProviderException
+from src.billing.repositories.manager import BillingRepositoryManager
+from src.billing.schemas.billing import CheckoutIn, StartTrialIn, SwitchPlanIn
+from src.billing.services import (
     BillingMaintenanceService,
     PlanService,
     SubscriptionService,
@@ -30,8 +23,15 @@ from src.platform.services.billing import (
     run_stale_checkout_cleanup_loop,
     run_trial_reminder_loop,
 )
-from src.platform.services.billing.common import _get_period_field
-from src.platform.services.billing.webhooks.invoices import InvoiceWebhookHandlers
+from src.billing.services.common import _get_period_field
+from src.billing.services.webhooks.invoices import InvoiceWebhookHandlers
+from src.platform.core.exceptions import (
+    AlreadyExistsException,
+    NotFoundException,
+    ValidationException,
+)
+from src.platform.core.security import Auth
+from src.platform.models.audit_log import AuditLog
 from tests.conftest import TestSessionLocal
 
 
@@ -53,7 +53,7 @@ def _admin_auth(organization_id: int = 1) -> Auth:
 
 async def _get_paid_price_id(session) -> int:
     """Return the id of the pro plan_price seeded by plan_with_price fixture."""
-    repos = RepositoryManager(session)
+    repos = BillingRepositoryManager(session)
     prices = await repos.plan_price.get_all()
     for p in prices:
         if p.amount > 0 and p.external_price_id:
@@ -64,7 +64,7 @@ async def _get_paid_price_id(session) -> int:
 async def _stamp_subscription_external_id(
     session, org_id: int, sub_ext_id: str
 ) -> None:
-    repos = RepositoryManager(session)
+    repos = BillingRepositoryManager(session)
     sub = await repos.subscription.get_active_for_organization(org_id)
     if sub:
         await repos.subscription.update(sub, external_subscription_id=sub_ext_id)
@@ -78,7 +78,7 @@ async def _stamp_subscription_external_id(
 async def test_get_all_plans_returns_free_plan(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = PlanService(repos, mock_billing_provider)
             plans = await service.get_all_plans()
     assert any(p.name == "Free" for p in plans)
@@ -87,7 +87,7 @@ async def test_get_all_plans_returns_free_plan(mock_billing_provider):
 async def test_get_plan_not_found_raises(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = PlanService(repos, mock_billing_provider)
             with pytest.raises(NotFoundException):
                 await service.get_plan(999)
@@ -101,7 +101,7 @@ async def test_get_plan_not_found_raises(mock_billing_provider):
 async def test_start_checkout_invalid_price_raises(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             repos.subscription.set_organization_scope(1)
             service = SubscriptionService(repos, mock_billing_provider, _admin_auth())
             with pytest.raises(NotFoundException):
@@ -112,7 +112,7 @@ async def test_start_checkout_success(mock_billing_provider, plan_with_price):
     price_id = plan_with_price["price"]["id"]
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             repos.subscription.set_organization_scope(1)
             service = SubscriptionService(repos, mock_billing_provider, _admin_auth())
             out = await service.start_checkout(CheckoutIn(plan_price_id=price_id))
@@ -127,7 +127,7 @@ async def test_start_checkout_success(mock_billing_provider, plan_with_price):
 async def test_start_trial_free_plan_raises(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             repos.subscription.set_organization_scope(1)
             # Get the free plan price id
             free_prices = [p for p in await repos.plan_price.get_all() if p.amount == 0]
@@ -140,9 +140,9 @@ async def test_start_trial_free_plan_raises(mock_billing_provider):
 async def test_start_trial_no_external_price_raises(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            from src.platform.models.billing import Plan, PlanPrice
+            from src.billing.models.billing import Plan, PlanPrice
 
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
 
             # Create a paid plan with no external_price_id
             plan = Plan(
@@ -179,7 +179,7 @@ async def test_start_trial_no_external_price_raises(mock_billing_provider):
 async def test_get_current_subscription_returns_sub(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             repos.subscription.set_organization_scope(1)
             service = SubscriptionService(repos, mock_billing_provider, _admin_auth())
             sub = await service.get_current_subscription()
@@ -194,7 +194,7 @@ async def test_get_current_subscription_returns_sub(mock_billing_provider):
 async def test_cancel_free_sub_raises(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             repos.subscription.set_organization_scope(1)
             service = SubscriptionService(repos, mock_billing_provider, _admin_auth())
             with pytest.raises(ValidationException):
@@ -208,7 +208,7 @@ async def test_cancel_subscription_no_external_id(
     price_id = plan_with_price["price"]["id"]
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub
             # Switch to paid plan locally (no Stripe ID)
@@ -225,7 +225,7 @@ async def test_cancel_subscription_with_external_id(
     price_id = plan_with_price["price"]["id"]
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub
             await repos.subscription.update(
@@ -250,7 +250,7 @@ async def test_resume_subscription_not_canceling_raises(
     price_id = plan_with_price["price"]["id"]
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub
             await repos.subscription.update(
@@ -269,7 +269,7 @@ async def test_resume_subscription_success(mock_billing_provider, plan_with_pric
     price_id = plan_with_price["price"]["id"]
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub
             await repos.subscription.update(
@@ -295,7 +295,7 @@ async def test_switch_plan_no_external_id_raises(
     price_id = plan_with_price["price"]["id"]
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             repos.subscription.set_organization_scope(1)
             service = SubscriptionService(repos, mock_billing_provider, _admin_auth())
             with pytest.raises(ValidationException):
@@ -306,9 +306,9 @@ async def test_switch_plan_success(mock_billing_provider, plan_with_price):
     price_id = plan_with_price["price"]["id"]
     async with TestSessionLocal() as session:
         async with session.begin():
-            from src.platform.models.billing import Plan, PlanPrice
+            from src.billing.models.billing import Plan, PlanPrice
 
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
 
             # Set up a second price to switch to
             plan2 = Plan(
@@ -353,7 +353,7 @@ async def test_switch_plan_success(mock_billing_provider, plan_with_price):
 async def test_get_customer_portal_url_no_customer_raises(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             repos.subscription.set_organization_scope(1)
             service = SubscriptionService(repos, mock_billing_provider, _admin_auth())
             with pytest.raises(ValidationException):
@@ -363,10 +363,10 @@ async def test_get_customer_portal_url_no_customer_raises(mock_billing_provider)
 async def test_get_customer_portal_url_success(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
-            org = await repos.organization.get(1)
+            repos = BillingRepositoryManager(session)
+            org = await repos.billing_account.get_for_organization(1)
             assert org
-            await repos.organization.update(org, external_customer_id="cus_test123")
+            await repos.billing_account.update(org, external_customer_id="cus_test123")
             repos.subscription.set_organization_scope(1)
             service = SubscriptionService(repos, mock_billing_provider, _admin_auth())
             out = await service.get_customer_portal_url()
@@ -388,7 +388,7 @@ async def test_webhook_subscription_updated_known_sub(
     price_id = plan_with_price["price"]["id"]
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub
             await repos.subscription.update(
@@ -399,7 +399,7 @@ async def test_webhook_subscription_updated_known_sub(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw = _make_webhook_raw(
                 "customer.subscription.updated",
@@ -416,7 +416,7 @@ async def test_webhook_subscription_updated_known_sub(
 async def test_webhook_subscription_updated_unknown_sub(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw = _make_webhook_raw(
                 "customer.subscription.updated",
@@ -432,7 +432,7 @@ async def test_webhook_subscription_deleted_restores_free(
     price_id = plan_with_price["price"]["id"]
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub
             await repos.subscription.update(
@@ -441,7 +441,7 @@ async def test_webhook_subscription_deleted_restores_free(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw = _make_webhook_raw(
                 "customer.subscription.deleted",
@@ -452,7 +452,7 @@ async def test_webhook_subscription_deleted_restores_free(
     # Verify restored to free
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub
             assert sub.external_subscription_id is None
@@ -461,22 +461,22 @@ async def test_webhook_subscription_deleted_restores_free(
 async def test_webhook_payment_method_attached(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
-            org = await repos.organization.get(1)
+            repos = BillingRepositoryManager(session)
+            org = await repos.billing_account.get_for_organization(1)
             assert org
-            await repos.organization.update(org, external_customer_id="cus_pm123")
+            await repos.billing_account.update(org, external_customer_id="cus_pm123")
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {"data": {"object": {"customer": "cus_pm123"}}}
             await service._dispatch("payment_method.attached", raw)
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
-            org = await repos.organization.get(1)
+            repos = BillingRepositoryManager(session)
+            org = await repos.billing_account.get_for_organization(1)
             assert org and org.has_payment_method is True
 
 
@@ -485,16 +485,16 @@ async def test_webhook_payment_method_detached(mock_billing_provider):
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
-            org = await repos.organization.get(1)
+            repos = BillingRepositoryManager(session)
+            org = await repos.billing_account.get_for_organization(1)
             assert org
-            await repos.organization.update(
+            await repos.billing_account.update(
                 org, external_customer_id="cus_det123", has_payment_method=True
             )
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -506,8 +506,8 @@ async def test_webhook_payment_method_detached(mock_billing_provider):
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
-            org = await repos.organization.get(1)
+            repos = BillingRepositoryManager(session)
+            org = await repos.billing_account.get_for_organization(1)
             assert org and org.has_payment_method is False
 
 
@@ -517,7 +517,7 @@ async def test_webhook_invoice_payment_succeeded_past_due(
     price_id = plan_with_price["price"]["id"]
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub
             await repos.subscription.update(
@@ -529,7 +529,7 @@ async def test_webhook_invoice_payment_succeeded_past_due(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -544,7 +544,7 @@ async def test_webhook_invoice_payment_succeeded_past_due(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub and sub.status == "active"
 
@@ -552,7 +552,7 @@ async def test_webhook_invoice_payment_succeeded_past_due(
 async def test_webhook_product_created(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -567,7 +567,7 @@ async def test_webhook_product_created(mock_billing_provider):
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             plan = await repos.plan.get_by_external_product_id("prod_new999")
             assert plan and plan.name == "New Plan"
 
@@ -575,9 +575,9 @@ async def test_webhook_product_created(mock_billing_provider):
 async def test_webhook_product_updated(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            from src.platform.models.billing import Plan
+            from src.billing.models.billing import Plan
 
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             plan = Plan(
                 name="OldName",
                 description="Old",
@@ -589,7 +589,7 @@ async def test_webhook_product_updated(mock_billing_provider):
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -604,7 +604,7 @@ async def test_webhook_product_updated(mock_billing_provider):
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             _plan = await repos.plan.get_by_external_product_id("prod_upd999")
             assert _plan and _plan.name == "UpdatedName"
 
@@ -612,14 +612,14 @@ async def test_webhook_product_updated(mock_billing_provider):
 async def test_webhook_checkout_session_completed(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
-            org = await repos.organization.get(1)
+            repos = BillingRepositoryManager(session)
+            org = await repos.billing_account.get_for_organization(1)
             assert org
-            await repos.organization.update(org, external_customer_id="cus_chk123")
+            await repos.billing_account.update(org, external_customer_id="cus_chk123")
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -634,7 +634,7 @@ async def test_webhook_checkout_session_completed(mock_billing_provider):
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub and sub.external_subscription_id == "sub_chk123"
 
@@ -643,10 +643,10 @@ async def test_webhook_checkout_session_expired_noop_active(mock_billing_provide
     """Expired checkout for active (non-incomplete) sub is a no-op."""
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
-            org = await repos.organization.get(1)
+            repos = BillingRepositoryManager(session)
+            org = await repos.billing_account.get_for_organization(1)
             assert org
-            await repos.organization.update(org, external_customer_id="cus_exp123")
+            await repos.billing_account.update(org, external_customer_id="cus_exp123")
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -665,14 +665,14 @@ async def test_webhook_subscription_created(mock_billing_provider, plan_with_pri
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
-            org = await repos.organization.get(1)
+            repos = BillingRepositoryManager(session)
+            org = await repos.billing_account.get_for_organization(1)
             assert org
-            await repos.organization.update(org, external_customer_id="cus_cre123")
+            await repos.billing_account.update(org, external_customer_id="cus_cre123")
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -706,7 +706,7 @@ async def test_webhook_subscription_trial_will_end(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub
             await repos.subscription.update(
@@ -715,7 +715,7 @@ async def test_webhook_subscription_trial_will_end(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -735,7 +735,7 @@ async def test_webhook_subscription_paused_explicit(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub
             await repos.subscription.update(
@@ -744,7 +744,7 @@ async def test_webhook_subscription_paused_explicit(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -760,7 +760,7 @@ async def test_webhook_subscription_paused_explicit(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub and sub.status == "paused"
 
@@ -770,7 +770,7 @@ async def test_webhook_invoice_payment_failed(mock_billing_provider, plan_with_p
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub
             await repos.subscription.update(
@@ -779,7 +779,7 @@ async def test_webhook_invoice_payment_failed(mock_billing_provider, plan_with_p
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -803,7 +803,7 @@ async def test_webhook_invoice_marked_uncollectible(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub
             await repos.subscription.update(
@@ -814,7 +814,7 @@ async def test_webhook_invoice_marked_uncollectible(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -833,7 +833,7 @@ async def test_webhook_subscription_resumed(mock_billing_provider, plan_with_pri
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub
             await repos.subscription.update(
@@ -845,7 +845,7 @@ async def test_webhook_subscription_resumed(mock_billing_provider, plan_with_pri
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -866,7 +866,7 @@ async def test_webhook_subscription_resumed(mock_billing_provider, plan_with_pri
 async def test_webhook_unknown_event_type_is_noop(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             # Should not raise
             await service._dispatch("unknown.event.type", {"data": {"object": {}}})
@@ -874,7 +874,7 @@ async def test_webhook_unknown_event_type_is_noop(mock_billing_provider):
 
 async def test_process_webhook_idempotent(mock_billing_provider):
     """Second call with same event_id returns True without re-processing."""
-    from src.platform.billing.types import WebhookPayload
+    from src.billing.provider.types import WebhookPayload
 
     mock_billing_provider.construct_webhook_event.return_value = WebhookPayload(
         external_event_id="evt_idem123",
@@ -884,7 +884,7 @@ async def test_process_webhook_idempotent(mock_billing_provider):
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             result = await service.process_webhook(b"payload", "sig")
     assert result is True
@@ -892,7 +892,7 @@ async def test_process_webhook_idempotent(mock_billing_provider):
     # Process the same event again - should be idempotent
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             result2 = await service.process_webhook(b"payload", "sig")
     assert result2 is True
@@ -927,7 +927,7 @@ def test_get_period_field_returns_none_when_missing():
 async def test_get_plan_success(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             plans = await repos.plan.get_active_plans()
             assert plans
             service = PlanService(repos, mock_billing_provider)
@@ -946,14 +946,14 @@ async def test_start_checkout_inactive_price_raises(
     price_id = plan_with_price["price"]["id"]
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             price = await repos.plan_price.get(price_id)
             assert price is not None
             await repos.plan_price.update(price, is_active=False)
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             repos.subscription.set_organization_scope(1)
             service = SubscriptionService(repos, mock_billing_provider, _admin_auth())
             with pytest.raises(NotFoundException):
@@ -961,11 +961,11 @@ async def test_start_checkout_inactive_price_raises(
 
 
 async def test_start_checkout_no_external_price_id_raises(mock_billing_provider):
-    from src.platform.models.billing import Plan, PlanPrice
+    from src.billing.models.billing import Plan, PlanPrice
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             plan = Plan(
                 name="NoPriceExtCO",
                 description="",
@@ -997,7 +997,7 @@ async def test_start_checkout_active_paid_sub_raises(
     price_id = plan_with_price["price"]["id"]
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub
             await repos.subscription.update(
@@ -1009,7 +1009,7 @@ async def test_start_checkout_active_paid_sub_raises(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             repos.subscription.set_organization_scope(1)
             service = SubscriptionService(repos, mock_billing_provider, _admin_auth())
             with pytest.raises(AlreadyExistsException):
@@ -1022,7 +1022,7 @@ async def test_start_checkout_org_not_found_raises(
     price_id = plan_with_price["price"]["id"]
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             repos.subscription.set_organization_scope(9999)
             service = SubscriptionService(
                 repos, mock_billing_provider, _admin_auth(organization_id=9999)
@@ -1039,13 +1039,11 @@ async def test_start_checkout_org_not_found_raises(
 async def test_start_trial_trials_not_configured_raises(
     mock_billing_provider, plan_with_price, mocker
 ):
-    from src.platform.core.config import settings as _settings
-
-    mocker.patch.object(_settings, "billing_trial_period_days", 0)
+    mocker.patch.object(billing_settings, "billing_trial_period_days", 0)
     price_id = plan_with_price["price"]["id"]
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             repos.subscription.set_organization_scope(1)
             service = SubscriptionService(repos, mock_billing_provider, _admin_auth())
             with pytest.raises(ValidationException):
@@ -1056,7 +1054,7 @@ async def test_start_trial_org_not_found_raises(mock_billing_provider, plan_with
     price_id = plan_with_price["price"]["id"]
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             repos.subscription.set_organization_scope(9999)
             service = SubscriptionService(
                 repos, mock_billing_provider, _admin_auth(organization_id=9999)
@@ -1069,14 +1067,14 @@ async def test_start_trial_already_used_raises(mock_billing_provider, plan_with_
     price_id = plan_with_price["price"]["id"]
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
-            org = await repos.organization.get(1)
+            repos = BillingRepositoryManager(session)
+            org = await repos.billing_account.get_for_organization(1)
             assert org
-            await repos.organization.update(org, trial_used=True)
+            await repos.billing_account.update(org, trial_used=True)
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             repos.subscription.set_organization_scope(1)
             service = SubscriptionService(repos, mock_billing_provider, _admin_auth())
             with pytest.raises(ValidationException):
@@ -1089,7 +1087,7 @@ async def test_start_trial_existing_trialing_sub_raises(
     price_id = plan_with_price["price"]["id"]
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub
             await repos.subscription.update(
@@ -1101,7 +1099,7 @@ async def test_start_trial_existing_trialing_sub_raises(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             repos.subscription.set_organization_scope(1)
             service = SubscriptionService(repos, mock_billing_provider, _admin_auth())
             with pytest.raises(AlreadyExistsException):
@@ -1114,7 +1112,7 @@ async def test_start_trial_existing_active_paid_raises(
     price_id = plan_with_price["price"]["id"]
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub
             await repos.subscription.update(
@@ -1126,7 +1124,7 @@ async def test_start_trial_existing_active_paid_raises(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             repos.subscription.set_organization_scope(1)
             service = SubscriptionService(repos, mock_billing_provider, _admin_auth())
             with pytest.raises(AlreadyExistsException):
@@ -1137,7 +1135,7 @@ async def test_start_trial_success(mock_billing_provider, plan_with_price):
     price_id = plan_with_price["price"]["id"]
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             repos.subscription.set_organization_scope(1)
             service = SubscriptionService(repos, mock_billing_provider, _admin_auth())
             out = await service.start_trial(StartTrialIn(plan_price_id=price_id))
@@ -1152,7 +1150,7 @@ async def test_start_trial_success(mock_billing_provider, plan_with_price):
 async def test_get_current_subscription_no_active_sub_raises(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub
             await repos.subscription.update(
@@ -1161,7 +1159,7 @@ async def test_get_current_subscription_no_active_sub_raises(mock_billing_provid
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             repos.subscription.set_organization_scope(1)
             service = SubscriptionService(repos, mock_billing_provider, _admin_auth())
             with pytest.raises(NotFoundException):
@@ -1179,7 +1177,7 @@ async def test_resume_subscription_no_external_id_raises(
     price_id = plan_with_price["price"]["id"]
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub
             await repos.subscription.update(
@@ -1191,7 +1189,7 @@ async def test_resume_subscription_no_external_id_raises(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             repos.subscription.set_organization_scope(1)
             service = SubscriptionService(repos, mock_billing_provider, _admin_auth())
             with pytest.raises(ValidationException):
@@ -1207,7 +1205,7 @@ async def test_switch_plan_invalid_price_raises(mock_billing_provider, plan_with
     price_id = plan_with_price["price"]["id"]
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub
             await repos.subscription.update(
@@ -1223,7 +1221,7 @@ async def test_switch_plan_free_price_raises(mock_billing_provider, plan_with_pr
     price_id = plan_with_price["price"]["id"]
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             free_prices = [p for p in await repos.plan_price.get_all() if p.amount == 0]
             assert free_prices
             free_price_id = free_prices[0].id
@@ -1241,12 +1239,12 @@ async def test_switch_plan_free_price_raises(mock_billing_provider, plan_with_pr
 async def test_switch_plan_no_external_price_raises(
     mock_billing_provider, plan_with_price
 ):
-    from src.platform.models.billing import Plan, PlanPrice
+    from src.billing.models.billing import Plan, PlanPrice
 
     price_id = plan_with_price["price"]["id"]
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             plan2 = Plan(
                 name="NoPriceExtSP",
                 description="",
@@ -1283,7 +1281,7 @@ async def test_switch_plan_same_plan_raises(mock_billing_provider, plan_with_pri
     price_id = plan_with_price["price"]["id"]
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub
             await repos.subscription.update(
@@ -1307,7 +1305,7 @@ async def test_process_webhook_billing_exception_returns_false(
     BillingProviderException causes mark_failed and
     returns False (Stripe should retry).
     """
-    from src.platform.billing.types import WebhookPayload
+    from src.billing.provider.types import WebhookPayload
 
     mock_billing_provider.construct_webhook_event.return_value = WebhookPayload(
         external_event_id="evt_bill_err",
@@ -1316,13 +1314,13 @@ async def test_process_webhook_billing_exception_returns_false(
     )
 
     mocker.patch(
-        "src.platform.services.billing.webhooks.WebhookService._dispatch",
+        "src.billing.services.webhooks.WebhookService._dispatch",
         side_effect=BillingProviderException("provider down"),
     )
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             result = await service.process_webhook(b"payload", "sig")
     assert result is False
@@ -1335,7 +1333,7 @@ async def test_process_webhook_permanent_exception_returns_true(
     Unexpected exceptions are logged and acked
     (returns True) to stop Stripe retries.
     """
-    from src.platform.billing.types import WebhookPayload
+    from src.billing.provider.types import WebhookPayload
 
     mock_billing_provider.construct_webhook_event.return_value = WebhookPayload(
         external_event_id="evt_perm_err",
@@ -1344,13 +1342,13 @@ async def test_process_webhook_permanent_exception_returns_true(
     )
 
     mocker.patch(
-        "src.platform.services.billing.webhooks.WebhookService._dispatch",
+        "src.billing.services.webhooks.WebhookService._dispatch",
         side_effect=RuntimeError("unexpected bug"),
     )
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             result = await service.process_webhook(b"payload", "sig")
     assert result is True
@@ -1364,7 +1362,7 @@ async def test_process_webhook_permanent_exception_returns_true(
 async def test_handle_checkout_completed_no_subscription_id(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -1381,7 +1379,7 @@ async def test_handle_checkout_completed_no_subscription_id(mock_billing_provide
 async def test_handle_checkout_completed_org_not_found(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -1399,7 +1397,7 @@ async def test_handle_checkout_completed_stamps_customer_id(mock_billing_provide
     """Org found via metadata fallback gets its external_customer_id stamped."""
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -1414,8 +1412,8 @@ async def test_handle_checkout_completed_stamps_customer_id(mock_billing_provide
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
-            org = await repos.organization.get(1)
+            repos = BillingRepositoryManager(session)
+            org = await repos.billing_account.get_for_organization(1)
             assert org and org.external_customer_id == "cus_stamp_new"
 
 
@@ -1423,10 +1421,10 @@ async def test_handle_checkout_completed_no_active_sub(mock_billing_provider):
     """When org has no active subscription, handler is a no-op."""
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
-            org = await repos.organization.get(1)
+            repos = BillingRepositoryManager(session)
+            org = await repos.billing_account.get_for_organization(1)
             assert org
-            await repos.organization.update(org, external_customer_id="cus_nosub")
+            await repos.billing_account.update(org, external_customer_id="cus_nosub")
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub
             await repos.subscription.update(
@@ -1435,7 +1433,7 @@ async def test_handle_checkout_completed_no_active_sub(mock_billing_provider):
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -1455,14 +1453,14 @@ async def test_handle_checkout_completed_invalid_price_in_metadata(
     """Invalid plan_price_id in metadata is logged but does not raise."""
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
-            org = await repos.organization.get(1)
+            repos = BillingRepositoryManager(session)
+            org = await repos.billing_account.get_for_organization(1)
             assert org
-            await repos.organization.update(org, external_customer_id="cus_badmeta")
+            await repos.billing_account.update(org, external_customer_id="cus_badmeta")
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -1488,7 +1486,7 @@ async def test_webhook_subscription_updated_price_changed(
     price_id = plan_with_price["price"]["id"]
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub
             await repos.subscription.update(
@@ -1497,7 +1495,7 @@ async def test_webhook_subscription_updated_price_changed(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -1513,7 +1511,7 @@ async def test_webhook_subscription_updated_price_changed(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub and sub.plan_price_id == price_id
 
@@ -1526,7 +1524,7 @@ async def test_webhook_subscription_updated_price_changed(
 async def test_webhook_subscription_deleted_sub_not_found(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw = _make_webhook_raw(
                 "customer.subscription.deleted",
@@ -1547,7 +1545,7 @@ async def test_webhook_subscription_deleted_no_free_price_with_ts(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub
             await repos.subscription.update(
@@ -1561,7 +1559,7 @@ async def test_webhook_subscription_deleted_no_free_price_with_ts(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw = _make_webhook_raw(
                 "customer.subscription.deleted",
@@ -1571,7 +1569,7 @@ async def test_webhook_subscription_deleted_no_free_price_with_ts(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub is None  # canceled
 
@@ -1584,7 +1582,7 @@ async def test_webhook_subscription_deleted_no_free_price_no_ts(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub
             await repos.subscription.update(
@@ -1597,7 +1595,7 @@ async def test_webhook_subscription_deleted_no_free_price_no_ts(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw = _make_webhook_raw(
                 "customer.subscription.deleted",
@@ -1614,7 +1612,7 @@ async def test_webhook_subscription_deleted_no_free_price_no_ts(
 async def test_webhook_payment_method_attached_no_customer(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {"data": {"object": {"customer": None}}}
             await service._dispatch("payment_method.attached", raw)
@@ -1626,16 +1624,16 @@ async def test_webhook_payment_method_detached_no_change_when_no_payment_method(
     """has_payment_method=False org skips the provider call."""
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
-            org = await repos.organization.get(1)
+            repos = BillingRepositoryManager(session)
+            org = await repos.billing_account.get_for_organization(1)
             assert org
-            await repos.organization.update(
+            await repos.billing_account.update(
                 org, external_customer_id="cus_nopm", has_payment_method=False
             )
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -1656,7 +1654,7 @@ async def test_webhook_payment_method_detached_no_change_when_no_payment_method(
 async def test_webhook_invoice_payment_failed_no_sub(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -1673,7 +1671,7 @@ async def test_webhook_invoice_payment_failed_no_sub(mock_billing_provider):
 async def test_webhook_invoice_payment_succeeded_no_sub(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -1694,10 +1692,10 @@ async def test_webhook_invoice_payment_succeeded_via_customer_lookup(
     price_id = plan_with_price["price"]["id"]
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
-            org = await repos.organization.get(1)
+            repos = BillingRepositoryManager(session)
+            org = await repos.billing_account.get_for_organization(1)
             assert org
-            await repos.organization.update(org, external_customer_id="cus_inv_cust")
+            await repos.billing_account.update(org, external_customer_id="cus_inv_cust")
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub
             await repos.subscription.update(
@@ -1709,7 +1707,7 @@ async def test_webhook_invoice_payment_succeeded_via_customer_lookup(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -1724,7 +1722,7 @@ async def test_webhook_invoice_payment_succeeded_via_customer_lookup(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub and sub.status == "active"
 
@@ -1738,7 +1736,7 @@ async def test_webhook_subscription_created_sub_not_found(mock_billing_provider)
     """subscription.created for unknown customer is a no-op."""
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -1763,14 +1761,16 @@ async def test_webhook_subscription_created_with_trial_end(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
-            org = await repos.organization.get(1)
+            repos = BillingRepositoryManager(session)
+            org = await repos.billing_account.get_for_organization(1)
             assert org
-            await repos.organization.update(org, external_customer_id="cus_trial_cre")
+            await repos.billing_account.update(
+                org, external_customer_id="cus_trial_cre"
+            )
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -1788,8 +1788,8 @@ async def test_webhook_subscription_created_with_trial_end(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
-            org = await repos.organization.get(1)
+            repos = BillingRepositoryManager(session)
+            org = await repos.billing_account.get_for_organization(1)
             assert org and org.trial_used is True
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub and sub.trial_end is not None
@@ -1804,17 +1804,17 @@ async def test_handle_checkout_session_expired_restores_free(mock_billing_provid
     """Incomplete sub + free price > restored to free."""
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
-            org = await repos.organization.get(1)
+            repos = BillingRepositoryManager(session)
+            org = await repos.billing_account.get_for_organization(1)
             assert org
-            await repos.organization.update(org, external_customer_id="cus_exp_free")
+            await repos.billing_account.update(org, external_customer_id="cus_exp_free")
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub
             await repos.subscription.update(sub, status="incomplete")
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -1828,7 +1828,7 @@ async def test_handle_checkout_session_expired_restores_free(mock_billing_provid
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub and sub.status == "active"
             assert sub.external_subscription_id is None
@@ -1840,10 +1840,12 @@ async def test_handle_checkout_session_expired_no_free_price_cancels(
     """Incomplete sub + no free price > marked canceled."""
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
-            org = await repos.organization.get(1)
+            repos = BillingRepositoryManager(session)
+            org = await repos.billing_account.get_for_organization(1)
             assert org
-            await repos.organization.update(org, external_customer_id="cus_exp_nofreep")
+            await repos.billing_account.update(
+                org, external_customer_id="cus_exp_nofreep"
+            )
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub
             await repos.subscription.update(sub, status="incomplete")
@@ -1854,7 +1856,7 @@ async def test_handle_checkout_session_expired_no_free_price_cancels(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -1868,7 +1870,7 @@ async def test_handle_checkout_session_expired_no_free_price_cancels(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub is None  # was canceled
 
@@ -1884,7 +1886,7 @@ async def test_webhook_invoice_payment_action_required(
     price_id = plan_with_price["price"]["id"]
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub
             await repos.subscription.update(
@@ -1893,7 +1895,7 @@ async def test_webhook_invoice_payment_action_required(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -1915,7 +1917,7 @@ async def test_webhook_invoice_payment_action_required(
 async def test_webhook_invoice_marked_uncollectible_no_sub(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -1937,7 +1939,7 @@ async def test_webhook_invoice_marked_uncollectible_no_sub(mock_billing_provider
 async def test_webhook_subscription_trial_will_end_no_sub(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {"object": {"id": "sub_ghost_trial", "trial_end": None}}
@@ -1953,7 +1955,7 @@ async def test_webhook_subscription_trial_will_end_no_sub(mock_billing_provider)
 async def test_webhook_subscription_paused_no_sub(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -1979,7 +1981,7 @@ async def test_webhook_subscription_paused_trial_end_downgrade(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub
             await repos.subscription.update(
@@ -1988,7 +1990,7 @@ async def test_webhook_subscription_paused_trial_end_downgrade(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -2004,7 +2006,7 @@ async def test_webhook_subscription_paused_trial_end_downgrade(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             sub = await repos.subscription.get_active_for_organization(1)
             # Downgraded to free (external_subscription_id cleared)
             assert sub and sub.external_subscription_id is None
@@ -2023,7 +2025,7 @@ async def test_webhook_subscription_resumed_no_pause_collection_in_prev(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub
             await repos.subscription.update(
@@ -2032,7 +2034,7 @@ async def test_webhook_subscription_resumed_no_pause_collection_in_prev(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -2052,7 +2054,7 @@ async def test_webhook_subscription_resumed_sub_not_found(mock_billing_provider)
     """resumed with pause_collection in prev but sub not in DB: no-op."""
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -2081,7 +2083,7 @@ async def test_webhook_product_created_already_exists(
     ext_id = plan_with_price["plan"]["external_product_id"]
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -2096,7 +2098,7 @@ async def test_webhook_product_created_already_exists(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             plans = [
                 p
                 for p in await repos.plan.get_active_plans()
@@ -2108,7 +2110,7 @@ async def test_webhook_product_created_already_exists(
 async def test_webhook_product_updated_not_found(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -2125,7 +2127,7 @@ async def test_webhook_product_updated_no_changes(
     ext_id = plan_with_price["plan"]["external_product_id"]
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             # Send event with no name/description/active fields
             raw: dict[str, Any] = {"data": {"object": {"id": ext_id}}}
@@ -2138,7 +2140,7 @@ async def test_webhook_price_created_already_exists(
     ext_price_id = plan_with_price["price"]["external_price_id"]
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -2157,7 +2159,7 @@ async def test_webhook_price_created_already_exists(
 async def test_webhook_price_created_no_product_id(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {"object": {"id": "price_no_prod", "product": None}}
@@ -2168,7 +2170,7 @@ async def test_webhook_price_created_no_product_id(mock_billing_provider):
 async def test_webhook_price_created_plan_not_found(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -2182,7 +2184,7 @@ async def test_webhook_price_created_success(mock_billing_provider, plan_with_pr
     ext_prod_id = plan_with_price["plan"]["external_product_id"]
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -2199,7 +2201,7 @@ async def test_webhook_price_created_success(mock_billing_provider, plan_with_pr
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             new_price = await repos.plan_price.get_by_external_price_id("price_new_999")
             assert (
                 new_price and new_price.amount == 1999 and new_price.interval == "year"
@@ -2209,7 +2211,7 @@ async def test_webhook_price_created_success(mock_billing_provider, plan_with_pr
 async def test_webhook_price_updated_not_found(mock_billing_provider):
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {"object": {"id": "price_ghost_upd", "active": False}}
@@ -2224,7 +2226,7 @@ async def test_webhook_price_updated_no_active_field(
     ext_price_id = plan_with_price["price"]["external_price_id"]
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {"data": {"object": {"id": ext_price_id}}}
             await service._dispatch("price.updated", raw)
@@ -2234,7 +2236,7 @@ async def test_webhook_price_updated_success(mock_billing_provider, plan_with_pr
     ext_price_id = plan_with_price["price"]["external_price_id"]
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {"object": {"id": ext_price_id, "active": False}}
@@ -2243,7 +2245,7 @@ async def test_webhook_price_updated_success(mock_billing_provider, plan_with_pr
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             price = await repos.plan_price.get_by_external_price_id(ext_price_id)
             assert price and price.is_active is False
 
@@ -2256,7 +2258,7 @@ async def test_webhook_price_updated_success(mock_billing_provider, plan_with_pr
 async def test_usage_service_get_current_usage_empty():
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = UsageService(repos, _admin_auth())
             usage = await service.get_current_usage()
     assert usage.usage == []
@@ -2270,7 +2272,7 @@ async def test_usage_service_get_current_usage_empty():
 async def test_billing_maintenance_cleanup_stale_checkouts():
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = BillingMaintenanceService(repos)
             count = await service.cleanup_stale_checkouts()
     assert count >= 0
@@ -2292,7 +2294,7 @@ async def test_run_stale_checkout_cleanup_loop(mocker):
             raise asyncio.CancelledError()
 
     mocker.patch(
-        "src.platform.services.billing.maintenance.asyncio.sleep",
+        "src.billing.services.maintenance.asyncio.sleep",
         side_effect=mock_sleep,
     )
 
@@ -2314,14 +2316,14 @@ async def test_start_trial_inactive_price_raises(
     price_id = plan_with_price["price"]["id"]
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             price = await repos.plan_price.get(price_id)
             assert price is not None
             await repos.plan_price.update(price, is_active=False)
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             repos.subscription.set_organization_scope(1)
             service = SubscriptionService(repos, mock_billing_provider, _admin_auth())
             with pytest.raises(NotFoundException):
@@ -2335,7 +2337,7 @@ async def test_cancel_subscription_no_active_sub_raises(mock_billing_provider):
     """
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub
             await repos.subscription.update(
@@ -2344,7 +2346,7 @@ async def test_cancel_subscription_no_active_sub_raises(mock_billing_provider):
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             repos.subscription.set_organization_scope(1)
             service = SubscriptionService(repos, mock_billing_provider, _admin_auth())
             with pytest.raises(NotFoundException):
@@ -2355,7 +2357,7 @@ async def test_checkout_completed_invalid_org_id_in_metadata(mock_billing_provid
     """Invalid organization_id in metadata is caught silently (lines 500-501)."""
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -2373,7 +2375,7 @@ async def test_notify_subscription_managers_org_not_found(mock_billing_provider)
     """_notify_subscription_managers returns early when org not found."""
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             handlers = InvoiceWebhookHandlers(repos, mock_billing_provider)
             await handlers._notify_subscription_managers(
                 organization_id=9999,
@@ -2389,7 +2391,7 @@ async def test_invoice_no_sub_id_and_no_customer_returns_none(mock_billing_provi
     """
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -2403,10 +2405,10 @@ async def test_webhook_subscription_created_create_or_get_active(mock_billing_pr
     """subscription.created for org with no active sub creates one (line 754)."""
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
-            org = await repos.organization.get(1)
+            repos = BillingRepositoryManager(session)
+            org = await repos.billing_account.get_for_organization(1)
             assert org
-            await repos.organization.update(
+            await repos.billing_account.update(
                 org, external_customer_id="cus_no_active_sub"
             )
             # Cancel the existing subscription so
@@ -2419,7 +2421,7 @@ async def test_webhook_subscription_created_create_or_get_active(mock_billing_pr
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -2446,10 +2448,10 @@ async def test_webhook_subscription_created_trialing_via_sub_id(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
-            org = await repos.organization.get(1)
+            repos = BillingRepositoryManager(session)
+            org = await repos.billing_account.get_for_organization(1)
             assert org
-            await repos.organization.update(
+            await repos.billing_account.update(
                 org, external_customer_id="cus_trial_via_id"
             )
             sub = await repos.subscription.get_active_for_organization(1)
@@ -2460,7 +2462,7 @@ async def test_webhook_subscription_created_trialing_via_sub_id(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -2478,8 +2480,8 @@ async def test_webhook_subscription_created_trialing_via_sub_id(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
-            org = await repos.organization.get(1)
+            repos = BillingRepositoryManager(session)
+            org = await repos.billing_account.get_for_organization(1)
             assert org and org.trial_used is True
 
 
@@ -2487,7 +2489,7 @@ async def test_webhook_invoice_payment_action_required_no_sub(mock_billing_provi
     """invoice.payment_action_required with no matching sub is a no-op (line 832)."""
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -2513,7 +2515,7 @@ async def test_downgrade_to_free_no_free_price_cancels_via_stripe(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub
             await repos.subscription.update(
@@ -2526,7 +2528,7 @@ async def test_downgrade_to_free_no_free_price_cancels_via_stripe(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -2554,7 +2556,7 @@ async def test_webhook_subscription_paused_trial_end_no_free_price(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub
             await repos.subscription.update(
@@ -2569,7 +2571,7 @@ async def test_webhook_subscription_paused_trial_end_no_free_price(
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {
@@ -2591,7 +2593,7 @@ async def test_webhook_product_updated_with_description(
     ext_id = plan_with_price["plan"]["external_product_id"]
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = WebhookService(repos, mock_billing_provider)
             raw: dict[str, Any] = {
                 "data": {"object": {"id": ext_id, "description": "New description"}}
@@ -2613,11 +2615,11 @@ async def test_run_stale_checkout_cleanup_loop_handles_exception(mocker):
             raise asyncio.CancelledError()
 
     mocker.patch(
-        "src.platform.services.billing.maintenance.asyncio.sleep",
+        "src.billing.services.maintenance.asyncio.sleep",
         side_effect=mock_sleep,
     )
     mocker.patch(
-        "src.platform.services.billing.maintenance.BillingMaintenanceService.cleanup_stale_checkouts",
+        "src.billing.services.maintenance.BillingMaintenanceService.cleanup_stale_checkouts",
         side_effect=RuntimeError("simulated db error"),
     )
 
@@ -2636,7 +2638,7 @@ async def _age_organization(organization_id: int, days: int) -> None:
     """Backdate an organization so it clears the reminder delay."""
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             organization = await repos.organization.get(organization_id)
             assert organization
             organization.created_at = datetime.now(UTC) - timedelta(days=days)
@@ -2645,13 +2647,15 @@ async def _age_organization(organization_id: int, days: int) -> None:
 async def _run_trial_reminders() -> int:
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = BillingMaintenanceService(RepositoryManager(session))
+            service = BillingMaintenanceService(BillingRepositoryManager(session))
             return await service.send_trial_reminders()
 
 
 async def test_send_trial_reminders_emails_managers_once(mocker):
-    send = mocker.patch("src.platform.services.billing.common.queue_email")
-    await _age_organization(1, days=settings.billing_trial_reminder_delay_days + 1)
+    send = mocker.patch("src.billing.services.common.queue_email")
+    await _age_organization(
+        1, days=billing_settings.billing_trial_reminder_delay_days + 1
+    )
 
     count = await _run_trial_reminders()
 
@@ -2659,10 +2663,12 @@ async def test_send_trial_reminders_emails_managers_once(mocker):
     templates = {call.kwargs["email_template"] for call in send.call_args_list}
     assert templates == {"trial-available"}
     data = send.call_args_list[0].kwargs["data"]
-    assert data["trial_days"] == settings.billing_trial_period_days
+    assert data["trial_days"] == billing_settings.billing_trial_period_days
 
     async with TestSessionLocal() as session:
-        organization = await RepositoryManager(session).organization.get(1)
+        organization = await BillingRepositoryManager(
+            session
+        ).billing_account.get_for_organization(1)
         assert organization and organization.trial_reminder_sent_at is not None
 
     # Second pass is a no-op - the stamp excludes the organization.
@@ -2672,7 +2678,7 @@ async def test_send_trial_reminders_emails_managers_once(mocker):
 
 
 async def test_send_trial_reminders_skips_recent_signups(mocker):
-    send = mocker.patch("src.platform.services.billing.common.queue_email")
+    send = mocker.patch("src.billing.services.common.queue_email")
 
     # Organizations are created "now" by the fixture, so none clear the delay.
     assert await _run_trial_reminders() == 0
@@ -2680,28 +2686,34 @@ async def test_send_trial_reminders_skips_recent_signups(mocker):
 
 
 async def test_send_trial_reminders_skips_used_trial(mocker):
-    send = mocker.patch("src.platform.services.billing.common.queue_email")
-    await _age_organization(1, days=settings.billing_trial_reminder_delay_days + 1)
+    send = mocker.patch("src.billing.services.common.queue_email")
+    await _age_organization(
+        1, days=billing_settings.billing_trial_reminder_delay_days + 1
+    )
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             for organization_id in (1, 2):
-                organization = await repos.organization.get(organization_id)
+                organization = await repos.billing_account.get_for_organization(
+                    organization_id
+                )
                 assert organization
-                await repos.organization.update(organization, trial_used=True)
+                await repos.billing_account.update(organization, trial_used=True)
 
     assert await _run_trial_reminders() == 0
     send.assert_not_called()
 
 
 async def test_send_trial_reminders_skips_trialing_subscription(mocker):
-    send = mocker.patch("src.platform.services.billing.common.queue_email")
-    await _age_organization(1, days=settings.billing_trial_reminder_delay_days + 1)
+    send = mocker.patch("src.billing.services.common.queue_email")
+    await _age_organization(
+        1, days=billing_settings.billing_trial_reminder_delay_days + 1
+    )
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             sub = await repos.subscription.get_active_for_organization(1)
             assert sub
             await repos.subscription.update(sub, status="trialing")
@@ -2710,14 +2722,16 @@ async def test_send_trial_reminders_skips_trialing_subscription(mocker):
 
     reminded = {call.kwargs["address"] for call in send.call_args_list}
     async with TestSessionLocal() as session:
-        organization = await RepositoryManager(session).organization.get(1)
+        organization = await BillingRepositoryManager(
+            session
+        ).billing_account.get_for_organization(1)
         assert organization and organization.trial_reminder_sent_at is None
     assert all("organization1" not in address for address in reminded)
 
 
 async def test_send_trial_reminders_disabled_when_trials_off(mocker):
-    send = mocker.patch("src.platform.services.billing.common.queue_email")
-    mocker.patch.object(settings, "billing_trial_period_days", 0)
+    send = mocker.patch("src.billing.services.common.queue_email")
+    mocker.patch.object(billing_settings, "billing_trial_period_days", 0)
     await _age_organization(1, days=30)
 
     assert await _run_trial_reminders() == 0
@@ -2735,11 +2749,11 @@ async def test_run_trial_reminder_loop_handles_exception(mocker):
             raise asyncio.CancelledError()
 
     mocker.patch(
-        "src.platform.services.billing.maintenance.asyncio.sleep",
+        "src.billing.services.maintenance.asyncio.sleep",
         side_effect=mock_sleep,
     )
     mocker.patch(
-        "src.platform.services.billing.maintenance.BillingMaintenanceService.send_trial_reminders",
+        "src.billing.services.maintenance.BillingMaintenanceService.send_trial_reminders",
         side_effect=RuntimeError("simulated db error"),
     )
 
@@ -2761,19 +2775,19 @@ async def test_checkout_and_trial_do_not_wait_for_a_locked_subscription(
     """Another transaction (e.g. a webhook) holding the subscription row must
     not block starting a checkout or trial."""
     mocker.patch(
-        "src.platform.services.billing.subscriptions.settings.billing_trial_period_days",
+        "src.billing.services.subscriptions.billing_settings.billing_trial_period_days",
         14,
     )
     price_id = plan_with_price["price"]["id"]
 
     async with TestSessionLocal() as webhook_session, webhook_session.begin():
-        webhook_repos = RepositoryManager(webhook_session)
+        webhook_repos = BillingRepositoryManager(webhook_session)
         await webhook_repos.subscription.get_active_for_organization_locked(1)
 
         async with TestSessionLocal() as session, session.begin():
             # Fail fast rather than hang if the flow does wait for the row.
             await session.execute(text("SET LOCAL lock_timeout = '2s'"))
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             service = SubscriptionService(repos, mock_billing_provider, _admin_auth())
             if flow == "checkout":
                 result = await service.start_checkout(
@@ -2793,10 +2807,10 @@ async def test_checkout_and_trial_do_not_wait_for_a_locked_subscription(
 
 async def _org_with_paid_subscription(price_id: int) -> None:
     async with TestSessionLocal() as session, session.begin():
-        repos = RepositoryManager(session)
-        org = await repos.organization.get(1)
+        repos = BillingRepositoryManager(session)
+        org = await repos.billing_account.get_for_organization(1)
         assert org
-        await repos.organization.update(org, external_customer_id="cus_dup")
+        await repos.billing_account.update(org, external_customer_id="cus_dup")
         sub = await repos.subscription.get_active_for_organization(1)
         assert sub
         await repos.subscription.update(
@@ -2809,15 +2823,17 @@ async def _org_with_paid_subscription(price_id: int) -> None:
 
 async def _dispatch(mock_billing_provider, event_type: str, obj: dict) -> None:
     async with TestSessionLocal() as session, session.begin():
-        service = WebhookService(RepositoryManager(session), mock_billing_provider)
+        service = WebhookService(
+            BillingRepositoryManager(session), mock_billing_provider
+        )
         await service._dispatch(event_type, {"data": {"object": obj}})
 
 
 async def _tracked_subscription() -> tuple[str | None, int | None]:
     async with TestSessionLocal() as session:
-        sub = await RepositoryManager(session).subscription.get_active_for_organization(
-            1
-        )
+        sub = await BillingRepositoryManager(
+            session
+        ).subscription.get_active_for_organization(1)
         assert sub
         return sub.external_subscription_id, sub.plan_price_id
 
@@ -2857,7 +2873,7 @@ async def test_duplicate_subscription_is_refunded_and_canceled(
     price_id = plan_with_price["price"]["id"]
     await _org_with_paid_subscription(price_id)
     mock_billing_provider.cancel_duplicate_subscription.return_value = 9900
-    send_email = mocker.patch("src.platform.services.billing.common.queue_email")
+    send_email = mocker.patch("src.billing.services.common.queue_email")
 
     for event_type, obj in events:
         await _dispatch(mock_billing_provider, event_type, obj)
@@ -2894,10 +2910,10 @@ async def test_first_paid_subscription_still_replaces_the_free_plan(
         {**DUPLICATE_CREATED, "id": "sub_first", "customer": "cus_first"},
     )
     async with TestSessionLocal() as session, session.begin():
-        repos = RepositoryManager(session)
-        org = await repos.organization.get(1)
+        repos = BillingRepositoryManager(session)
+        org = await repos.billing_account.get_for_organization(1)
         assert org
-        await repos.organization.update(org, external_customer_id="cus_first")
+        await repos.billing_account.update(org, external_customer_id="cus_first")
     await _dispatch(
         mock_billing_provider,
         "customer.subscription.created",
@@ -2926,13 +2942,13 @@ async def test_first_paid_subscription_still_replaces_the_free_plan(
 async def test_webhook_audit_entry_names_the_events_organization(
     event_id, obj, expected_organization_id, mock_billing_provider
 ):
-    from src.platform.billing.types import WebhookPayload
+    from src.billing.provider.types import WebhookPayload
 
     async with TestSessionLocal() as session, session.begin():
-        repos = RepositoryManager(session)
-        org = await repos.organization.get(1)
+        repos = BillingRepositoryManager(session)
+        org = await repos.billing_account.get_for_organization(1)
         assert org
-        await repos.organization.update(org, external_customer_id="cus_audit")
+        await repos.billing_account.update(org, external_customer_id="cus_audit")
 
     # An event type no handler acts on: only the audit entry is under test.
     mock_billing_provider.construct_webhook_event.return_value = WebhookPayload(
@@ -2941,7 +2957,9 @@ async def test_webhook_audit_entry_names_the_events_organization(
         raw={"data": {"object": obj}},
     )
     async with TestSessionLocal() as session, session.begin():
-        service = WebhookService(RepositoryManager(session), mock_billing_provider)
+        service = WebhookService(
+            BillingRepositoryManager(session), mock_billing_provider
+        )
         assert await service.process_webhook(b"payload", "sig") is True
 
     async with TestSessionLocal() as session:

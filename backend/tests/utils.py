@@ -3,6 +3,9 @@ from contextlib import ExitStack, contextmanager
 from datetime import UTC, datetime, timedelta
 from unittest.mock import patch
 
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 
 @contextmanager
 def advance_clock(*targets: str, seconds: int = 3) -> Iterator[None]:
@@ -85,3 +88,13 @@ def assert_pagination(
     assert rs["page_number"] == page_number
     assert rs["page_size"] == page_size
     assert rs["total"] == total
+
+
+async def get_billing_account(session: AsyncSession, organization_id: int):
+    """The organization's billing account (`src.billing`), in ``session``."""
+    from src.billing.models.account import BillingAccount
+
+    rs = await session.execute(
+        select(BillingAccount).where(BillingAccount.organization_id == organization_id)
+    )
+    return rs.scalar_one()

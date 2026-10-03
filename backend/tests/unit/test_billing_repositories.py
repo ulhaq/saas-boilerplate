@@ -1,29 +1,27 @@
-"""Tests for billing repositories, billing/dependencies.py and require_limit."""
+"""Tests for billing repositories, the provider factory, plan entitlements and
+the platform's require_limit / track_usage over them."""
 
 from datetime import UTC, date, datetime, timedelta
 from enum import StrEnum
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 
-from src.platform.billing.dependencies import (
-    _current_period_start,
-    get_billing_provider,
-    track_usage,
-)
-from src.platform.billing.stripe_provider import StripeProvider
-from src.platform.core.exceptions import LimitExceededException
-from src.platform.core.security import Auth
-from src.platform.enums import Permission as PermEnum
-from src.platform.enums import PlanFeature
-from src.platform.models.billing import (
+from src.billing.models.billing import (
     Plan,
     PlanPrice,
     PlanSetting,
     WebhookEvent,
 )
+from src.billing.provider.dependencies import get_billing_provider
+from src.billing.provider.stripe_provider import StripeProvider
+from src.billing.repositories.manager import BillingRepositoryManager
+from src.billing.services.entitlements import PlanEntitlements, current_period_start
+from src.platform.core.exceptions import LimitExceededException
+from src.platform.core.security import Auth
+from src.platform.enums import Permission as PermEnum
+from src.platform.enums import PlanFeature
 from src.platform.models.organization import Organization
-from src.platform.repositories.repository_manager import RepositoryManager
 from tests.conftest import TestSessionLocal
 
 
@@ -53,76 +51,99 @@ def test_get_billing_provider_returns_stripe_provider():
 
 
 def test_current_period_start_is_first_of_month():
-    d = _current_period_start()
+    d = current_period_start()
     assert d.day == 1
     assert isinstance(d, date)
 
 
-async def test_require_limit_no_limit_defined_passes():
-    """When no limit is configured, the check passes without raising."""
+# ---------------------------------------------------------------------------
+# require_limit / track_usage (platform) over the installed Entitlements
+# ---------------------------------------------------------------------------
+
+
+class _FakeEntitlements:
+    def __init__(self, limit: int | None, usage: int = 0) -> None:
+        self._limit = limit
+        self._usage = usage
+        self.recorded: list[tuple[int, str]] = []
+
+    async def has_feature(self, db, organization_id, feature) -> bool:
+        return True
+
+    async def limit(self, db, organization_id, metric) -> int | None:
+        return self._limit
+
+    async def usage(self, db, organization_id, metric) -> int:
+        return self._usage
+
+    async def record_usage(self, db, organization_id, metric) -> int:
+        self.recorded.append((organization_id, metric))
+        return len(self.recorded)
+
+
+def _install(mocker, entitlements: _FakeEntitlements) -> None:
+    mocker.patch(
+        "src.platform.services.access.composition.current",
+        return_value=MagicMock(entitlements=entitlements),
+    )
+
+
+@pytest.mark.parametrize(
+    ("limit", "usage"),
+    [(None, 10_000), (100, 50)],
+    ids=["unlimited", "within the limit"],
+)
+async def test_require_limit_passes(mocker, limit, usage):
     from src.platform.services.access import require_limit
 
-    repos = MagicMock()
-    repos.plan_setting.get_for_organization = AsyncMock(return_value=None)
-    auth = _admin_auth()
-
+    _install(mocker, _FakeEntitlements(limit, usage))
     check = require_limit(_Metric.API_CALLS)
-    # Directly call the inner _check function
-    _ = check.__wrapped__ if hasattr(check, "__wrapped__") else None
-    # require_limit returns the inner _check coroutine function directly
-    await check(repos=repos, current_user=auth)
+    await check(db=MagicMock(), current_user=_admin_auth())  # should not raise
 
 
-async def test_require_limit_within_limit_passes():
+async def test_require_limit_exceeded_raises(mocker):
     from src.platform.services.access import require_limit
 
-    limit = MagicMock()
-    limit.value = 100
-    repos = MagicMock()
-    repos.plan_setting.get_for_organization = AsyncMock(return_value=limit)
-    repos.plan_usage.get_count = AsyncMock(return_value=50)
-    auth = _admin_auth()
-
-    check = require_limit(_Metric.API_CALLS)
-    await check(repos=repos, current_user=auth)  # should not raise
-
-
-async def test_require_limit_unlimited_passes():
-    """limit.value = None means unlimited."""
-    from src.platform.services.access import require_limit
-
-    limit = MagicMock()
-    limit.value = None
-    repos = MagicMock()
-    repos.plan_setting.get_for_organization = AsyncMock(return_value=limit)
-    auth = _admin_auth()
-
-    check = require_limit(_Metric.API_CALLS)
-    await check(repos=repos, current_user=auth)
-
-
-async def test_require_limit_exceeded_raises():
-    from src.platform.services.access import require_limit
-
-    limit = MagicMock()
-    limit.value = 10
-    repos = MagicMock()
-    repos.plan_setting.get_for_organization = AsyncMock(return_value=limit)
-    repos.plan_usage.get_count = AsyncMock(return_value=10)
-    auth = _admin_auth()
-
+    _install(mocker, _FakeEntitlements(limit=10, usage=10))
     check = require_limit(_Metric.API_CALLS)
     with pytest.raises(LimitExceededException):
-        await check(repos=repos, current_user=auth)
+        await check(db=MagicMock(), current_user=_admin_auth())
 
 
-async def test_track_usage_calls_increment():
-    repos = MagicMock()
-    repos.plan_usage.increment = AsyncMock(return_value=5)
+async def test_track_usage_records_one_use(mocker):
+    from src.platform.services.access import track_usage
 
-    result = await track_usage(repos, organization_id=1, metric=_Metric.API_CALLS)
-    assert result == 5
-    repos.plan_usage.increment.assert_awaited_once()
+    entitlements = _FakeEntitlements(limit=None)
+    _install(mocker, entitlements)
+
+    assert await track_usage(MagicMock(), 1, _Metric.API_CALLS) == 1
+    assert entitlements.recorded == [(1, _Metric.API_CALLS)]
+
+
+# ---------------------------------------------------------------------------
+# PlanEntitlements (billing): plan features, plan settings, usage counters
+# ---------------------------------------------------------------------------
+
+
+async def test_plan_entitlements_read_the_organizations_plan():
+    entitlements = PlanEntitlements()
+    async with TestSessionLocal() as session, session.begin():
+        free_price = await BillingRepositoryManager(session).plan_price.get_free_price()
+        assert free_price
+        session.add(PlanSetting(plan_id=free_price.plan_id, key="api_calls", value=2))
+        await session.flush()
+
+        # Seeded: the free plan includes api_token and has no seat limit.
+        assert await entitlements.has_feature(session, 1, PlanFeature.API_TOKEN)
+        assert not await entitlements.has_feature(session, 1, "sso")
+        assert await entitlements.limit(session, 1, "api_calls") == 2
+        assert await entitlements.limit(session, 1, "seats") is None
+
+        assert await entitlements.usage(session, 1, "api_calls") == 0
+        assert await entitlements.record_usage(session, 1, "api_calls") == 1
+        assert await entitlements.record_usage(session, 1, "api_calls") == 2
+        assert await entitlements.usage(session, 1, "api_calls") == 2
+        assert await entitlements.usage(session, 2, "api_calls") == 0
 
 
 # ---------------------------------------------------------------------------
@@ -138,7 +159,7 @@ async def test_plan_get_by_external_product_id_found():
             )
             session.add(plan)
             await session.flush()
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             result = await repos.plan.get_by_external_product_id("prod_abc")
             assert result is not None
             assert result.external_product_id == "prod_abc"
@@ -147,7 +168,7 @@ async def test_plan_get_by_external_product_id_found():
 async def test_plan_get_by_external_product_id_not_found():
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             result = await repos.plan.get_by_external_product_id("prod_nonexistent")
             assert result is None
 
@@ -155,7 +176,7 @@ async def test_plan_get_by_external_product_id_not_found():
 async def test_plan_get_active_plans():
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             plans = await repos.plan.get_active_plans()
             assert len(plans) >= 1
             assert all(p.is_active for p in plans)
@@ -169,7 +190,7 @@ async def test_plan_get_active_plans():
 async def test_plan_price_get_by_plan():
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             # Get the seeded free plan (id=1)
             plans = await repos.plan.get_active_plans()
             free_plan = plans[0]
@@ -194,7 +215,7 @@ async def test_plan_price_get_by_external_price_id_found():
             )
             session.add(price)
             await session.flush()
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             result = await repos.plan_price.get_by_external_price_id("price_ext_abc")
             assert result is not None
             assert result.external_price_id == "price_ext_abc"
@@ -203,7 +224,7 @@ async def test_plan_price_get_by_external_price_id_found():
 async def test_plan_price_get_by_external_price_id_not_found():
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             result = await repos.plan_price.get_by_external_price_id(
                 "price_nonexistent"
             )
@@ -213,7 +234,7 @@ async def test_plan_price_get_by_external_price_id_not_found():
 async def test_plan_price_get_free_price():
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             result = await repos.plan_price.get_free_price()
             assert result is not None
             assert result.amount == 0
@@ -238,7 +259,7 @@ async def test_plan_price_get_highest_price():
             )
             session.add(price)
             await session.flush()
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             result = await repos.plan_price.get_highest_price()
             assert result is not None
             assert result.amount == 999
@@ -247,7 +268,7 @@ async def test_plan_price_get_highest_price():
 async def test_plan_price_get_active_by_plan():
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             plans = await repos.plan.get_active_plans()
             free_plan = plans[0]
             prices = await repos.plan_price.get_active_by_plan(free_plan.id)
@@ -259,7 +280,7 @@ async def test_plan_price_has_active_subscriptions_true():
     """The seeded free price has an active subscription for org 1."""
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             free_price = await repos.plan_price.get_free_price()
             assert free_price is not None
             result = await repos.plan_price.has_active_subscriptions(free_price.id)
@@ -282,7 +303,7 @@ async def test_plan_price_has_active_subscriptions_false():
             )
             session.add(price)
             await session.flush()
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             result = await repos.plan_price.has_active_subscriptions(price.id)
             assert result is False
 
@@ -296,7 +317,7 @@ async def test_plan_feature_get_features_for_organization():
     """Org 1 has an active free subscription; free plan has API_TOKEN feature."""
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             features = await repos.plan_feature.get_features_for_organization(1)
             assert PlanFeature.API_TOKEN in features
 
@@ -309,7 +330,7 @@ async def test_plan_feature_get_features_for_organization():
 async def test_subscription_get_active_for_organization_found():
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             repos.subscription.set_organization_scope(1)
             result = await repos.subscription.get_active_for_organization(1)
             assert result is not None
@@ -319,7 +340,7 @@ async def test_subscription_get_active_for_organization_found():
 async def test_subscription_get_active_for_organization_not_found():
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             result = await repos.subscription.get_active_for_organization(9999)
             assert result is None
 
@@ -327,7 +348,7 @@ async def test_subscription_get_active_for_organization_not_found():
 async def test_subscription_get_active_for_organization_locked():
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             repos.subscription.set_organization_scope(1)
             result = await repos.subscription.get_active_for_organization_locked(1)
             assert result is not None
@@ -335,7 +356,7 @@ async def test_subscription_get_active_for_organization_locked():
 
 async def _fresh_org(session) -> int:
     """Create and flush a new organization, returning its id."""
-    org = Organization(name="Temp Org", billing_email="billing@example.org")
+    org = Organization(name="Temp Org")
     session.add(org)
     await session.flush()
     return org.id
@@ -345,7 +366,7 @@ async def test_subscription_get_by_external_subscription_id_found():
     async with TestSessionLocal() as session:
         async with session.begin():
             org_id = await _fresh_org(session)
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             free_price = await repos.plan_price.get_free_price()
             assert free_price is not None
             sub = await repos.subscription.create(
@@ -364,7 +385,7 @@ async def test_subscription_get_by_external_subscription_id_found():
 async def test_subscription_get_by_external_subscription_id_not_found():
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             result = await repos.subscription.get_by_external_subscription_id(
                 "sub_nope"
             )
@@ -375,7 +396,7 @@ async def test_subscription_get_by_external_subscription_id_locked():
     async with TestSessionLocal() as session:
         async with session.begin():
             org_id = await _fresh_org(session)
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             free_price = await repos.plan_price.get_free_price()
             assert free_price is not None
             await repos.subscription.create(
@@ -394,7 +415,7 @@ async def test_subscription_get_stale_incomplete():
     async with TestSessionLocal() as session:
         async with session.begin():
             org_id = await _fresh_org(session)
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             free_price = await repos.plan_price.get_free_price()
             assert free_price is not None
             stale_sub = await repos.subscription.create(
@@ -417,7 +438,7 @@ async def test_subscription_bulk_cancel_stale_incomplete():
     async with TestSessionLocal() as session:
         async with session.begin():
             org_id = await _fresh_org(session)
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             free_price = await repos.plan_price.get_free_price()
             assert free_price is not None
             stale_sub = await repos.subscription.create(
@@ -437,7 +458,7 @@ async def test_subscription_bulk_cancel_stale_incomplete():
 async def test_subscription_create_or_get_active():
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             free_price = await repos.plan_price.get_free_price()
             assert free_price is not None
             sub = await repos.subscription.create_or_get_active(
@@ -457,7 +478,7 @@ async def test_plan_setting_get_for_organization():
     """Create a limit for the free plan, verify it's returned for org 1's active sub."""
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             free_price = await repos.plan_price.get_free_price()
             assert free_price is not None
             plan_id = free_price.plan_id
@@ -473,7 +494,7 @@ async def test_plan_setting_get_for_organization():
 async def test_plan_setting_get_settings_for_organization():
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             free_price = await repos.plan_price.get_free_price()
             assert free_price is not None
             plan_id = free_price.plan_id
@@ -493,7 +514,7 @@ async def test_plan_setting_get_settings_for_organization():
 async def test_plan_usage_get_count_zero():
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             count = await repos.plan_usage.get_count(
                 organization_id=1,
                 metric=_Metric.API_CALLS,
@@ -505,7 +526,7 @@ async def test_plan_usage_get_count_zero():
 async def test_plan_usage_get_for_organization_empty():
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             records = await repos.plan_usage.get_for_organization(
                 organization_id=1,
                 period_start=date.today(),
@@ -521,7 +542,7 @@ async def test_plan_usage_get_for_organization_empty():
 async def _create_webhook_event(
     session, external_event_id: str = "evt_test"
 ) -> WebhookEvent:
-    repos = RepositoryManager(session)
+    repos = BillingRepositoryManager(session)
     return await repos.webhook_event.create(
         external_event_id=external_event_id,
         event_type="customer.subscription.updated",
@@ -533,7 +554,7 @@ async def test_webhook_event_get_by_external_event_id_found():
     async with TestSessionLocal() as session:
         async with session.begin():
             event = await _create_webhook_event(session, "evt_find_me")
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             result = await repos.webhook_event.get_by_external_event_id("evt_find_me")
             assert result is not None
             assert result.id == event.id
@@ -542,7 +563,7 @@ async def test_webhook_event_get_by_external_event_id_found():
 async def test_webhook_event_get_by_external_event_id_not_found():
     async with TestSessionLocal() as session:
         async with session.begin():
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             result = await repos.webhook_event.get_by_external_event_id("evt_nope")
             assert result is None
 
@@ -551,7 +572,7 @@ async def test_webhook_event_mark_processed():
     async with TestSessionLocal() as session:
         async with session.begin():
             event = await _create_webhook_event(session, "evt_process_me")
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             updated = await repos.webhook_event.mark_processed(event)
             assert updated.status == "processed"
             assert updated.processed_at is not None
@@ -561,7 +582,7 @@ async def test_webhook_event_mark_failed():
     async with TestSessionLocal() as session:
         async with session.begin():
             event = await _create_webhook_event(session, "evt_fail_me")
-            repos = RepositoryManager(session)
+            repos = BillingRepositoryManager(session)
             updated = await repos.webhook_event.mark_failed(
                 event, "something went wrong"
             )

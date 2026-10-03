@@ -11,8 +11,8 @@
       <Button size="sm" variant="outline" @click="$emit('dismiss')">
         {{ $t('common.maybeLater') }}
       </Button>
-      <Button size="sm" as-child>
-        <RouterLink to="/settings/billing">{{ $t('common.upgradePlan') }}</RouterLink>
+      <Button v-if="appConfig.upgradeRoute" size="sm" as-child>
+        <RouterLink :to="appConfig.upgradeRoute">{{ $t('common.upgradePlan') }}</RouterLink>
       </Button>
     </div>
   </div>
@@ -21,6 +21,7 @@
 <script setup lang="ts">
 import { Lock } from 'lucide-vue-next'
 import { Button } from '@/platform/components/ui/button'
+import { appConfig } from '@/platform/config'
 
 defineProps<{
   title: string

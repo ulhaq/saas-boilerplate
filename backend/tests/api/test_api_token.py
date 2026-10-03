@@ -6,9 +6,9 @@ from fastapi.testclient import TestClient
 from httpx import Headers, Response
 from sqlalchemy import delete, select
 
+from src.billing.models.billing import PlanFeature as PlanFeatureModel
 from src.main import app
 from src.platform.models.api_token import ApiToken
-from src.platform.models.billing import PlanFeature as PlanFeatureModel
 from tests.conftest import TestSessionLocal
 
 # ── helpers ──────────────────────────────────────────────────────────────────

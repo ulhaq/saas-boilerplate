@@ -1,10 +1,8 @@
-import logging
 from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import Depends
 
-from src.platform.billing.dependencies import BillingProviderDep
 from src.platform.core import composition
 from src.platform.core.config import settings
 from src.platform.core.exceptions import (
@@ -30,8 +28,6 @@ from src.platform.schemas.organization import (
 from src.platform.schemas.user import UserOut
 from src.platform.services.access import authenticate
 from src.platform.services.base import ResourceService
-
-log = logging.getLogger(__name__)
 
 
 async def setup_new_organization(
@@ -66,21 +62,12 @@ async def setup_new_organization(
             role, *[permission_map[p] for p in role_permissions if p in permission_map]
         )
 
-    # Create a local active free subscription. No Stripe customer or subscription
-    # is created here - the free plan is local-only. A Stripe customer is created
-    # when the user starts a trial or paid checkout.
-    free_price = await repos.plan_price.get_free_price()
-    if free_price:
-        await repos.subscription.create(
-            organization_id=organization.id,
-            plan_price_id=free_price.id,
-            status="active",
-        )
-    else:
-        log.warning(
-            "No free plan found - skipping auto-subscription for organization %s",
-            organization.id,
-        )
+    await emit(
+        HookEvent.ORGANIZATION_CREATED,
+        repos=repos,
+        organization_id=organization.id,
+        user_id=user.id,
+    )
 
 
 class OrganizationService(
@@ -97,11 +84,9 @@ class OrganizationService(
         self,
         repos: Annotated[RepositoryManager, Depends()],
         current_user: Annotated[Auth, Depends(authenticate)],
-        provider: BillingProviderDep,
     ) -> None:
         self.repo = repos.organization
         self.current_user = current_user
-        self.provider = provider
         super().__init__(repos)
 
     async def get(self, identifier: int, include_deleted: bool = False) -> Organization:
@@ -165,9 +150,7 @@ class OrganizationService(
         if existing is not None and existing.deleted_at is not None:
             organization = await self.repo.restore(existing)
         else:
-            organization = await self.repo.create(
-                name=schema_in.name, billing_email=self.current_user.email
-            )
+            organization = await self.repo.create(name=schema_in.name)
 
         await self.repos.user_organization.create(
             user_id=self.current_user.id,
@@ -232,15 +215,11 @@ class OrganizationService(
                 "You can only delete your active organization"
             )
 
-        subscription = await self.repos.subscription.get_active_for_organization(
-            identifier
+        await emit(
+            HookEvent.ORGANIZATION_DELETING,
+            repos=self.repos,
+            organization_id=identifier,
         )
-        if subscription and subscription.external_subscription_id:
-            raise PermissionDeniedException(
-                "Cannot delete an organization with an active subscription."
-                " Cancel the subscription first.",
-                error_code=ErrorCode.SUBSCRIPTION_ALREADY_ACTIVE,
-            )
 
         # Load members before deletion so the DB cascade hasn't removed the rows yet
         memberships = (
@@ -318,7 +297,7 @@ class OrganizationService(
         if schema_in.user_id == self.current_user.id:
             raise PermissionDeniedException("Cannot transfer ownership to yourself")
 
-        organization = await self.get(organization_id)
+        await self.get(organization_id)
 
         membership = await self.repos.user_organization.get_by_user_and_organization(
             schema_in.user_id, organization_id
@@ -349,7 +328,9 @@ class OrganizationService(
             },
         )
 
-        if organization.external_customer_id:
-            await self.provider.update_customer(
-                organization.external_customer_id, email=new_owner.email
-            )
+        await emit(
+            HookEvent.OWNERSHIP_TRANSFERRED,
+            repos=self.repos,
+            organization_id=organization_id,
+            user_id=new_owner.id,
+        )

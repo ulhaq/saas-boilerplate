@@ -84,23 +84,6 @@ class ErrorCode(ErrorCodeEnum):
         "multiple_organizations_disabled",
         "Creating additional organizations is disabled",
     )
-    BILLING_ERROR = ("billing_error", "A billing provider error occurred")
-    BILLING_WEBHOOK_INVALID = (
-        "billing_webhook_invalid",
-        "Webhook signature verification failed",
-    )
-    SUBSCRIPTION_ALREADY_ACTIVE = (
-        "subscription_already_active",
-        "Organization already has an active subscription",
-    )
-    SUBSCRIPTION_NOT_FOUND = (
-        "subscription_not_found",
-        "No active subscription found for this organization",
-    )
-    TRIAL_ALREADY_USED = (
-        "trial_already_used",
-        "A free trial has already been used for this organization",
-    )
     PROTECTED_ROLE_MODIFICATION = (
         "protected_role_modification",
         "Protected roles cannot be modified or deleted",
@@ -179,7 +162,6 @@ class Permission(StrEnum):
     MANAGE_USER_ROLE = "manage:user_role"
     READ_PERMISSION = "read:permission"
     MANAGE_ROLE_PERMISSION = "manage:role_permission"
-    MANAGE_SUBSCRIPTION = "manage:subscription"
     MANAGE_API_TOKEN = "manage:api_token"
     READ_AUDIT_LOG = "read:audit_log"
 
@@ -211,18 +193,10 @@ class AuditAction(StrEnum):
     ROLE_PERMISSION_ASSIGN = "role.permission_assign"
     API_TOKEN_CREATE = "api_token.create"
     API_TOKEN_DELETE = "api_token.delete"
-    BILLING_WEBHOOK = "billing.webhook"
     ORG_CREATE = "org.create"
     ORG_UPDATE = "org.update"
     ORG_DELETE = "org.delete"
     ORG_OWNERSHIP_TRANSFER = "org.ownership_transfer"
-    BILLING_CHECKOUT_START = "billing.checkout_start"
-    BILLING_TRIAL_START = "billing.trial_start"
-    BILLING_DUPLICATE_SUBSCRIPTION_REFUNDED = "billing.duplicate_subscription_refunded"
-    BILLING_SUBSCRIPTION_CANCEL = "billing.subscription_cancel"
-    BILLING_SUBSCRIPTION_RESUME = "billing.subscription_resume"
-    BILLING_PLAN_SWITCH = "billing.plan_switch"
-    BILLING_EMAIL_UPDATE = "billing.email_update"
 
 
 # Platform-only role grants. Domain modules contribute additional per-role
@@ -247,7 +221,6 @@ PERMISSION_DESCRIPTIONS: dict[StrEnum, str] = {
     Permission.MANAGE_USER_ROLE: "Allows the user to manage users' roles.",
     Permission.READ_PERMISSION: "Allows the user to read permissions.",
     Permission.MANAGE_ROLE_PERMISSION: "Allows the user to manage roles' permissions.",
-    Permission.MANAGE_SUBSCRIPTION: "Allows managing the organization's subscription.",
     Permission.MANAGE_API_TOKEN: (
         "Allows the user to create and manage their own API tokens."
     ),

@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from src.platform.core.entitlements import Entitlements
     from src.platform.core.hooks import Handler, HookEvent
 
 type RoleSpec = tuple[str, str, Sequence[StrEnum]]
@@ -34,6 +35,11 @@ class Composition:
     email_subjects: Mapping[str, Mapping[str, str]]
     # Product template roots, searched after the platform's own.
     template_directories: Sequence[Path]
+    # UTM tagging of module emails: template -> medium, and link data keys.
+    email_campaigns: Mapping[str, str]
+    email_link_keys: frozenset[str]
+    # Features and limits per organization (`UNLIMITED` without a plan module).
+    entitlements: Entitlements
 
 
 _installed: Composition | None = None

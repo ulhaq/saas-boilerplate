@@ -35,26 +35,35 @@ This file provides comprehensive guidance for working with this FastAPI multi-te
 
 ## Architecture
 
-### Platform core vs. product domain
+### Platform core, billing module, product domain
 
-The backend is split into a **generic SaaS platform** (auth, organizations, users,
-RBAC, billing, audit, GDPR) and the **product domain**. The core never imports
-domain code; the two are wired together in exactly one place:
+The backend is split into a **generic SaaS platform** (`src/platform/`: auth,
+organizations, users, RBAC, audit, GDPR, notifications), the optional **billing
+module** (`src/billing/`: plans, subscriptions, usage, Stripe) and the **product
+domain** (`src/example/`). The platform imports neither billing nor the product;
+billing and the product plug in through the same manifest, wired together in
+exactly one place:
 
 | Piece              | Path                           | Purpose                                                                                                                                                                                               |
 | ------------------ | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Hook registry      | `src/platform/core/hooks.py`   | Core emits `HookEvent`s (`MEMBER_ADDED`, `MEMBER_REMOVED`, `PLAN_CHANGED`); products list async handlers in their manifest                                                                          |
+| Hook registry      | `src/platform/core/hooks.py`   | `HookEvent`s (`MEMBER_ADDED`, `MEMBER_REMOVED`, `ORGANIZATION_CREATED`, `ORGANIZATION_DELETING`, `OWNERSHIP_TRANSFERRED`, `PLAN_CHANGED`); modules list async handlers in their manifest       |
+| Entitlements       | `src/platform/core/entitlements.py` | What an organization may use (features, limits, usage). Billing provides `PlanEntitlements`; without it, `UNLIMITED`                                                                         |
+| Billing module     | `src/billing/`                 | Own layers, enums, settings (`BillingSettings`), templates, hooks and migration; manifest `BILLING` in `src/billing/module.py`; `BillingRepositoryManager` adds its repositories                  |
 | Platform enums     | `src/platform/enums.py`        | Core `Permission`, `AuditAction`, `ErrorCode`, `PlanFeature`, `UsageMetric`, `DEFAULT_ROLES` - no domain members allowed                                                                              |
 | Domain enums       | `src/example/enums.py`         | Product permissions, audit actions, error codes, usage metrics, plus per-role grant/description contributions                                                                                         |
 | Domain hooks       | `src/example/hooks.py`         | Handlers for platform lifecycle events                                                                                                                                                                |
 | Domain settings    | `src/example/config.py`        | Independent settings namespace extending the shared `EnvSettings` base                                                                                                                                |
 | Product manifest   | `src/platform/core/product.py` | `ProductModule`: everything a product contributes (permissions, role grants, routers, hooks, worker loops, models, emails)                                                                            |
-| Installed products | `src/products.py`              | `PRODUCTS` list - the only assembly file that names a product package                                                                                                                                 |
-| Composition root   | `src/bootstrap.py`             | Merges core + every product's permissions (`ALL_PERMISSIONS`, `PERMISSION_DESCRIPTIONS`, for seeding) and, via `bootstrap()`, installs one read-only `Composition` (`src/platform/core/composition.py`: default roles, hooks, email subjects, template directories) that platform code reads with `composition.current()` |
+| Installed modules  | `src/products.py`              | `PRODUCTS` (the product) and `MODULES` (`BILLING` + products) - the only assembly file that names them                                                                                                |
+| Composition root   | `src/bootstrap.py`             | Merges core + every product's permissions (`ALL_PERMISSIONS`, `PERMISSION_DESCRIPTIONS`, for seeding) and, via `bootstrap()`, installs one read-only `Composition` (`src/platform/core/composition.py`: default roles, hooks, email subjects, template directories, entitlements) that platform code reads with `composition.current()`; `AUDIT_ACTION` composes every module's audit actions for the audit-log filter |
 
 `bootstrap()` is called at startup by `src/main.py` (API) and `worker.py` (worker).
-`src/main.py` includes each product's routers, `worker.py` starts its loops, and
-`alembic/env.py` registers its models - all by iterating `PRODUCTS`.
+`src/main.py` includes each module's routers, `worker.py` starts its loops, and
+`alembic/env.py` registers its models - all by iterating `MODULES`.
+To run without plans and Stripe, drop `BILLING` from `MODULES`, delete the
+billing migration and point the product migration's `down_revision` at the
+initial schema (its project-limit seed skips itself without billing's tables):
+every feature is then on, with no limits.
 Seeding code (Alembic initial migration, `src/init_db.py`, `tests/conftest.py`) must
 import the composed sets from `src.bootstrap`, never from `src.platform.enums` directly.
 
@@ -78,9 +87,10 @@ your product package when you rename it.
 - `schemas/` - Pydantic request/response models. Response models extend `ResponseSchema` (`src/platform/core/schema.py`) so defaulted fields are required in the OpenAPI schema - the frontend's generated types depend on it.
 - `src/platform/core/` - Cross-cutting concerns: config, security (JWT/passwords), DI dependencies, error handling, rate limiting, hooks
 
-Enforced by import-linter (`uv run poe lint`), for `src/platform/` and `src/example/` alike:
+Enforced by import-linter (`uv run poe lint`), for `src/platform/`, `src/billing/` and `src/example/` alike:
 
-- Each layer imports only the layers below it: `routers > services > billing > repositories > models | schemas` (`billing` is the platform's payment-provider adapter; `models` and `schemas` must not import each other).
+- `src.platform` imports neither `src.billing` nor the product; billing does not import the product.
+- Each layer imports only the layers below it: `routers > services > provider > repositories > models | schemas` (`provider` is billing's payment-provider adapter; `models` and `schemas` must not import each other).
 - Routers never import repositories or models directly - always go through a service.
 - `core` imports none of these layers - no exceptions. Where a core helper needs a model's data, it declares the shape it reads as a `Protocol` (e.g. `UserLike` in `core/security.py`) instead of importing the model.
 
@@ -88,15 +98,15 @@ Enforced by import-linter (`uv run poe lint`), for `src/platform/` and `src/exam
 
 **Generic base classes** - `ResourceService[T]` and `SQLResourceRepository[T]` provide standard CRUD behavior. Domain-specific classes extend these; avoid duplicating CRUD logic.
 
-**Dependency injection** - `src/platform/services/access.py` provides the auth/authz FastAPI dependencies: `authenticate()`, `require_permission(Permission.X)`, `require_plan_feature()`, `require_limit()` and `require_owner()`. `RepositoryManager` in `src/platform/repositories/repository_manager.py` is the DI container for platform repositories; product code depends on `ExampleRepositoryManager` (`src/example/repositories/manager.py`) instead.
+**Dependency injection** - `src/platform/services/access.py` provides the auth/authz FastAPI dependencies: `authenticate()`, `require_permission(Permission.X)`, `require_plan_feature()`, `require_limit()` and `require_owner()`. `RepositoryManager` in `src/platform/repositories/repository_manager.py` is the DI container for platform repositories; billing code depends on `BillingRepositoryManager` (`src/billing/repositories/manager.py`) and product code on `ExampleRepositoryManager` (`src/example/repositories/manager.py`) instead.
 
-**Transactions** - Each request runs in one transaction, committed when the endpoint returns (before the response and its background tasks) and rolled back if it raises. Depend on the session only via `DbSession` (`src/platform/core/database.py`), never `Depends(get_db)` - the default scope would commit after the response; `tests/unit/test_db_session_scope.py` enforces this. Services do not call `commit()`. The one exception is a write that must survive the error it reports (MFA failed-attempt counter, failed password sign-ins in `login_throttle`, refresh-token reuse revocation): call `repos.commit_before_raise()` and raise immediately. Worker loops open their own `session.begin()` per iteration. Don't hold row or advisory locks across calls to Stripe or other external services: checkout and trial take none (duplicate Stripe customers are prevented by an idempotency key in `get_or_create_customer`); cancel/resume/switch-plan lock the subscription row because they write state from Stripe's response, and every Stripe call is bounded by `STRIPE_TIMEOUT_SECONDS` (`configure_stripe` in `billing/stripe_provider.py`).
+**Transactions** - Each request runs in one transaction, committed when the endpoint returns (before the response and its background tasks) and rolled back if it raises. Depend on the session only via `DbSession` (`src/platform/core/database.py`), never `Depends(get_db)` - the default scope would commit after the response; `tests/unit/test_db_session_scope.py` enforces this. Services do not call `commit()`. The one exception is a write that must survive the error it reports (MFA failed-attempt counter, failed password sign-ins in `login_throttle`, refresh-token reuse revocation): call `repos.commit_before_raise()` and raise immediately. Worker loops open their own `session.begin()` per iteration. Don't hold row or advisory locks across calls to Stripe or other external services: checkout and trial take none (duplicate Stripe customers are prevented by an idempotency key in `get_or_create_customer`); cancel/resume/switch-plan lock the subscription row because they write state from Stripe's response, and every Stripe call is bounded by `STRIPE_TIMEOUT_SECONDS` (`configure_stripe` in `src/billing/provider/stripe_provider.py`).
 
-**Error handling** - Raise `ClientException(ErrorCode.X)` from services; the middleware in `src/platform/core/middlewares.py` converts these to consistent JSON error responses. Error codes are defined in `src/platform/enums.py` (platform) and `src/example/enums.py` (product).
+**Error handling** - Raise `ClientException(ErrorCode.X)` from services; the middleware in `src/platform/core/middlewares.py` converts these to consistent JSON error responses. Error codes are defined in `src/platform/enums.py` (platform), `src/billing/enums.py` (billing) and `src/example/enums.py` (product).
 
 **Multi-tenancy** - Users and resources belong to an `Organization`. Organization isolation is enforced at the repository level via `organization_id` foreign keys. Repositories extending `OrganizationScopedRepository` are **loud by default**: generic queries raise `UnscopedQueryError` unless `set_organization_scope()` was called; intentional cross-tenant access (auth identity lookups, workers, webhook handlers) must use the explicit `.unscoped` accessor.
 
-**Plan limits** - Plan settings (`billing_plan_setting`) hold per-plan limits keyed by metric (`seats`, `projects`, ...). Use `BaseService._require_capacity(metric, org_id, current_count)` for "how many can exist" limits and `require_limit(metric)` (`services/access.py`) / `track_usage()` (`billing/dependencies.py`) for per-period usage counters.
+**Plan limits** - The platform asks the installed `Entitlements` (`composition.current().entitlements`), never billing directly. Use `BaseService._require_capacity(metric, org_id, current_count)` for "how many can exist" limits, `BaseService._require_feature()` / `require_plan_feature()` for features, and `require_limit(metric)` / `track_usage()` (`services/access.py`) for per-period usage counters. With billing installed, the answers come from the organization's plan: plan settings (`billing_plan_setting`) hold limits keyed by metric (`seats`, `projects`, ...).
 
 **Permissions** - Fine-grained RBAC using the `Permission` enum (`src/platform/enums.py`) plus `ExamplePermission` (`src/example/enums.py`). Users have roles; roles have permissions. Use `require_permission()` on routes to enforce access.
 

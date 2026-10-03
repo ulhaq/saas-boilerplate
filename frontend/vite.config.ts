@@ -6,7 +6,7 @@ import Components from 'unplugin-vue-components/vite'
 import { VueRouterAutoImports } from 'unplugin-vue-router'
 import { fileURLToPath, URL } from 'node:url'
 import { BRAND } from './src/brand'
-import { productPackages } from './products.config.js'
+import { modulePackages } from './products.config.js'
 
 /**
  * Fills the `%BRAND_NAME%` / `%MARKETING_ORIGIN%` placeholders in index.html,
@@ -57,7 +57,7 @@ export default defineConfig({
     brandAssets(),
     umamiScript(),
     VueRouter({
-      routesFolder: ['src/platform/pages', ...productPackages.map((pkg) => `src/${pkg}/pages`)],
+      routesFolder: ['src/platform/pages', ...modulePackages.map((pkg) => `src/${pkg}/pages`)],
       dts: writeTypes && 'src/typed-router.d.ts',
     }),
     vue(),
@@ -72,7 +72,7 @@ export default defineConfig({
       vueTemplate: true,
     }),
     Components({
-      dirs: ['src/platform/components', ...productPackages.map((pkg) => `src/${pkg}/components`)],
+      dirs: ['src/platform/components', ...modulePackages.map((pkg) => `src/${pkg}/components`)],
       dts: writeTypes && 'src/components.d.ts',
     }),
   ],

@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 
+from src.billing.models.billing import PlanSetting
 from src.example.enums import ExampleUsageMetric
-from src.platform.models.billing import PlanSetting
 from tests.conftest import TestSessionLocal
 
 _FREE_PLAN_ID = 1  # seeded in conftest

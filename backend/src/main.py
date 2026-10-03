@@ -17,7 +17,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from starlette.routing import BaseRoute
 
-from src.bootstrap import bootstrap
+from src.bootstrap import AUDIT_ACTION, bootstrap
 from src.platform.core.config import settings
 from src.platform.core.database import DbSession
 from src.platform.core.error_response import (
@@ -41,7 +41,6 @@ from src.platform.routers import (
     api_token,
     audit_log,
     auth,
-    billing,
     contact,
     invitation,
     notification,
@@ -51,7 +50,7 @@ from src.platform.routers import (
     user,
     waitlist,
 )
-from src.products import PRODUCTS
+from src.products import MODULES
 
 setup_logging("api")
 setup_telemetry("api")
@@ -250,22 +249,16 @@ async def health_check(session: DbSession) -> Response:
 ROUTERS: list[RouterMount] = [
     RouterMount(router=auth.router, tags=["Authentication"]),
     RouterMount(router=auth.internal_router, tags=["Authentication"], public=False),
-    *(mount for product in PRODUCTS for mount in product.routers),
+    *(mount for module in MODULES for mount in module.routers),
     RouterMount(router=api_token.router, tags=["API Tokens"], public=False),
-    RouterMount(router=billing.plan_router, tags=["Billing Plans"], public=False),
     RouterMount(router=organization.router, tags=["Organizations"], public=False),
     RouterMount(router=user.router, tags=["Users"], public=False),
     RouterMount(router=invitation.router, tags=["Invitations"], public=False),
     RouterMount(router=role.router, tags=["Roles"], public=False),
     RouterMount(router=permission.router, tags=["Permissions"], public=False),
     RouterMount(
-        router=billing.subscription_router,
-        tags=["Billing Subscriptions"],
-        public=False,
+        router=audit_log.build_router(AUDIT_ACTION), tags=["Audit Log"], public=False
     ),
-    RouterMount(router=billing.usage_router, tags=["Billing Usage"], public=False),
-    RouterMount(router=billing.webhook_router, tags=["Billing Webhooks"], public=False),
-    RouterMount(router=audit_log.router, tags=["Audit Log"], public=False),
     RouterMount(router=notification.router, tags=["Notifications"], public=False),
     RouterMount(router=waitlist.router, tags=["Waitlists"], public=False),
     RouterMount(router=contact.router, tags=["Contact"], public=False),

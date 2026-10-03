@@ -11,7 +11,9 @@
         v-if="limitReached"
         :title="$t('users.invite.limitReachedTitle')"
         :description="
-          $t('users.invite.limitReachedDescription', { limit: subscriptionStore.seatLimit })
+          $t('users.invite.limitReachedDescription', {
+            limit: entitlements.limitFor(UsageMetric.SEATS),
+          })
         "
         @dismiss="$emit('update:open', false)"
       />
@@ -119,7 +121,8 @@ import { useRolesStore } from '@/platform/stores/roles'
 import { PAGE_SIZE } from '@/platform/constants'
 import { useToast } from '@/platform/composables/useToast'
 import { useErrorHandler } from '@/platform/composables/useErrorHandler'
-import { useSubscriptionStore } from '@/platform/stores/subscription'
+import { useEntitlements } from '@/platform/entitlements'
+import { UsageMetric } from '@/platform/constants'
 import type { RoleOut } from '@/platform/types'
 
 const props = defineProps<{ open: boolean }>()
@@ -128,7 +131,7 @@ const emit = defineEmits<{ 'update:open': [boolean]; invited: [] }>()
 const { t } = useI18n()
 const { toast } = useToast()
 const { resolveError, resolveFieldErrors } = useErrorHandler()
-const subscriptionStore = useSubscriptionStore()
+const entitlements = useEntitlements()
 const usersStore = useUsersStore()
 const rolesStore = useRolesStore()
 const { hasPermission } = usePermission()

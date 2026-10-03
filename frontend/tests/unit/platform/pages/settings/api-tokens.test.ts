@@ -6,13 +6,18 @@ import { i18n } from '@/plugins/i18n'
 import { BADGE_MAX, PlanFeature } from '@/platform/constants'
 import { useApiTokensStore } from '@/platform/stores/apiTokens'
 import { useProfileStore } from '@/platform/stores/profile'
-import { useSubscriptionStore } from '@/platform/stores/subscription'
 import type { ApiTokenCreate, ApiTokenResponse } from '@/platform/types'
 
 const t = i18n.global.t
 
 const toast = vi.fn()
 vi.mock('@/platform/composables/useToast', () => ({ useToast: () => ({ toast }) }))
+
+// The organization's plan features, as the installed entitlements report them.
+let features: string[] = []
+vi.mock('@/platform/entitlements', () => ({
+  useEntitlements: () => ({ hasFeature: (f: string) => features.includes(f) }),
+}))
 
 function token(id: number, overrides: Partial<ApiTokenResponse> = {}): ApiTokenResponse {
   return {
@@ -41,11 +46,11 @@ let store: ReturnType<typeof useApiTokensStore>
 
 async function mountPage(
   tokens: ApiTokenResponse[] = [],
-  { features = [PlanFeature.API_TOKEN] as string[] } = {},
+  { features: planFeatures = [PlanFeature.API_TOKEN] as string[] } = {},
 ): Promise<VueWrapper> {
   setActivePinia(createPinia())
   useProfileStore().permissions = PERMISSIONS
-  useSubscriptionStore().hasFeature = (f: string) => features.includes(f)
+  features = planFeatures
   store = useApiTokensStore()
   store.fetchTokens = vi.fn(async () => {
     store.tokens = tokens

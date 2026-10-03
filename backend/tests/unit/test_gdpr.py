@@ -148,7 +148,6 @@ async def test_purge_soft_deleted_orgs_removes_old():
             org = Organization(
                 name="Old Deleted Org",
                 deleted_at=very_old,
-                billing_email="billing@example.org",
             )
             session.add(org)
             await session.flush()
@@ -177,7 +176,6 @@ async def test_purge_soft_deleted_orgs_keeps_recent():
             org = Organization(
                 name="Recent Deleted Org",
                 deleted_at=recent,
-                billing_email="billing@example.org",
             )
             session.add(org)
 
@@ -193,7 +191,7 @@ async def test_purge_soft_deleted_orgs_ignores_active():
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            org = Organization(name="Active Org", billing_email="billing@example.org")
+            org = Organization(name="Active Org")
             session.add(org)
 
     async with TestSessionLocal() as session:

@@ -5,7 +5,7 @@ import tsPlugin from '@typescript-eslint/eslint-plugin'
 import vueParser from 'vue-eslint-parser'
 import prettier from 'eslint-config-prettier'
 import globals from 'globals'
-import { productPackages } from './products.config.js'
+import { modulePackages, productPackages } from './products.config.js'
 
 const autoImportedGlobals = {
   EffectScope: 'readonly',
@@ -145,8 +145,30 @@ export default [
   },
   {
     // Boundary contract (mirrors backend import-linter): the platform shell
-    // must never import from the product domain.
+    // must never import from billing or the product domain.
     files: ['src/platform/**/*.{ts,tsx,vue}', 'tests/unit/platform/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            ...modulePackages.map((pkg) => ({
+              group: [`@/${pkg}`, `@/${pkg}/**`, `**/${pkg}/**`],
+              message: `Platform code must not import from a module (src/${pkg}).`,
+            })),
+            {
+              group: ['@/products'],
+              message: 'Platform code must not import the product list (src/products.ts).',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // Billing is an optional platform module: products may build on it, but it
+    // never depends on a product.
+    files: ['src/billing/**/*.{ts,tsx,vue}', 'tests/unit/billing/**/*.ts'],
     rules: {
       'no-restricted-imports': [
         'error',
@@ -154,11 +176,11 @@ export default [
           patterns: [
             ...productPackages.map((pkg) => ({
               group: [`@/${pkg}`, `@/${pkg}/**`, `**/${pkg}/**`],
-              message: `Platform code must not import from the product domain (src/${pkg}).`,
+              message: `Billing must not import from the product domain (src/${pkg}).`,
             })),
             {
               group: ['@/products'],
-              message: 'Platform code must not import the product list (src/products.ts).',
+              message: 'Billing must not import the module list (src/products.ts).',
             },
           ],
         },

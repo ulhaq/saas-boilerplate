@@ -15,18 +15,18 @@ Your primary mission is to poll and inspect Stripe webhook events, compare them 
 This is a multi-tenant SaaS application. The backend is in `backend/` using FastAPI, async SQLAlchemy, Alembic migrations, and PostgreSQL. Billing models and webhook handlers live in the backend layer. Always consult `backend/CLAUDE.md` for conventions, commands, and architecture specific to the backend.
 
 **Billing module layout** (key files to inspect):
-- `backend/src/platform/billing/` - Stripe integration core
+- `backend/src/billing/provider/` - Stripe integration core
   - `stripe_provider.py` - Stripe API provider / event handling
   - `stripe_setup.py` - Stripe product/price bootstrap
   - `dependencies.py` - FastAPI DI dependencies for billing
   - `types.py` - billing-specific type definitions
   - `abc.py` - abstract base classes for billing providers
-- `backend/src/platform/models/billing.py` - SQLAlchemy billing models
-- `backend/src/platform/routers/billing.py` - billing API endpoints; webhook lands at `POST /billing/webhook` → `service.process_webhook(payload, sig_header)`
-- `backend/src/platform/services/billing.py` - billing service layer, including `process_webhook` and `run_stale_checkout_cleanup_loop`
-- `backend/src/platform/repositories/billing.py` - billing data access
-- `backend/src/platform/schemas/billing.py` - Pydantic billing schemas
-- `backend/worker.py` - registers the stale-checkout cleanup loop (billing background work runs only in the worker process, never in the API lifespan)
+- `backend/src/billing/models/` - SQLAlchemy billing models (`billing.py`, `account.py`)
+- `backend/src/billing/routers/billing.py` - billing API endpoints; webhook lands at `POST /billing/webhook` → `service.process_webhook(payload, sig_header)`
+- `backend/src/billing/services/` - billing service layer (`subscriptions.py`, `webhooks/`, `maintenance.py` with `run_stale_checkout_cleanup_loop`); `backend/src/billing/models/` holds the plans, subscriptions and per-organization `BillingAccount`
+- `backend/src/billing/repositories/` - billing data access (`BillingRepositoryManager` in `manager.py`)
+- `backend/src/billing/schemas/billing.py` - Pydantic billing schemas
+- `backend/src/billing/module.py` - the billing manifest: routers, hooks, worker loops (stale-checkout cleanup, trial reminders) (billing background work runs only in the worker process, never in the API lifespan)
 - `backend/src/platform/core/hooks.py` - hook registry; billing emits `PLAN_CHANGED`, and product handlers (e.g. `backend/src/example/hooks.py`) react (e.g. enforcing product plan limits)
 - Tests: `backend/tests/api/test_billing_plans.py`, `test_billing_subscriptions.py`, `test_billing_usage.py`, `test_billing_webhook.py`
 

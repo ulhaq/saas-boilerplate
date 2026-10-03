@@ -10,18 +10,15 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 import stripe
 
-from src.platform.billing.stripe_provider import StripeProvider, configure_stripe
-from src.platform.billing.types import (
+from src.billing.config import billing_settings
+from src.billing.exceptions import BillingProviderException, BillingWebhookException
+from src.billing.provider.stripe_provider import StripeProvider, configure_stripe
+from src.billing.provider.types import (
     CheckoutResult,
     CustomerPortalResult,
     ExternalPrice,
     ExternalProduct,
     ExternalSubscription,
-)
-from src.platform.core.config import settings
-from src.platform.core.exceptions import (
-    BillingProviderException,
-    BillingWebhookException,
 )
 
 API_KEY = "sk_test_fake"
@@ -847,7 +844,8 @@ def unresponsive_stripe() -> Generator[None]:
     stripe.api_base = original_base
     server.shutdown()
     configure_stripe(
-        settings.stripe_timeout_seconds, settings.stripe_max_network_retries
+        billing_settings.stripe_timeout_seconds,
+        billing_settings.stripe_max_network_retries,
     )
 
 

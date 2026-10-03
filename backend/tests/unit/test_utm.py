@@ -72,7 +72,18 @@ def test_apply_utm_skips_untagged_templates() -> None:
 
 
 def test_apply_utm_returns_a_new_mapping() -> None:
-    data = {"billing_url": "https://app.example.com/settings/billing"}
-    tagged = apply_utm("trial-ended", data)
-    assert data["billing_url"] == "https://app.example.com/settings/billing"
+    data = {"login_url": "https://app.example.com/login"}
+    tagged = apply_utm("welcome", data)
+    assert data["login_url"] == "https://app.example.com/login"
     assert tagged is not data
+
+
+def test_apply_utm_tags_the_installed_modules_emails() -> None:
+    """Billing lists its templates and the `billing_url` link key."""
+    data = apply_utm(
+        "payment-failed",
+        {"billing_url": "https://app.example.com/settings/billing"},
+    )
+    params = _params(data["billing_url"])
+    assert params["utm_campaign"] == ["payment-failed"]
+    assert params["utm_medium"] == ["dunning"]

@@ -6,11 +6,11 @@ from fastapi.testclient import TestClient
 from httpx import Headers
 from sqlalchemy import select
 
-from src.platform.billing.types import WebhookPayload
+from src.billing.models.billing import Plan, PlanPrice, Subscription
+from src.billing.provider.types import WebhookPayload
 from src.platform.models.audit_log import AuditLog
-from src.platform.models.billing import Plan, PlanPrice, Subscription
-from src.platform.models.organization import Organization
 from tests.conftest import TestSessionLocal
+from tests.utils import get_billing_account
 
 
 def test_start_checkout_returns_url(
@@ -109,7 +109,7 @@ def test_get_current_subscription_features_empty_without_plan_features(
 
     from sqlalchemy import delete
 
-    from src.platform.models.billing import PlanFeature as PlanFeatureModel
+    from src.billing.models.billing import PlanFeature as PlanFeatureModel
     from tests.conftest import TestSessionLocal
 
     async def _remove_features() -> None:
@@ -184,7 +184,7 @@ def test_cancel_subscription(
     # Patch the mock to simulate an active subscription with external_subscription_id
     # by setting it directly via mock webhook payload
     mock_billing_provider.construct_webhook_event.return_value = __import__(
-        "src.platform.billing.types", fromlist=["WebhookPayload"]
+        "src.billing.provider.types", fromlist=["WebhookPayload"]
     ).WebhookPayload(
         external_event_id="evt_checkout_completed",
         event_type="checkout.session.completed",
@@ -355,7 +355,7 @@ async def test_switch_plan_success(
         price2_id = price2.id
         await session.commit()
 
-    emit_mock = mocker.patch("src.platform.services.billing.subscriptions.emit")
+    emit_mock = mocker.patch("src.billing.services.subscriptions.emit")
     response = admin_authenticated.post(
         "/v1/billing/subscriptions/current/switch-plan",
         json={"plan_price_id": price2_id},
@@ -562,9 +562,8 @@ async def test_start_trial_fails_when_already_trialed(
     mock_billing_provider: MagicMock,
 ) -> None:
     async with TestSessionLocal() as session:
-        organization = await session.get(Organization, 1)
-        if organization:
-            organization.trial_used = True
+        account = await get_billing_account(session, 1)
+        account.trial_used = True
         await session.commit()
 
     price_id = plan_with_price["price"]["id"]

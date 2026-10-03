@@ -6,12 +6,11 @@ import { createAppRouter } from './router'
 import { i18n } from './plugins/i18n'
 import { configureApp } from '@/platform/config'
 import { initTelemetry } from '@/platform/lib/telemetry'
-import { products } from '@/products'
-import '@/platform/notifications/billing'
+import { modules } from '@/products'
 import './assets/index.css'
 
-for (const product of products) product.setup?.()
-const homeRoute = products.find((product) => product.homeRoute)?.homeRoute
+for (const module of modules) module.setup?.()
+const homeRoute = modules.find((module) => module.homeRoute)?.homeRoute
 if (homeRoute) configureApp({ homeRoute })
 
 const app = createApp(App)

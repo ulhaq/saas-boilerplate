@@ -4,11 +4,11 @@ import asyncio
 
 import pytest
 
-from src.platform.core.database import try_job_lock
-from src.platform.services.billing.maintenance import (
+from src.billing.services.maintenance import (
     run_stale_checkout_cleanup_loop,
     run_trial_reminder_loop,
 )
+from src.platform.core.database import try_job_lock
 from src.platform.services.gdpr import run_gdpr_retention_loop
 from tests.conftest import TestSessionLocal
 
@@ -35,14 +35,14 @@ LOOPS = [
     pytest.param(
         "trial_reminder",
         run_trial_reminder_loop,
-        "src.platform.services.billing.maintenance."
+        "src.billing.services.maintenance."
         "BillingMaintenanceService.send_trial_reminders",
         id="trial-reminders",
     ),
     pytest.param(
         "stale_checkout_cleanup",
         run_stale_checkout_cleanup_loop,
-        "src.platform.services.billing.maintenance."
+        "src.billing.services.maintenance."
         "BillingMaintenanceService.cleanup_stale_checkouts",
         id="stale-checkout-cleanup",
     ),
