@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
-from src.platform.enums import AuditAction
+from src.foundation.enums import AuditAction
 
 
 def test_get_audit_logs_forbidden_for_member(
@@ -44,7 +44,7 @@ def test_invite_user_creates_audit_entry(
     mocker: MockerFixture,
     admin_authenticated: TestClient,
 ) -> None:
-    mocker.patch("src.platform.services.user.send_email")
+    mocker.patch("src.foundation.services.user.send_email")
 
     admin_authenticated.post(
         "/v1/users/invite",

@@ -8,7 +8,7 @@ from sqlalchemy import select
 
 from src.billing.repositories.manager import BillingRepositoryManager
 from src.billing.services.common import notify_subscription_managers
-from src.platform.models.notification import Notification
+from src.foundation.models.notification import Notification
 from tests.conftest import TestSessionLocal
 
 # Seeded: in organization 1 only user 1 (Owner) can manage the subscription;

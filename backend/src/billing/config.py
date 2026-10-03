@@ -1,11 +1,11 @@
-"""Billing settings, read from the environment like the platform's
+"""Billing settings, read from the environment like the foundation's
 (`STRIPE_*` and `BILLING_*` variables)."""
 
 from typing import Literal, Self
 
 from pydantic import SecretStr, model_validator
 
-from src.platform.core.config import EnvSettings
+from src.foundation.core.config import EnvSettings
 
 
 class BillingSettings(EnvSettings):

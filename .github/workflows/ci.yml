@@ -55,7 +55,7 @@ jobs:
           DB_CONNECTION: postgresql+psycopg://postgres:postgres@localhost:5432/app
         run: uv run poe test
 
-      # The platform and the product must work without the optional modules:
+      # The foundation and the product must work without the optional modules:
       # remove them from this throwaway checkout for good (as a user would,
       # docs/adding-a-domain-module.md) and check everything again - lint,
       # the migration chain on a fresh database, and the remaining tests.

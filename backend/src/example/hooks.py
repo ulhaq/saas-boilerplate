@@ -1,8 +1,8 @@
-"""Example product handlers for the platform lifecycle hooks.
+"""Example product handlers for the foundation lifecycle hooks.
 
 Listed in `src.example.product` and registered by the composition root
 (`src.bootstrap`). Handlers receive keyword arguments only, including the
-platform ``RepositoryManager`` as ``repos``; wrap its session in
+foundation ``RepositoryManager`` as ``repos``; wrap its session in
 ``ExampleRepositoryManager(repos.db)`` to reach product repositories inside the
 caller's transaction.
 """
@@ -11,8 +11,8 @@ import logging
 
 from src.example.enums import ExampleUsageMetric
 from src.example.repositories.manager import ExampleRepositoryManager
-from src.platform.core import composition
-from src.platform.repositories.repository_manager import RepositoryManager
+from src.foundation.core import composition
+from src.foundation.repositories.repository_manager import RepositoryManager
 
 log = logging.getLogger(__name__)
 

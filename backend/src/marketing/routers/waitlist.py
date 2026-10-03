@@ -2,9 +2,9 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request, status
 
+from src.foundation.core.limiter import limiter
 from src.marketing.schemas.waitlist import WaitlistJoinIn, WaitlistJoinOut
 from src.marketing.services.waitlist import WaitlistService
-from src.platform.core.limiter import limiter
 
 router = APIRouter(prefix="/waitlist")
 

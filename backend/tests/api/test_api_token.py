@@ -7,8 +7,8 @@ from fastapi.testclient import TestClient
 from httpx import Headers, Response
 from sqlalchemy import select
 
+from src.foundation.models.api_token import ApiToken
 from src.main import app
-from src.platform.models.api_token import ApiToken
 from tests.conftest import TestSessionLocal
 
 # ── helpers ──────────────────────────────────────────────────────────────────

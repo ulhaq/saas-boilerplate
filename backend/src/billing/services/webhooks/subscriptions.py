@@ -7,7 +7,7 @@ from src.billing.services.webhooks.base import (
     WebhookHandler,
     WebhookHandlerGroup,
 )
-from src.platform.core.config import settings
+from src.foundation.core.config import settings
 
 log = logging.getLogger(__name__)
 

@@ -16,7 +16,7 @@ from src.billing.models.billing import (
     Subscription,
     WebhookEvent,
 )
-from src.platform.repositories.base import (
+from src.foundation.repositories.base import (
     OrganizationScopedRepository,
     SoftDeleteRepository,
     SQLResourceRepository,

@@ -6,8 +6,8 @@ from fastapi import Depends
 from src.billing.repositories.manager import BillingRepositoryManager
 from src.billing.schemas.billing import UsageItemOut, UsageOut
 from src.billing.services.base import BillingBaseService
-from src.platform.core.security import Auth
-from src.platform.services.access import authenticate
+from src.foundation.core.security import Auth
+from src.foundation.services.access import authenticate
 
 
 class UsageService(BillingBaseService):

@@ -10,18 +10,18 @@ from sqlalchemy import select
 
 from src import sync_permissions
 from src.bootstrap import ALL_PERMISSIONS, bootstrap
-from src.platform.core.database import ASYNC_SESSION_LOCAL
-from src.platform.core.hooks import HookEvent, emit
-from src.platform.core.logging import setup_logging
-from src.platform.core.security import hash_secret
-from src.platform.enums import OWNER_ROLE_NAME
-from src.platform.models.api_token import ApiToken  # noqa: F401
-from src.platform.models.organization import Organization
-from src.platform.models.permission import Permission as PermissionModel
-from src.platform.models.role import Role
-from src.platform.models.user import User
-from src.platform.models.user_organization import UserOrganization
-from src.platform.repositories.repository_manager import RepositoryManager
+from src.foundation.core.database import ASYNC_SESSION_LOCAL
+from src.foundation.core.hooks import HookEvent, emit
+from src.foundation.core.logging import setup_logging
+from src.foundation.core.security import hash_secret
+from src.foundation.enums import OWNER_ROLE_NAME
+from src.foundation.models.api_token import ApiToken  # noqa: F401
+from src.foundation.models.organization import Organization
+from src.foundation.models.permission import Permission as PermissionModel
+from src.foundation.models.role import Role
+from src.foundation.models.user import User
+from src.foundation.models.user_organization import UserOrganization
+from src.foundation.repositories.repository_manager import RepositoryManager
 
 setup_logging("init_db")
 log = logging.getLogger(__name__)

@@ -1,9 +1,9 @@
 """Direct unit tests for AuditLogService."""
 
-from src.platform.core.security import Auth
-from src.platform.enums import Permission as PermEnum
-from src.platform.repositories.repository_manager import RepositoryManager
-from src.platform.services.audit_log import AuditLogService
+from src.foundation.core.security import Auth
+from src.foundation.enums import Permission as PermEnum
+from src.foundation.repositories.repository_manager import RepositoryManager
+from src.foundation.services.audit_log import AuditLogService
 from tests.conftest import TestSessionLocal
 
 

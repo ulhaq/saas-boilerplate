@@ -37,7 +37,7 @@
 
 <script setup lang="ts">
 import { Check, Info, Minus } from 'lucide-vue-next'
-import { Popover, PopoverContent, PopoverTrigger } from '@/platform/components/ui/popover'
+import { Popover, PopoverContent, PopoverTrigger } from '@/foundation/components/ui/popover'
 import type { ComparisonRow } from '@/billing/composables/useBillingFormat'
 
 defineProps<{ planName: string; rows: ComparisonRow[] }>()

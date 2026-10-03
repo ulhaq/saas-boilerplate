@@ -1,12 +1,12 @@
-"""Billing webhooks queue their emails in the platform's outbox."""
+"""Billing webhooks queue their emails in the foundation's outbox."""
 
 from sqlalchemy import select
 
 from src.billing.repositories.manager import BillingRepositoryManager
 from src.billing.services import WebhookService
-from src.platform.models.email_outbox import EmailOutbox
-from src.platform.models.notification import Notification
-from src.platform.repositories.repository_manager import RepositoryManager
+from src.foundation.models.email_outbox import EmailOutbox
+from src.foundation.models.notification import Notification
+from src.foundation.repositories.repository_manager import RepositoryManager
 from tests.conftest import TestSessionLocal
 
 
@@ -34,7 +34,7 @@ async def test_a_webhook_queues_its_email_instead_of_sending_it(
     mocker,
     mock_billing_provider,
 ):
-    send = mocker.patch("src.platform.services.email_outbox.send_email")
+    send = mocker.patch("src.foundation.services.email_outbox.send_email")
     async with TestSessionLocal() as session, session.begin():
         repos = BillingRepositoryManager(session)
         sub = await repos.subscription.get_active_for_organization(1)

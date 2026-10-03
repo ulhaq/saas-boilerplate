@@ -7,8 +7,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from src.billing.models.billing import PlanSetting, PlanUsage
+from src.foundation.services.access import require_limit
 from src.main import app
-from src.platform.services.access import require_limit
 from tests.conftest import TestSessionLocal
 
 

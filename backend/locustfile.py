@@ -2,7 +2,7 @@ from typing import ClassVar
 
 from locust import HttpUser, task
 
-from src.platform.core.config import settings
+from src.foundation.core.config import settings
 
 
 class LoadTesting(HttpUser):

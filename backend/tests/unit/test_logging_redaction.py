@@ -1,6 +1,6 @@
-"""Unit tests for src/platform/core/logging.py credential redaction."""
+"""Unit tests for src/foundation/core/logging.py credential redaction."""
 
-from src.platform.core.logging import _redact_nested, _redact_text, redact
+from src.foundation.core.logging import _redact_nested, _redact_text, redact
 
 # --- _redact_text: message-string patterns ---------------------------------
 

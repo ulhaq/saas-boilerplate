@@ -1,5 +1,5 @@
 from src.billing.repositories.manager import BillingRepositoryManager
-from src.platform.services.base import BaseService
+from src.foundation.services.base import BaseService
 
 
 class BillingBaseService(BaseService):

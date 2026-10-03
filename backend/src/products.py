@@ -1,4 +1,4 @@
-"""The modules installed in this deployment: optional platform modules
+"""The modules installed in this deployment: optional foundation modules
 (billing, marketing), then the product.
 
 The only file in the assembly layer that names a product package. To replace
@@ -11,8 +11,8 @@ product packages too; see `docs/adding-a-domain-module.md`.)
 
 from src.billing.module import BILLING
 from src.example.product import EXAMPLE
+from src.foundation.core.module import Module
 from src.marketing.module import MARKETING
-from src.platform.core.module import Module
 
 PRODUCTS: list[Module] = [EXAMPLE]
 

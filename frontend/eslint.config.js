@@ -144,9 +144,9 @@ export default [
     },
   },
   {
-    // Boundary contract (mirrors backend import-linter): the platform shell
+    // Boundary contract (mirrors backend import-linter): the foundation shell
     // must never import from billing or the product domain.
-    files: ['src/platform/**/*.{ts,tsx,vue}', 'tests/unit/platform/**/*.ts'],
+    files: ['src/foundation/**/*.{ts,tsx,vue}', 'tests/unit/foundation/**/*.ts'],
     rules: {
       'no-restricted-imports': [
         'error',
@@ -154,11 +154,11 @@ export default [
           patterns: [
             ...modulePackages.map((pkg) => ({
               group: [`@/${pkg}`, `@/${pkg}/**`, `**/${pkg}/**`],
-              message: `Platform code must not import from a module (src/${pkg}).`,
+              message: `Foundation code must not import from a module (src/${pkg}).`,
             })),
             {
               group: ['@/products'],
-              message: 'Platform code must not import the product list (src/products.ts).',
+              message: 'Foundation code must not import the product list (src/products.ts).',
             },
           ],
         },
@@ -166,7 +166,7 @@ export default [
     },
   },
   {
-    // Billing is an optional platform module: products may build on it, but it
+    // Billing is an optional foundation module: products may build on it, but it
     // never depends on a product.
     files: ['src/billing/**/*.{ts,tsx,vue}', 'tests/unit/billing/**/*.ts'],
     rules: {

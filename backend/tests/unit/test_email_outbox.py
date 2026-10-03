@@ -5,9 +5,9 @@ from datetime import UTC, datetime
 import pytest
 from sqlalchemy import select
 
-from src.platform.models.email_outbox import EmailOutbox
-from src.platform.repositories.repository_manager import RepositoryManager
-from src.platform.services.email_outbox import (
+from src.foundation.models.email_outbox import EmailOutbox
+from src.foundation.repositories.repository_manager import RepositoryManager
+from src.foundation.services.email_outbox import (
     MAX_ATTEMPTS,
     deliver_due_emails,
     queue_email,
@@ -61,7 +61,7 @@ async def test_a_rolled_back_transaction_sends_nothing():
 
 
 async def test_queued_emails_are_sent_once(mocker):
-    send = mocker.patch("src.platform.services.email_outbox.send_email")
+    send = mocker.patch("src.foundation.services.email_outbox.send_email")
     await _queue()
 
     assert await _deliver() == 1
@@ -79,7 +79,7 @@ async def test_queued_emails_are_sent_once(mocker):
 
 async def test_a_failed_send_is_retried_later(mocker):
     mocker.patch(
-        "src.platform.services.email_outbox.send_email",
+        "src.foundation.services.email_outbox.send_email",
         side_effect=OSError("mail server down"),
     )
     await _queue()
@@ -96,7 +96,7 @@ async def test_a_failed_send_is_retried_later(mocker):
 
 
 async def test_an_email_is_given_up_after_max_attempts(mocker):
-    send = mocker.patch("src.platform.services.email_outbox.send_email")
+    send = mocker.patch("src.foundation.services.email_outbox.send_email")
     await _queue()
     async with TestSessionLocal() as session, session.begin():
         email = (await session.execute(select(EmailOutbox))).scalar_one()

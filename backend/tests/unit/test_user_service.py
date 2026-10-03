@@ -4,21 +4,21 @@ import pytest
 from pydantic import ValidationError as PydanticValidationError
 
 from src.bootstrap import ALL_PERMISSIONS
-from src.platform.core.exceptions import (
+from src.foundation.core.exceptions import (
     AlreadyExistsException,
     NotAuthenticatedException,
     PermissionDeniedException,
 )
-from src.platform.core.security import Auth
-from src.platform.enums import Permission as PermEnum
-from src.platform.repositories.repository_manager import RepositoryManager
-from src.platform.schemas.user import (
+from src.foundation.core.security import Auth
+from src.foundation.enums import Permission as PermEnum
+from src.foundation.repositories.repository_manager import RepositoryManager
+from src.foundation.schemas.user import (
     ChangePasswordIn,
     InviteUserIn,
     UserPatch,
     UserRoleIn,
 )
-from src.platform.services.user import UserService
+from src.foundation.services.user import UserService
 from src.products import MODULES
 from tests.conftest import TestSessionLocal
 
@@ -219,7 +219,7 @@ async def test_manage_roles_clears_roles():
 
 async def test_delete_me_non_owner():
     """Standard user can delete themselves."""
-    from src.platform.schemas.user import DeleteMeIn
+    from src.foundation.schemas.user import DeleteMeIn
 
     async with TestSessionLocal() as session, session.begin():
         service = _make_service(session, _standard_auth())
@@ -230,7 +230,7 @@ async def test_delete_me_non_owner():
 
 
 async def test_delete_me_wrong_password_raises():
-    from src.platform.schemas.user import DeleteMeIn
+    from src.foundation.schemas.user import DeleteMeIn
 
     async with TestSessionLocal() as session, session.begin():
         service = _make_service(session, _standard_auth())
@@ -243,7 +243,7 @@ async def test_delete_me_wrong_password_raises():
 
 async def test_delete_me_owner_raises():
     """Owner cannot delete themselves without transferring ownership first."""
-    from src.platform.schemas.user import DeleteMeIn
+    from src.foundation.schemas.user import DeleteMeIn
 
     async with TestSessionLocal() as session, session.begin():
         service = _make_service(session, _admin_auth())
@@ -260,8 +260,8 @@ async def test_delete_me_owner_raises():
 
 
 async def test_paginate_returns_paginated_response():
-    from src.platform.schemas.common import PageQueryParams
-    from src.platform.schemas.user import UserOut
+    from src.foundation.schemas.common import PageQueryParams
+    from src.foundation.schemas.user import UserOut
 
     async with TestSessionLocal() as session, session.begin():
         service = _make_service(session, _admin_auth())
@@ -281,7 +281,7 @@ async def test_paginate_returns_paginated_response():
 
 async def test_invite_user_org_not_found_raises():
     """When current_user.organization_id doesn't exist, NotFoundException is raised."""
-    from src.platform.core.exceptions import NotFoundException
+    from src.foundation.core.exceptions import NotFoundException
 
     ghost_auth = Auth(
         id=1,
@@ -348,8 +348,8 @@ async def test_manage_roles_adds_role():
 
 async def test_manage_roles_removing_manage_permission_calls_assert():
     """Removing MANAGE_USER_ROLE from a user calls _assert_not_last_admin (line 351)."""
-    from src.platform.enums import Permission as PermEnum2
-    from src.platform.models.role import Role
+    from src.foundation.enums import Permission as PermEnum2
+    from src.foundation.models.role import Role
 
     # Give user 2 (who already has the Member role) an extra org-1 role that
     # carries MANAGE_USER_ROLE.
@@ -391,11 +391,11 @@ async def test_remove_user_last_admin_raises():
     """Removing the last user with MANAGE_USER_ROLE in an org raises."""
     from datetime import UTC, datetime
 
-    from src.platform.enums import Permission as PermEnum2
-    from src.platform.models.organization import Organization
-    from src.platform.models.role import Role
-    from src.platform.models.user import User
-    from src.platform.models.user_organization import UserOrganization
+    from src.foundation.enums import Permission as PermEnum2
+    from src.foundation.models.organization import Organization
+    from src.foundation.models.role import Role
+    from src.foundation.models.user import User
+    from src.foundation.models.user_organization import UserOrganization
 
     async with TestSessionLocal() as session, session.begin():
         repos = RepositoryManager(session)

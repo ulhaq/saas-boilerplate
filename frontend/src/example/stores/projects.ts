@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { projectsApi } from '@/example/api/projects'
-import type { PaginatedResponse } from '@/platform/types'
+import type { PaginatedResponse } from '@/foundation/types'
 import type { ProjectIn, ProjectOut, ProjectPatch } from '@/example/types/project'
 
 type ListParams = Record<string, string | number | undefined>

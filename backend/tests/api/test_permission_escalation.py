@@ -112,7 +112,7 @@ def test_an_invite_can_only_carry_roles_the_inviter_could_grant(
     setup,
     mocker: MockerFixture,
 ):
-    mocker.patch("src.platform.services.user.send_email")
+    mocker.patch("src.foundation.services.user.send_email")
     manager, auditor = setup["manager"], setup["auditor_role"]
 
     _refused(

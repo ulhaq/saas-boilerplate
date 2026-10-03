@@ -1,6 +1,6 @@
 /**
  * Billing module entry - plans, subscriptions and Stripe checkout, plugged into
- * the platform shell like a product (the frontend twin of the backend's
+ * the foundation shell like a product (the frontend twin of the backend's
  * `src/billing/module.py`). Listed in `src/products.ts`; drop it there (and
  * from `products.config.js`) to run without plans: every feature on, no limits.
  */
@@ -10,12 +10,12 @@ import { BILLING_ROUTE, requireAppAccess, useBillingEntitlements } from '@/billi
 import da from '@/billing/locales/da'
 import en from '@/billing/locales/en'
 import { registerBillingNotifications } from '@/billing/notifications'
-import { registerBanner } from '@/platform/banners'
-import { configureApp } from '@/platform/config'
-import { provideEntitlements } from '@/platform/entitlements'
-import { registerSettingsNavItems } from '@/platform/navigation'
-import type { Module } from '@/platform/module'
-import { registerRouteGuard } from '@/platform/routeGuards'
+import { registerBanner } from '@/foundation/banners'
+import { configureApp } from '@/foundation/config'
+import { provideEntitlements } from '@/foundation/entitlements'
+import { registerSettingsNavItems } from '@/foundation/navigation'
+import type { Module } from '@/foundation/module'
+import { registerRouteGuard } from '@/foundation/routeGuards'
 
 const billing: Module = {
   name: 'billing',

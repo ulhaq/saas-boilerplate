@@ -2,11 +2,11 @@
   <mj-head>
     <mj-title>Dobbelt abonnement refunderet - {{ app_name }}</mj-title>
     <mj-preview>Vi har annulleret et ekstra {{ app_name }}-abonnement og refunderet det fuldt ud.</mj-preview>
-    <mj-include path="../../../../../platform/templates/emails/mjml/shared/_head.mjml" />
+    <mj-include path="../../../../../foundation/templates/emails/mjml/shared/_head.mjml" />
   </mj-head>
   <mj-body background-color="#eff1f5" width="600px">
     <mj-wrapper background-color="#ffffff" border="1px solid #e0e3eb" border-radius="12px" padding="0" css-class="app-card">
-      <mj-include path="../../../../../platform/templates/emails/mjml/shared/_header.mjml" />
+      <mj-include path="../../../../../foundation/templates/emails/mjml/shared/_header.mjml" />
 
       <mj-section padding="28px 32px 32px 32px" css-class="app-pad">
         <mj-column>
@@ -38,6 +38,6 @@
       </mj-section>
     </mj-wrapper>
 
-    <mj-include path="../../../../../platform/templates/emails/mjml/da/partials/_footer.mjml" />
+    <mj-include path="../../../../../foundation/templates/emails/mjml/da/partials/_footer.mjml" />
   </mj-body>
 </mjml>

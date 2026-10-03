@@ -4,8 +4,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from src.platform.core.exceptions import ValidationException
-from src.platform.routers.query_options import filters_query, sort_query
+from src.foundation.core.exceptions import ValidationException
+from src.foundation.routers.query_options import filters_query, sort_query
 
 # ---------------------------------------------------------------------------
 # sort_query dependency
@@ -68,8 +68,8 @@ def test_filters_query_skips_param_without_dunder():
 
 
 def test_filters_query_valid_param_returns_filter_item():
-    from src.platform.enums import ComparisonOperator
-    from src.platform.schemas.common import FilterItem
+    from src.foundation.enums import ComparisonOperator
+    from src.foundation.schemas.common import FilterItem
 
     dep = filters_query()
     req = _mock_request({"name__eq": "Admin"})

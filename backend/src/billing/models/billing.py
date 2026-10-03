@@ -15,10 +15,10 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from src.platform.models.mixins import ResourceModel, ResourceModelBase
+from src.foundation.models.mixins import ResourceModel, ResourceModelBase
 
 if TYPE_CHECKING:
-    from src.platform.models.organization import Organization
+    from src.foundation.models.organization import Organization
 
 
 class Plan(ResourceModel):

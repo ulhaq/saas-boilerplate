@@ -12,9 +12,9 @@ from src.billing.provider.dependencies import get_billing_provider
 from src.billing.repositories.manager import BillingRepositoryManager
 from src.billing.services.base import BillingBaseService
 from src.billing.services.common import notify_subscription_managers
-from src.platform.core.config import settings
-from src.platform.core.database import try_job_lock
-from src.platform.core.telemetry import track_worker_run
+from src.foundation.core.config import settings
+from src.foundation.core.database import try_job_lock
+from src.foundation.core.telemetry import track_worker_run
 
 log = logging.getLogger(__name__)
 

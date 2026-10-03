@@ -4,7 +4,7 @@
  * payload = the email's data (dates as ISO strings). Registered by the billing
  * module's `setup()`.
  */
-import { registerNotificationPresenter } from '@/platform/composables/useNotificationPresenter'
+import { registerNotificationPresenter } from '@/foundation/composables/useNotificationPresenter'
 import { i18n } from '@/plugins/i18n'
 
 // Email template -> locale key under `notifications.billing`.

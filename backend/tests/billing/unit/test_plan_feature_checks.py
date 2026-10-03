@@ -4,11 +4,11 @@ from enum import StrEnum
 
 import pytest
 
-from src.platform.core.exceptions import PlanFeatureUnavailableException
-from src.platform.core.security import Auth
-from src.platform.enums import Permission as PermEnum
-from src.platform.repositories.repository_manager import RepositoryManager
-from src.platform.services.organization import OrganizationService
+from src.foundation.core.exceptions import PlanFeatureUnavailableException
+from src.foundation.core.security import Auth
+from src.foundation.enums import Permission as PermEnum
+from src.foundation.repositories.repository_manager import RepositoryManager
+from src.foundation.services.organization import OrganizationService
 from tests.conftest import TestSessionLocal
 
 

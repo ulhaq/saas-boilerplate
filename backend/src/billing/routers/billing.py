@@ -21,11 +21,11 @@ from src.billing.services import (
     UsageService,
     WebhookService,
 )
-from src.platform.core.cache import set_cache_control
-from src.platform.core.config import settings
-from src.platform.core.limiter import limiter
-from src.platform.core.security import Auth
-from src.platform.services.access import authenticate, require_permission
+from src.foundation.core.cache import set_cache_control
+from src.foundation.core.config import settings
+from src.foundation.core.limiter import limiter
+from src.foundation.core.security import Auth
+from src.foundation.services.access import authenticate, require_permission
 
 plan_router = APIRouter(prefix="/billing/plans")
 subscription_router = APIRouter(prefix="/billing/subscriptions")

@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from src.platform.services.gdpr import (
+from src.foundation.services.gdpr import (
     purge_expired_tokens,
     purge_soft_deleted_orgs,
     purge_soft_deleted_users,
@@ -15,10 +15,10 @@ from tests.conftest import TestSessionLocal
 
 
 async def test_purge_expired_tokens_removes_old_records():
-    from src.platform.core.security import hash_secret
-    from src.platform.models.email_verification_token import EmailVerificationToken
-    from src.platform.models.invitation import Invitation
-    from src.platform.models.password_reset_token import PasswordResetToken
+    from src.foundation.core.security import hash_secret
+    from src.foundation.models.email_verification_token import EmailVerificationToken
+    from src.foundation.models.invitation import Invitation
+    from src.foundation.models.password_reset_token import PasswordResetToken
 
     very_old = datetime.now(UTC) - timedelta(days=400)
 
@@ -56,11 +56,11 @@ async def test_purge_expired_tokens_removes_old_records():
 
 
 async def test_purge_expired_tokens_keeps_fresh_records():
-    from src.platform.core.security import hash_secret
+    from src.foundation.core.security import hash_secret
 
     async with TestSessionLocal() as session, session.begin():
         # A fresh email verification token should NOT be purged
-        from src.platform.models.email_verification_token import (
+        from src.foundation.models.email_verification_token import (
             EmailVerificationToken,
         )
 
@@ -81,8 +81,8 @@ async def test_purge_expired_tokens_keeps_fresh_records():
 async def test_purge_soft_deleted_users_removes_old():
     from sqlalchemy import select
 
-    from src.platform.core.security import hash_secret
-    from src.platform.models.user import User
+    from src.foundation.core.security import hash_secret
+    from src.foundation.models.user import User
 
     very_old = datetime.now(UTC) - timedelta(days=400)
 
@@ -108,8 +108,8 @@ async def test_purge_soft_deleted_users_removes_old():
 
 
 async def test_purge_soft_deleted_users_keeps_recent():
-    from src.platform.core.security import hash_secret
-    from src.platform.models.user import User
+    from src.foundation.core.security import hash_secret
+    from src.foundation.models.user import User
 
     recent = datetime.now(UTC) - timedelta(days=10)
 
@@ -131,7 +131,7 @@ async def test_purge_soft_deleted_users_keeps_recent():
 async def test_purge_soft_deleted_orgs_removes_old():
     from sqlalchemy import select
 
-    from src.platform.models.organization import Organization
+    from src.foundation.models.organization import Organization
 
     very_old = datetime.now(UTC) - timedelta(days=400)
 
@@ -157,7 +157,7 @@ async def test_purge_soft_deleted_orgs_removes_old():
 
 
 async def test_purge_soft_deleted_orgs_keeps_recent():
-    from src.platform.models.organization import Organization
+    from src.foundation.models.organization import Organization
 
     recent = datetime.now(UTC) - timedelta(days=10)
 
@@ -175,7 +175,7 @@ async def test_purge_soft_deleted_orgs_keeps_recent():
 
 
 async def test_purge_soft_deleted_orgs_ignores_active():
-    from src.platform.models.organization import Organization
+    from src.foundation.models.organization import Organization
 
     async with TestSessionLocal() as session, session.begin():
         org = Organization(name="Active Org")
@@ -202,7 +202,7 @@ async def test_run_gdpr_retention_loop_runs_one_iteration(mocker):
         if call_count >= 2:
             raise asyncio.CancelledError
 
-    mocker.patch("src.platform.services.gdpr.asyncio.sleep", side_effect=mock_sleep)
+    mocker.patch("src.foundation.services.gdpr.asyncio.sleep", side_effect=mock_sleep)
 
     with pytest.raises(asyncio.CancelledError):
         await run_gdpr_retention_loop(TestSessionLocal)
@@ -220,9 +220,9 @@ async def test_run_gdpr_retention_loop_swallows_exceptions(mocker):
         if call_count >= 3:
             raise asyncio.CancelledError
 
-    mocker.patch("src.platform.services.gdpr.asyncio.sleep", side_effect=mock_sleep)
+    mocker.patch("src.foundation.services.gdpr.asyncio.sleep", side_effect=mock_sleep)
     mocker.patch(
-        "src.platform.services.gdpr.purge_expired_tokens",
+        "src.foundation.services.gdpr.purge_expired_tokens",
         side_effect=RuntimeError("db gone"),
     )
 

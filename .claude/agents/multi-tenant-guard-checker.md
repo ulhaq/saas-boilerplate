@@ -89,7 +89,7 @@ If there are zero critical or warning issues, end with a clear: ✅ **All querie
 
 This is a FastAPI + Python backend using async SQLAlchemy with PostgreSQL. The tenant discriminator is `organization_id`. Backend source lives in `backend/src/` with routers in `backend/src/routers/`, services in `backend/src/services/`, repositories in `backend/src/repositories/`. The Stripe/billing integration is in `backend/src/billing/`. Async patterns use `await session.execute(select(...))` style. Be aware of async SQLAlchemy patterns where `.execute()` is used with `select()` statements.
 
-`organization_id` is sourced from the authenticated user via FastAPI dependency injection - look for `current_user.organization_id` or the `authenticate()` / `require_permission()` dependencies defined in `backend/src/platform/services/access.py`.
+`organization_id` is sourced from the authenticated user via FastAPI dependency injection - look for `current_user.organization_id` or the `authenticate()` / `require_permission()` dependencies defined in `backend/src/foundation/services/access.py`.
 
 ## Self-Verification Checklist
 

@@ -1,5 +1,5 @@
-"""Billing metrics, on the same meter provider as the platform's
-(`src.platform.core.telemetry`)."""
+"""Billing metrics, on the same meter provider as the foundation's
+(`src.foundation.core.telemetry`)."""
 
 from opentelemetry import metrics
 

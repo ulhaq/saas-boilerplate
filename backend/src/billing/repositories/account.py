@@ -5,8 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.billing.models.account import BillingAccount
 from src.billing.models.billing import PlanPrice, Subscription
-from src.platform.models.organization import Organization
-from src.platform.repositories.base import SQLResourceRepository
+from src.foundation.models.organization import Organization
+from src.foundation.repositories.base import SQLResourceRepository
 
 
 class BillingAccountRepository(SQLResourceRepository[BillingAccount]):

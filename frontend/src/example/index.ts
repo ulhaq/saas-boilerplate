@@ -1,12 +1,12 @@
 /**
- * Example product module entry - the manifest of everything the platform shell
+ * Example product module entry - the manifest of everything the foundation shell
  * needs to know about the product. Listed in `src/products.ts`.
  */
 import { FolderOpen, LayoutDashboard } from 'lucide-vue-next'
 import da from '@/example/locales/da'
 import en from '@/example/locales/en'
-import { registerNavItems } from '@/platform/navigation'
-import type { Module } from '@/platform/module'
+import { registerNavItems } from '@/foundation/navigation'
+import type { Module } from '@/foundation/module'
 
 const example: Module = {
   name: 'example',

@@ -13,7 +13,7 @@ def _invite(
     role_ids: list[int] | None = None,
 ) -> str:
     """Send an invite and return the link token captured from the email."""
-    mock_send = mocker.patch("src.platform.services.user.send_email")
+    mock_send = mocker.patch("src.foundation.services.user.send_email")
     rs = client.post(
         "/v1/users/invite",
         json={"email": email, "role_ids": role_ids if role_ids is not None else [2]},
@@ -74,7 +74,7 @@ def test_list_invitations_flags_expired(
     mocker: MockerFixture,
     admin_authenticated: TestClient,
 ) -> None:
-    with patch("src.platform.core.config.settings.invite_expiry", -1):
+    with patch("src.foundation.core.config.settings.invite_expiry", -1):
         _invite(mocker, admin_authenticated)
 
     [item] = admin_authenticated.get("/v1/invitations").json()

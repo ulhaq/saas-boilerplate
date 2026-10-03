@@ -9,13 +9,13 @@ from pytest_mock import MockerFixture
 from sqlalchemy import func, select
 
 from src.billing.models.billing import PlanPrice, PlanSetting
-from src.platform.core.exceptions import ClientException
-from src.platform.enums import UsageMetric
-from src.platform.models.invitation import Invitation
-from src.platform.models.user import User
-from src.platform.models.user_organization import UserOrganization
-from src.platform.repositories.repository_manager import RepositoryManager
-from src.platform.services.base import BaseService
+from src.foundation.core.exceptions import ClientException
+from src.foundation.enums import UsageMetric
+from src.foundation.models.invitation import Invitation
+from src.foundation.models.user import User
+from src.foundation.models.user_organization import UserOrganization
+from src.foundation.repositories.repository_manager import RepositoryManager
+from src.foundation.services.base import BaseService
 from tests.conftest import TestSessionLocal
 
 # Organization 1 is seeded with 3 members.
@@ -31,7 +31,7 @@ async def _set_seats(seats: int) -> None:
 
 
 def _invite(mocker: MockerFixture, client: TestClient, email: str):
-    send = mocker.patch("src.platform.services.user.send_email")
+    send = mocker.patch("src.foundation.services.user.send_email")
     response = client.post("/v1/users/invite", json={"email": email, "role_ids": [2]})
     token = (
         send.call_args.kwargs["data"]["invite_url"].split("token=")[1]

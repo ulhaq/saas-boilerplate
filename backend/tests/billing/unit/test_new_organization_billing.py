@@ -1,7 +1,7 @@
 """Billing's ORGANIZATION_CREATED handler: the billing account and free subscription."""
 
 from src.billing.repositories.manager import BillingRepositoryManager
-from src.platform.services.organization import setup_new_organization
+from src.foundation.services.organization import setup_new_organization
 from tests.conftest import TestSessionLocal
 
 

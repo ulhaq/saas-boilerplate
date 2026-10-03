@@ -57,7 +57,7 @@ export default defineConfig({
     brandAssets(),
     umamiScript(),
     VueRouter({
-      routesFolder: ['src/platform/pages', ...modulePackages.map((pkg) => `src/${pkg}/pages`)],
+      routesFolder: ['src/foundation/pages', ...modulePackages.map((pkg) => `src/${pkg}/pages`)],
       dts: writeTypes && 'src/typed-router.d.ts',
     }),
     vue(),
@@ -72,7 +72,7 @@ export default defineConfig({
       vueTemplate: true,
     }),
     Components({
-      dirs: ['src/platform/components', ...modulePackages.map((pkg) => `src/${pkg}/components`)],
+      dirs: ['src/foundation/components', ...modulePackages.map((pkg) => `src/${pkg}/components`)],
       dts: writeTypes && 'src/components.d.ts',
     }),
   ],

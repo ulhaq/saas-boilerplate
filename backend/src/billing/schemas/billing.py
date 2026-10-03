@@ -4,8 +4,8 @@ from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 from src.billing.config import billing_settings
 from src.billing.enums import ENTITLED_STATUSES
-from src.platform.core.schema import ResponseSchema
-from src.platform.schemas.types import ConstrainedEmail
+from src.foundation.core.schema import ResponseSchema
+from src.foundation.schemas.types import ConstrainedEmail
 
 
 class CheckoutIn(BaseModel):

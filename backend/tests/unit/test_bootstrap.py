@@ -1,5 +1,5 @@
 """Tests for composing product manifests (src/bootstrap.py) and the installed
-composition (src/platform/core/composition.py)."""
+composition (src/foundation/core/composition.py)."""
 
 from enum import StrEnum
 from types import ModuleType
@@ -13,13 +13,13 @@ from src.bootstrap import (
     compose,
     compose_default_roles,
 )
-from src.platform import enums as core_enums
-from src.platform.core import composition
-from src.platform.core.entitlements import UNLIMITED
-from src.platform.core.hooks import HookEvent, emit
-from src.platform.core.module import Module
-from src.platform.core.template import templates
-from src.platform.services.email_content import subject_for
+from src.foundation import enums as core_enums
+from src.foundation.core import composition
+from src.foundation.core.entitlements import UNLIMITED
+from src.foundation.core.hooks import HookEvent, emit
+from src.foundation.core.module import Module
+from src.foundation.core.template import templates
+from src.foundation.services.email_content import subject_for
 from src.products import MODULES
 
 
@@ -66,9 +66,9 @@ def test_compose_default_roles_applies_description_overrides_last_wins():
     assert composed == [("Member", "Second's text", []), ("Admin", "Default admin", [])]
 
 
-def test_compose_default_roles_does_not_mutate_platform_roles():
-    platform_grants: list[StrEnum] = [_Perm.READ_WIDGET]
-    roles: list[RoleSpec] = [("Member", "Default member", platform_grants)]
+def test_compose_default_roles_does_not_mutate_foundation_roles():
+    foundation_grants: list[StrEnum] = [_Perm.READ_WIDGET]
+    roles: list[RoleSpec] = [("Member", "Default member", foundation_grants)]
     widgets = _product(
         "widgets",
         default_role_permissions={"Member": [_Perm.EDIT_WIDGET]},
@@ -76,7 +76,7 @@ def test_compose_default_roles_does_not_mutate_platform_roles():
 
     compose_default_roles(roles, [widgets])
 
-    assert platform_grants == [_Perm.READ_WIDGET]
+    assert foundation_grants == [_Perm.READ_WIDGET]
 
 
 async def _on_plan_changed(**_: object) -> None: ...
@@ -129,7 +129,7 @@ def test_bootstrap_is_idempotent_but_a_different_composition_is_refused(
         composition.install(compose([]))
 
 
-async def test_platform_code_uses_the_installed_composition(monkeypatch, tmp_path):
+async def test_foundation_code_uses_the_installed_composition(monkeypatch, tmp_path):
     (tmp_path / "emails" / "en").mkdir(parents=True)
     (tmp_path / "emails" / "en" / "widget-ready.html").write_text("<p>{{ name }}</p>")
     calls: list[dict] = []
@@ -144,7 +144,7 @@ async def test_platform_code_uses_the_installed_composition(monkeypatch, tmp_pat
                 _product(
                     "widgets",
                     hooks={HookEvent.PLAN_CHANGED: [record]},
-                    # Products can also override a platform subject.
+                    # Products can also override a foundation subject.
                     email_subjects={
                         "en": {"widget-ready": "{app_name} widget", "welcome": "Hi"},
                     },

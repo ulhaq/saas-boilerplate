@@ -1,6 +1,6 @@
 """The billing module's manifest: plans, subscriptions and Stripe, plugged into
-the platform like a product. Remove it from `src.products` (and its migration)
-and the platform runs without plans: every feature on, no limits."""
+the foundation like a product. Remove it from `src.products` (and its migration)
+and the foundation runs without plans: every feature on, no limits."""
 
 from pathlib import Path
 
@@ -24,9 +24,9 @@ from src.billing.services.maintenance import (
     run_stale_checkout_cleanup_loop,
     run_trial_reminder_loop,
 )
-from src.platform.core.hooks import HookEvent
-from src.platform.core.module import Module
-from src.platform.core.routing import RouterMount
+from src.foundation.core.hooks import HookEvent
+from src.foundation.core.module import Module
+from src.foundation.core.routing import RouterMount
 
 BILLING = Module(
     name="billing",

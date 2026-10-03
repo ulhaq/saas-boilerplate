@@ -6,10 +6,10 @@ from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 from sqlalchemy import select
 
-import src.platform.core.mfa as mfa_module
+import src.foundation.core.mfa as mfa_module
+from src.foundation.core.config import settings
+from src.foundation.models.audit_log import AuditLog
 from src.main import app
-from src.platform.core.config import settings
-from src.platform.models.audit_log import AuditLog
 from tests.api.test_mfa import _Clock, _enroll
 from tests.conftest import TestSessionLocal
 
@@ -19,14 +19,14 @@ NEW_EMAIL = "admin.new@example.org"
 
 @pytest.fixture
 def user_mail(mocker: MockerFixture) -> MagicMock:
-    return mocker.patch("src.platform.services.user.send_email")
+    return mocker.patch("src.foundation.services.user.send_email")
 
 
 @pytest.fixture
 def auth_mail(mocker: MockerFixture) -> MagicMock:
     # Email from the auth flows: email-change confirmations and sign-up links.
-    mail = mocker.patch("src.platform.services.auth.credentials.send_email")
-    mocker.patch("src.platform.services.auth.registration.send_email", mail)
+    mail = mocker.patch("src.foundation.services.auth.credentials.send_email")
+    mocker.patch("src.foundation.services.auth.registration.send_email", mail)
     return mail
 
 

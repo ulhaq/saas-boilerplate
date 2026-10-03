@@ -1,6 +1,6 @@
 # Adding a Domain Module
 
-How to add a new product/domain package (here called `acme`) next to - or instead of - `example`, on both sides of the stack. The rule everywhere: **the platform never imports your domain; your domain imports the platform; only the assembly layer knows both.** The optional modules (billing, marketing) follow the same rule and are independent of your product too: reach plan limits and features through the platform's entitlements, never billing's code.
+How to add a new product/domain package (here called `acme`) next to - or instead of - `example`, on both sides of the stack. The rule everywhere: **the foundation never imports your domain; your domain imports the foundation; only the assembly layer knows both.** The optional modules (billing, marketing) follow the same rule and are independent of your product too: reach plan limits and features through the foundation's entitlements, never billing's code.
 
 ## Backend (`backend/src/acme/`)
 
@@ -14,9 +14,9 @@ src/acme/
 ├── enums.py          # AcmePermission, AcmeAuditAction, AcmeErrorCode, AcmePlanFeature,
 │                     # AcmeUsageMetric + ACME_PERMISSION_DESCRIPTIONS,
 │                     # ACME_DEFAULT_ROLE_PERMISSIONS, ACME_DEFAULT_ROLE_DESCRIPTIONS
-├── hooks.py          # async handlers for platform HookEvents (listed in product.py)
-├── models/           # SQLAlchemy models (import platform mixins/Base); __init__.py imports all
-├── repositories/     # repos extending the platform base classes
+├── hooks.py          # async handlers for foundation HookEvents (listed in product.py)
+├── models/           # SQLAlchemy models (import foundation mixins/Base); __init__.py imports all
+├── repositories/     # repos extending the foundation base classes
 │   └── manager.py    # AcmeRepositoryManager(RepositoryManager) adding your repos
 ├── services/         # business logic extending BaseService
 ├── routers/          # FastAPI routers, guarded with require_permission(AcmePermission.X)
@@ -28,14 +28,14 @@ src/acme/
 
 Conventions that carry over from `example`:
 
-- Models declare `organization_id` FKs toward platform tables (never the reverse); repositories that hold tenant data extend `OrganizationScopedRepository` so unscoped queries fail loudly.
-- Services raise `ClientException(AcmeErrorCode.X)`; the platform middleware renders the JSON error.
-- Routers/services depend on `AcmeRepositoryManager` (FastAPI instantiates it via `Depends()` exactly like the platform one). Hook handlers receive the _platform_ manager and wrap its session: `repos = AcmeRepositoryManager(repos.db)` - same transaction. A handler never calls an external service (a platform operation must not fail because a provider is down) - record the wanted state and let a worker loop push it.
-- **Plan limits and features** go through the platform, so they work with or without billing: "how many can exist" limits with `await self._require_capacity(AcmeUsageMetric.WIDGETS, organization_id, self.repo.count)` right before inserting (it takes a per-organization lock, so concurrent requests can't both take the last slot), features with `require_plan_feature(AcmePlanFeature.X)` on a route or `self._require_feature(...)` in a service, and `composition.current().entitlements.limit(...)` to read a limit (e.g. in a `PLAN_CHANGED` handler). Without billing installed every feature is on and nothing is limited.
+- Models declare `organization_id` FKs toward foundation tables (never the reverse); repositories that hold tenant data extend `OrganizationScopedRepository` so unscoped queries fail loudly.
+- Services raise `ClientException(AcmeErrorCode.X)`; the foundation middleware renders the JSON error.
+- Routers/services depend on `AcmeRepositoryManager` (FastAPI instantiates it via `Depends()` exactly like the foundation one). Hook handlers receive the _foundation_ manager and wrap its session: `repos = AcmeRepositoryManager(repos.db)` - same transaction. A handler never calls an external service (a foundation operation must not fail because a provider is down) - record the wanted state and let a worker loop push it.
+- **Plan limits and features** go through the foundation, so they work with or without billing: "how many can exist" limits with `await self._require_capacity(AcmeUsageMetric.WIDGETS, organization_id, self.repo.count)` right before inserting (it takes a per-organization lock, so concurrent requests can't both take the last slot), features with `require_plan_feature(AcmePlanFeature.X)` on a route or `self._require_feature(...)` in a service, and `composition.current().entitlements.limit(...)` to read a limit (e.g. in a `PLAN_CHANGED` handler). Without billing installed every feature is on and nothing is limited.
 
 ### 2. Declare its manifest (`src/acme/product.py`)
 
-Everything the package plugs into the platform goes in one `Module` (`src/platform/core/module.py`) - see `src/example/product.py`:
+Everything the package plugs into the foundation goes in one `Module` (`src/foundation/core/module.py`) - see `src/example/product.py`:
 
 ```python
 ACME = Module(
@@ -60,7 +60,7 @@ Also available: `default_role_descriptions`, `email_campaigns` / `email_link_key
 | Where             | What                                                                                                                                                                                                                                             |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `src/products.py` | add `ACME` to `PRODUCTS` - `bootstrap()`, the API router includes, the worker loops and Alembic's model registration all iterate `MODULES`, which includes it                                                                                                       |
-| `pyproject.toml`  | in the import-linter contracts, add `src.acme` next to (or instead of) `src.example`: the platform contract's `forbidden_modules` (so the platform can't import it), the independence contract's `modules` (so it and the optional modules stay apart), the layers contract's `containers`, and the routers contract's module lists |
+| `pyproject.toml`  | in the import-linter contracts, add `src.acme` next to (or instead of) `src.example`: the foundation contract's `forbidden_modules` (so the foundation can't import it), the independence contract's `modules` (so it and the optional modules stay apart), the layers contract's `containers`, and the routers contract's module lists |
 
 Never start loops in `main.py` - `worker.py` runs them in a single process.
 
@@ -70,12 +70,12 @@ Never start loops in `main.py` - `worker.py` runs them in a single process.
 uv run alembic revision --autogenerate -m "acme tables"   # one migration per module, chained last
 uv run alembic upgrade head
 uv run python -m src.sync_permissions                       # your permissions reach the DB and every Owner role
-uv run poe check && uv run poe test && uv run poe test-platform-only
+uv run poe check && uv run poe test && uv run poe test-foundation-only
 ```
 
 Permissions are never seeded by migrations: `sync_permissions` adds the declared ones on every deploy (CI runs it after `alembic upgrade head`) and `init_db` runs it too. To seed plan limits for your metrics, insert `billing_plan_setting` rows in your migration only when billing's tables exist (see `*_example_project_table.py`), so the product still migrates without billing.
 
-Add tests under `backend/tests/` (API tests get the seeded multi-tenant fixtures from `conftest.py` for free; your permissions/roles are seeded because `conftest` imports the composed sets from `src.bootstrap`). A test that relies on billing behaviour (a plan limit, a plan feature) gets `@pytest.mark.billing`, so `test-platform-only` skips it; don't hard-code counts that depend on the installed modules.
+Add tests under `backend/tests/` (API tests get the seeded multi-tenant fixtures from `conftest.py` for free; your permissions/roles are seeded because `conftest` imports the composed sets from `src.bootstrap`). A test that relies on billing behaviour (a plan limit, a plan feature) gets `@pytest.mark.billing`, so `test-foundation-only` skips it; don't hard-code counts that depend on the installed modules.
 
 ## Frontend (`frontend/src/acme/`)
 
@@ -85,22 +85,22 @@ Add tests under `backend/tests/` (API tests get the seeded multi-tenant fixtures
 src/acme/
 ├── index.ts          # manifest: messages, homeRoute, setup() (see step 2)
 ├── pages/            # file-based routes, merged into the app's route tree
-├── components/       # auto-registered, same as platform components
+├── components/       # auto-registered, same as foundation components
 ├── stores/ + api/    # Pinia store is the data gateway; api module (typed `api` calls) used only by the store
 ├── composables/ utils/ constants.ts
 ├── types/            # aliases of the generated API schema: Schema<'WidgetOut'>
-├── locales/en.ts, da.ts   # message tree, deep-merged over platform messages
+├── locales/en.ts, da.ts   # message tree, deep-merged over foundation messages
 └── notifications/    # optional: notification presenter registrations
 ```
 
 ### 2. Declare its manifest (`src/acme/index.ts`)
 
-The module entry default-exports a `Module` (`src/platform/module.ts`) - see `src/example/index.ts`:
+The module entry default-exports a `Module` (`src/foundation/module.ts`) - see `src/example/index.ts`:
 
 ```ts
 const acme: Module = {
   name: 'acme',
-  messages: { da, en },          // deep-merged over the platform locales
+  messages: { da, en },          // deep-merged over the foundation locales
   homeRoute: '/acme',            // optional: where signed-in users land
   setup() {                      // runs once at startup
     registerNavItems('main', [{ to: '/acme', labelKey: 'nav.acme', icon: ..., order: 25 }])
@@ -117,7 +117,7 @@ export default acme
 | `src/products.ts`    | import the manifest and add it to `products` - `main.ts` runs its `setup()` and home route, `plugins/i18n.ts` merges its messages       |
 | `products.config.js` | add `'acme'` to `productPackages` - Vite reads it (via `modulePackages`) for `src/acme/pages` and `src/acme/components`, ESLint for the boundary rules |
 
-Plan limits and features come from `useEntitlements()` (`@/platform/entitlements`: `limitFor`, `hasFeature`, `loadLimits`, `planSummary`) - never billing's store - so the product works without billing; `<PlanQuota>`, `<PlanLimitReached>` and `<LockedOverlay>` render them.
+Plan limits and features come from `useEntitlements()` (`@/foundation/entitlements`: `limitFor`, `hasFeature`, `loadLimits`, `planSummary`) - never billing's store - so the product works without billing; `<PlanQuota>`, `<PlanLimitReached>` and `<LockedOverlay>` render them.
 
 ### 4. Verify
 
@@ -130,11 +130,11 @@ Build first: it generates `typed-router.d.ts`, `components.d.ts` and `auto-impor
 
 ## Replacing the product instead of adding one
 
-Same steps - but delete `src/example/` on both sides (and `backend/tests/api/test_projects.py`) and drop it from the installed lists: `src/products.py` and the import-linter contracts (backend); `src/products.ts` and `products.config.js` (frontend). The platform packages need no changes at all. Also drop the example migration (`alembic/versions/*_example_project_table.py`, which seeds the `projects` plan limits), and update `src/brand.ts`, `planComparisonRows` and `planDescriptions` for the new product.
+Same steps - but delete `src/example/` on both sides (and `backend/tests/api/test_projects.py`) and drop it from the installed lists: `src/products.py` and the import-linter contracts (backend); `src/products.ts` and `products.config.js` (frontend). The foundation packages need no changes at all. Also drop the example migration (`alembic/versions/*_example_project_table.py`, which seeds the `projects` plan limits), and update `src/brand.ts`, `planComparisonRows` and `planDescriptions` for the new product.
 
 ## Keeping or dropping the optional modules
 
-Billing (plans, subscriptions, Stripe; both sides) and marketing (the waitlist and contact-form endpoints the `site/` posts to; backend only) are installed by default. CI already checks that the platform and the product work without them: it removes them from a throwaway checkout with the scripts below and runs lint, the migrations and the tests again (backend), and build, type-check, lint and tests (frontend).
+Billing (plans, subscriptions, Stripe; both sides) and marketing (the waitlist and contact-form endpoints the `site/` posts to; backend only) are installed by default. CI already checks that the foundation and the product work without them: it removes them from a throwaway checkout with the scripts below and runs lint, the migrations and the tests again (backend), and build, type-check, lint and tests (frontend).
 
 To drop one for good, in `backend/` run `uv run python scripts/remove_module.py billing` (or `marketing`), then `uv run poe fix && uv run poe check && uv run poe test` and reset the database. The script does these steps, which you can also do by hand:
 

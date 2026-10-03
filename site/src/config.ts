@@ -4,7 +4,7 @@
  * The site is standalone: it shares no code with the app (`frontend/`) or the
  * backend. Keep `name` in sync with `frontend/src/brand.ts` and the backend
  * `APP_NAME`, and keep the legal slugs in `i18n/routes.ts` in sync with
- * `LEGAL_PATHS` in `frontend/src/platform/constants.ts` - the app links there.
+ * `LEGAL_PATHS` in `frontend/src/foundation/constants.ts` - the app links there.
  */
 export const SITE = {
   name: 'SaaS Boilerplate',

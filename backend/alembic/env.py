@@ -3,9 +3,9 @@ from logging.config import fileConfig
 from sqlalchemy import create_engine, pool
 
 from alembic import context
-from src.platform import models  # noqa: F401  (registers platform tables)
-from src.platform.core.config import settings
-from src.platform.core.database import Base
+from src.foundation import models  # noqa: F401  (registers foundation tables)
+from src.foundation.core.config import settings
+from src.foundation.core.database import Base
 from src.products import MODULES  # noqa: F401  (each manifest imports its models)
 
 # this is the Alembic Config object, which provides

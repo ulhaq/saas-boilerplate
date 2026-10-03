@@ -2,9 +2,9 @@ from typing import Annotated
 
 from fastapi import Depends
 
+from src.foundation.services.base import BaseService
 from src.marketing.repositories.manager import MarketingRepositoryManager
 from src.marketing.schemas.waitlist import WaitlistJoinIn, WaitlistJoinOut
-from src.platform.services.base import BaseService
 
 
 class WaitlistService(BaseService):

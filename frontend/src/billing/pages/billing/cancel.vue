@@ -25,8 +25,8 @@ meta:
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import { Button } from '@/platform/components/ui/button'
-import PageHeader from '@/platform/components/common/PageHeader.vue'
+import { Button } from '@/foundation/components/ui/button'
+import PageHeader from '@/foundation/components/common/PageHeader.vue'
 
 const router = useRouter()
 </script>

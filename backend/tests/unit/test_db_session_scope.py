@@ -10,8 +10,8 @@ from fastapi.dependencies.models import Dependant
 from fastapi.routing import APIRoute
 from starlette.routing import BaseRoute
 
+from src.foundation.core.database import get_db
 from src.main import app
-from src.platform.core.database import get_db
 
 
 def _api_routes(routes: Iterable[BaseRoute]) -> Iterator[APIRoute]:

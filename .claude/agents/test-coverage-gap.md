@@ -27,14 +27,14 @@ Each layer has its own CLAUDE.md. Always read `backend/CLAUDE.md` and `frontend/
 
 ### Step 2 - Enumerate Source Modules
 **Backend - scan for:**
-- All router files: `backend/src/platform/routers/*.py` and the product's (`backend/src/example/routers/*.py`)
-- All service files: `backend/src/platform/services/**/*.py` and the product's (`backend/src/example/services/*.py`)
+- All router files: `backend/src/foundation/routers/*.py` and the product's (`backend/src/example/routers/*.py`)
+- All service files: `backend/src/foundation/services/**/*.py` and the product's (`backend/src/example/services/*.py`)
 - Existing tests live in `backend/tests/api/` (integration tests) and `backend/tests/unit/` (unit tests)
 - Any other testable units called out in `backend/CLAUDE.md`
 
 **Frontend - scan for:**
-- All Pinia store files (e.g., `frontend/src/platform/stores/*.ts`, `frontend/src/example/stores/*.ts`)
-- All composable files (e.g., `frontend/src/platform/composables/*.ts`)
+- All Pinia store files (e.g., `frontend/src/foundation/stores/*.ts`, `frontend/src/example/stores/*.ts`)
+- All composable files (e.g., `frontend/src/foundation/composables/*.ts`)
 - Any API client or service modules
 - Any other testable units called out in `frontend/CLAUDE.md`
 

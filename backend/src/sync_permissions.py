@@ -1,7 +1,7 @@
 """Sync the database's permissions with the installed modules.
 
 Run after migrations on every deploy (and by `init_db`): adds permissions the
-platform, billing or the product declare but the database lacks, and grants
+foundation, billing or the product declare but the database lacks, and grants
 them to every organization's Owner role. Idempotent.
 
 Usage:
@@ -12,10 +12,10 @@ import asyncio
 import logging
 
 from src.bootstrap import ALL_PERMISSIONS, PERMISSION_DESCRIPTIONS
-from src.platform.core.database import ASYNC_SESSION_LOCAL
-from src.platform.core.logging import setup_logging
-from src.platform.repositories.repository_manager import RepositoryManager
-from src.platform.services.permission import PermissionSync, sync_permissions
+from src.foundation.core.database import ASYNC_SESSION_LOCAL
+from src.foundation.core.logging import setup_logging
+from src.foundation.repositories.repository_manager import RepositoryManager
+from src.foundation.services.permission import PermissionSync, sync_permissions
 
 log = logging.getLogger(__name__)
 

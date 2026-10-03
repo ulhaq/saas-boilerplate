@@ -27,7 +27,7 @@ This is a multi-tenant SaaS application. The backend is in `backend/` using Fast
 - `backend/src/billing/repositories/` - billing data access (`BillingRepositoryManager` in `manager.py`)
 - `backend/src/billing/schemas/billing.py` - Pydantic billing schemas
 - `backend/src/billing/module.py` - the billing manifest: routers, hooks, worker loops (stale-checkout cleanup, trial reminders) (billing background work runs only in the worker process, never in the API lifespan)
-- `backend/src/platform/core/hooks.py` - hook registry; billing emits `PLAN_CHANGED`, and product handlers (e.g. `backend/src/example/hooks.py`) react (e.g. enforcing product plan limits)
+- `backend/src/foundation/core/hooks.py` - hook registry; billing emits `PLAN_CHANGED`, and product handlers (e.g. `backend/src/example/hooks.py`) react (e.g. enforcing product plan limits)
 - Tests: `backend/tests/api/test_billing_plans.py`, `test_billing_subscriptions.py`, `test_billing_usage.py`, `test_billing_webhook.py`
 
 The tenant discriminator in this project is `organization_id`, not `tenant_id`. Repositories extending `OrganizationScopedRepository` raise `UnscopedQueryError` unless scoped; webhook handlers and worker loops are legitimate cross-tenant callers and must use the explicit `.unscoped` accessor - flag any webhook code path that bypasses this convention some other way.

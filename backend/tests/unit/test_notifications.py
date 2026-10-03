@@ -4,8 +4,8 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from src.platform.models.notification import Notification
-from src.platform.repositories.repository_manager import RepositoryManager
+from src.foundation.models.notification import Notification
+from src.foundation.repositories.repository_manager import RepositoryManager
 from tests.conftest import TestSessionLocal
 
 # Seeded: user 1 (organization 1's Owner), user 2 (a Member of organization 1)

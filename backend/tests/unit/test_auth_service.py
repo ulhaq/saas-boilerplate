@@ -10,16 +10,16 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from src.platform.core.exceptions import (
+from src.foundation.core.exceptions import (
     AlreadyExistsException,
     NotAuthenticatedException,
     NotFoundException,
     PermissionDeniedException,
 )
-from src.platform.core.security import Auth, Token, hash_secret, sign
-from src.platform.enums import ErrorCode
-from src.platform.repositories.repository_manager import RepositoryManager
-from src.platform.schemas.user import (
+from src.foundation.core.security import Auth, Token, hash_secret, sign
+from src.foundation.enums import ErrorCode
+from src.foundation.repositories.repository_manager import RepositoryManager
+from src.foundation.schemas.user import (
     CompleteInviteIn,
     CompleteRegistrationIn,
     EmailIn,
@@ -27,13 +27,13 @@ from src.platform.schemas.user import (
     ResetPasswordIn,
     VerifyEmailIn,
 )
-from src.platform.services.auth import (
+from src.foundation.services.auth import (
     CredentialsService,
     InviteService,
     RegistrationService,
     SessionService,
 )
-from src.platform.services.auth.base import AuthBaseService
+from src.foundation.services.auth.base import AuthBaseService
 from tests.conftest import TestSessionLocal
 
 
@@ -249,7 +249,7 @@ async def test_refresh_access_token_bogus_raises():
 
 
 async def test_switch_organization_valid():
-    from src.platform.core.security import Auth
+    from src.foundation.core.security import Auth
 
     async with TestSessionLocal() as session, session.begin():
         repos = RepositoryManager(session)
@@ -266,7 +266,7 @@ async def test_switch_organization_valid():
 
 
 async def test_switch_organization_non_member_raises():
-    from src.platform.core.security import Auth
+    from src.foundation.core.security import Auth
 
     async with TestSessionLocal() as session, session.begin():
         repos = RepositoryManager(session)
@@ -458,7 +458,7 @@ async def test_complete_invite_existing_user_requires_sign_in():
 
 async def test_accept_invite_existing_user():
     """Signed-in user accepts an invite to org 2 and gets an org-2 session."""
-    from src.platform.core.security import decode_token
+    from src.foundation.core.security import decode_token
 
     email = "admin@example.org"  # already in org 1
 
@@ -484,8 +484,8 @@ async def test_complete_registration_restores_soft_deleted_user():
     """When a soft-deleted user with the same email exists, it is restored."""
     from datetime import UTC, datetime
 
-    from src.platform.core.security import hash_secret, sign
-    from src.platform.models.user import User
+    from src.foundation.core.security import hash_secret, sign
+    from src.foundation.models.user import User
 
     email = "restored@example.com"
     setup_token = sign(
@@ -627,7 +627,7 @@ async def test_accept_invite_with_roles():
 
 
 async def test_complete_invite_new_user_no_credentials_raises():
-    from src.platform.core.exceptions import ValidationException
+    from src.foundation.core.exceptions import ValidationException
 
     email = "nocreds@example.com"
 
@@ -649,8 +649,8 @@ async def test_complete_invite_new_user_no_credentials_raises():
 async def test_complete_invite_restores_soft_deleted_user():
     from datetime import UTC, datetime
 
-    from src.platform.core.security import hash_secret
-    from src.platform.models.user import User
+    from src.foundation.core.security import hash_secret
+    from src.foundation.models.user import User
 
     email = "deleted_invite@example.com"
 
@@ -716,10 +716,10 @@ async def test_complete_invite_new_user_with_roles():
 
 async def test_get_access_token_no_membership_raises():
     """User exists and password is correct but has no org membership."""
-    from src.platform.core.security import hash_secret
+    from src.foundation.core.security import hash_secret
 
     async with TestSessionLocal() as session, session.begin():
-        from src.platform.models.user import User
+        from src.foundation.models.user import User
 
         user = User(
             name="No Org User",
@@ -742,7 +742,7 @@ async def test_get_access_token_no_membership_raises():
 async def test_refresh_access_token_zero_user_id_raises(mocker):
     """JWT decodes successfully but sub='0' > user_id falsy > NotAuthenticated."""
     mocker.patch(
-        "src.platform.services.auth.sessions.decode_token",
+        "src.foundation.services.auth.sessions.decode_token",
         return_value={"sub": "0"},
     )
 
@@ -760,7 +760,7 @@ async def test_refresh_access_token_zero_user_id_raises(mocker):
 async def test_refresh_access_token_user_not_found_raises(mocker):
     """JWT has valid sub but user doesn't exist in DB."""
     mocker.patch(
-        "src.platform.services.auth.sessions.decode_token",
+        "src.foundation.services.auth.sessions.decode_token",
         return_value={"sub": "99999"},
     )
 
@@ -811,7 +811,7 @@ async def test_refresh_access_token_no_membership_raises():
     """Valid token/user but UserOrganization row deleted before refresh."""
     from sqlalchemy import delete
 
-    from src.platform.models.user_organization import UserOrganization
+    from src.foundation.models.user_organization import UserOrganization
 
     async with TestSessionLocal() as session, session.begin():
         service = await _make_service(session, SessionService)
@@ -836,7 +836,7 @@ async def test_refresh_access_token_no_membership_raises():
 
 async def test_switch_organization_user_not_found_raises():
     """Auth object references a non-existent user_id > NotAuthenticated."""
-    from src.platform.core.security import Auth
+    from src.foundation.core.security import Auth
 
     ghost_auth = Auth(
         id=99999,

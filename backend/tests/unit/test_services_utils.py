@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from src.platform.services.mailer import send_email
+from src.foundation.services.mailer import send_email
 
 # ---------------------------------------------------------------------------
 # setup_new_organization
@@ -26,7 +26,7 @@ def test_send_email_calls_smtp(mocker):
     mock_smtp_instance.__exit__ = MagicMock(return_value=False)
     mock_smtp_instance.has_extn.return_value = False
 
-    mocker.patch("src.platform.services.mailer.SMTP", return_value=mock_smtp_instance)
+    mocker.patch("src.foundation.services.mailer.SMTP", return_value=mock_smtp_instance)
 
     send_email(
         address="user@example.com",
@@ -45,7 +45,7 @@ def test_send_email_calls_smtp(mocker):
 def test_send_email_smtp_failure_propagates(mocker):
     """SMTP errors propagate so callers can handle or log them."""
     mocker.patch(
-        "src.platform.services.mailer.SMTP",
+        "src.foundation.services.mailer.SMTP",
         side_effect=ConnectionRefusedError("refused"),
     )
 
@@ -67,7 +67,7 @@ def test_send_email_no_data_uses_defaults(mocker):
     mock_smtp_instance.__exit__ = MagicMock(return_value=False)
     mock_smtp_instance.has_extn.return_value = False
 
-    mocker.patch("src.platform.services.mailer.SMTP", return_value=mock_smtp_instance)
+    mocker.patch("src.foundation.services.mailer.SMTP", return_value=mock_smtp_instance)
 
     send_email(
         address="user@example.com",
@@ -86,7 +86,7 @@ def test_send_email_with_none_data(mocker):
     mock_smtp_instance.__exit__ = MagicMock(return_value=False)
     mock_smtp_instance.has_extn.return_value = False
 
-    mocker.patch("src.platform.services.mailer.SMTP", return_value=mock_smtp_instance)
+    mocker.patch("src.foundation.services.mailer.SMTP", return_value=mock_smtp_instance)
 
     send_email(
         address="user@example.com",
@@ -109,9 +109,9 @@ def test_send_email_with_starttls(mocker):
     # has_extn returns a truthy MagicMock by default - STARTTLS path is taken
     mock_smtp_instance.has_extn.return_value = True
 
-    mocker.patch("src.platform.services.mailer.SMTP", return_value=mock_smtp_instance)
+    mocker.patch("src.foundation.services.mailer.SMTP", return_value=mock_smtp_instance)
     # Patch only email_tls so the rest of settings keeps real string values
-    mocker.patch("src.platform.services.mailer.settings.email_tls", True)  # noqa: FBT003
+    mocker.patch("src.foundation.services.mailer.settings.email_tls", True)  # noqa: FBT003
 
     send_email(
         address="user@example.com",
@@ -132,8 +132,8 @@ def test_send_email_with_smtp_credentials(mocker):
     mock_smtp_instance.__exit__ = MagicMock(return_value=False)
     mock_smtp_instance.has_extn.return_value = False
 
-    mocker.patch("src.platform.services.mailer.SMTP", return_value=mock_smtp_instance)
-    mock_settings = mocker.patch("src.platform.services.mailer.settings")
+    mocker.patch("src.foundation.services.mailer.SMTP", return_value=mock_smtp_instance)
+    mock_settings = mocker.patch("src.foundation.services.mailer.settings")
     mock_settings.email_tls = False
     mock_settings.email_user = "smtp_user"
     mock_settings.email_password = "smtp_pass"
@@ -161,9 +161,9 @@ def test_send_email_gives_up_on_a_stalled_mail_server(mocker):
     server.bind(("127.0.0.1", 0))
     server.listen()
     host, port = server.getsockname()
-    mocker.patch("src.platform.services.mailer.settings.email_host", host)
-    mocker.patch("src.platform.services.mailer.settings.email_port", port)
-    mocker.patch("src.platform.services.mailer.settings.email_timeout_seconds", 0.3)
+    mocker.patch("src.foundation.services.mailer.settings.email_host", host)
+    mocker.patch("src.foundation.services.mailer.settings.email_port", port)
+    mocker.patch("src.foundation.services.mailer.settings.email_timeout_seconds", 0.3)
 
     started = time.monotonic()
     try:

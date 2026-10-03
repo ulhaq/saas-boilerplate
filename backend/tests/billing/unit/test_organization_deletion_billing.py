@@ -3,13 +3,13 @@
 import pytest
 
 from src.billing.repositories.manager import BillingRepositoryManager
-from src.platform.core.exceptions import (
+from src.foundation.core.exceptions import (
     PermissionDeniedException,
 )
-from src.platform.core.security import Auth
-from src.platform.enums import Permission as PermEnum
-from src.platform.repositories.repository_manager import RepositoryManager
-from src.platform.services.organization import OrganizationService
+from src.foundation.core.security import Auth
+from src.foundation.enums import Permission as PermEnum
+from src.foundation.repositories.repository_manager import RepositoryManager
+from src.foundation.services.organization import OrganizationService
 from tests.conftest import TestSessionLocal
 
 

@@ -1,8 +1,8 @@
 import pytest
 from fastapi.testclient import TestClient
 
+from src.foundation.core.config import settings
 from src.main import API_CSP, DOCS_CSP
-from src.platform.core.config import settings
 
 BASE_HEADERS = {
     "x-content-type-options": "nosniff",

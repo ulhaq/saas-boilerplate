@@ -9,7 +9,7 @@ from httpx import Headers, Response
 from sqlalchemy import delete
 
 from src.billing.models.billing import PlanFeature as PlanFeatureModel
-from src.platform.models.api_token import ApiToken
+from src.foundation.models.api_token import ApiToken
 from tests.conftest import TestSessionLocal
 
 

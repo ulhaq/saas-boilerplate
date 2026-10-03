@@ -4,7 +4,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.example.models.project import Project
-from src.platform.repositories.base import OrganizationScopedRepository
+from src.foundation.repositories.base import OrganizationScopedRepository
 
 
 class ProjectRepository(OrganizationScopedRepository[Project]):

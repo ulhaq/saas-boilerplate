@@ -7,7 +7,7 @@ environment with an `EXAMPLE_` prefix (e.g. `heartbeat_interval_seconds` <-
 
 from pydantic_settings import SettingsConfigDict
 
-from src.platform.core.config import EnvSettings
+from src.foundation.core.config import EnvSettings
 
 
 class ExampleSettings(EnvSettings):

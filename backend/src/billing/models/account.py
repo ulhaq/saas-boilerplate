@@ -4,10 +4,10 @@ from typing import TYPE_CHECKING
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from src.platform.models.mixins import ResourceModelBase
+from src.foundation.models.mixins import ResourceModelBase
 
 if TYPE_CHECKING:
-    from src.platform.models.organization import Organization
+    from src.foundation.models.organization import Organization
 
 
 class BillingAccount(ResourceModelBase):

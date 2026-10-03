@@ -17,8 +17,8 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
 )
 from opentelemetry.trace import StatusCode
 
-from src.platform.core.logging import add_trace_context
-from src.platform.core.telemetry import track_worker_run
+from src.foundation.core.logging import add_trace_context
+from src.foundation.core.telemetry import track_worker_run
 
 _reader = InMemoryMetricReader()
 _spans = InMemorySpanExporter()

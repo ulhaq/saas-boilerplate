@@ -14,7 +14,7 @@ def _do_verify(
     email: str = "new_user@example.org",
 ) -> str:
     """Register, capture verification token, verify email, return setup_token."""
-    mock_send = mocker.patch("src.platform.services.auth.registration.send_email")
+    mock_send = mocker.patch("src.foundation.services.auth.registration.send_email")
     _do_register(client, email)
     verify_url = mock_send.call_args.kwargs["data"]["verify_url"]
     token = verify_url.split("token=")[1]

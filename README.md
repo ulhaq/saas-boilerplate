@@ -26,11 +26,11 @@ The product-specific code lives in one package per side (`backend/src/example/`,
 
 ## Architecture
 
-Both sides of the codebase are split into a generic, reusable **SaaS platform**, optional **modules** (billing; marketing on the backend) and the **product domain**, wired together by a thin assembly layer. The platform never imports a module or the product, and they don't import each other - enforced in CI by [import-linter](https://import-linter.readthedocs.io) on the backend and ESLint `no-restricted-imports` rules on the frontend. CI also runs the tests with the optional modules removed.
+Both sides of the codebase are split into a generic, reusable **SaaS foundation**, optional **modules** (billing; marketing on the backend) and the **product domain**, wired together by a thin assembly layer. The foundation never imports a module or the product, and they don't import each other - enforced in CI by [import-linter](https://import-linter.readthedocs.io) on the backend and ESLint `no-restricted-imports` rules on the frontend. CI also runs the tests with the optional modules removed.
 
 ```
 backend/src/                            frontend/src/
-├── platform/    generic SaaS core      ├── platform/   generic app shell
+├── foundation/  generic SaaS core      ├── foundation/ generic app shell
 │   ├── core/    config, db, security,  │   ├── pages/ components/ stores/
 │   │            hooks, entitlements    │   ├── api/ composables/ layouts/
 │   ├── models/ repositories/           │   ├── locales/ types/
@@ -49,11 +49,11 @@ backend/src/                            frontend/src/
 ├── sync_permissions.py, init_db.py
 ```
 
-How the two halves connect without the platform knowing about the product:
+How the two halves connect without the foundation knowing about the product:
 
 - **Module manifest**: each module declares everything it plugs in - one `Module` per side (`src/example/product.py`, `src/billing/module.py`, `src/example/index.ts`, ...). The assembly layer reads the installed list (`src/products.py`, `src/products.ts`), so swapping the product or dropping a module is a small change on each side.
 - **Hooks** (backend): lifecycle events (`MEMBER_ADDED`, `MEMBER_REMOVED`, `ORGANIZATION_CREATED`, `ORGANIZATION_DELETING`, `OWNERSHIP_TRANSFERRED`, `PLAN_CHANGED`); modules list async handlers in their manifest.
-- **Entitlements** (both sides): the platform asks "is this feature on, what's this limit?" through one interface; billing answers from the organization's plan, and without billing everything is on and unlimited.
+- **Entitlements** (both sides): the foundation asks "is this feature on, what's this limit?" through one interface; billing answers from the organization's plan, and without billing everything is on and unlimited.
 - **Composition** (backend): `bootstrap()` merges the modules' permissions, roles, audit actions, hooks, email subjects, templates and entitlements into one read-only `Composition` at startup.
 - **Registries** (frontend): manifests register sidebar and settings nav items, notification presenters, dashboard banners and route guards, and set the authenticated home route; their locale trees are deep-merged in the i18n plugin.
 
@@ -72,7 +72,7 @@ Background loops live only in the worker so the API can scale horizontally witho
 2. **Product code**: replace the `example` package on both sides - step-by-step in [`docs/adding-a-domain-module.md`](docs/adding-a-domain-module.md).
 3. **Optional modules**: keep or drop billing (no Stripe, no plans - everything unlimited) and marketing (no marketing site) - see "Keeping or dropping the optional modules" in the same guide.
 4. **Plans** (with billing): adjust the seeded plans/prices/seat limits in the billing migration, product limits in your product migration, and the plan copy (`planComparisonRows`, `planDescriptions`) in the product locales.
-5. **Marketing site**: `site/` (static Astro). Set the name, company details and support email in `site/src/config.ts`, the plans in `site/src/content/plans.ts`, the copy in `site/src/i18n/ui.ts` and the legal texts in `site/src/content/legal/`. `SITE_THEME` picks one of eight designs at build time (editorial, tech, soft, swiss, brutal, enterprise, nordic, aurora), and `PUBLIC_CTA_MODE=waitlist` switches every call to action to the waitlist for a pre-launch. The app links to its terms and privacy pages (`LEGAL_PATHS` in `frontend/src/platform/constants.ts`) and to its `/og-image.png`.
+5. **Marketing site**: `site/` (static Astro). Set the name, company details and support email in `site/src/config.ts`, the plans in `site/src/content/plans.ts`, the copy in `site/src/i18n/ui.ts` and the legal texts in `site/src/content/legal/`. `SITE_THEME` picks one of eight designs at build time (editorial, tech, soft, swiss, brutal, enterprise, nordic, aurora), and `PUBLIC_CTA_MODE=waitlist` switches every call to action to the waitlist for a pre-launch. The app links to its terms and privacy pages (`LEGAL_PATHS` in `frontend/src/foundation/constants.ts`) and to its `/og-image.png`.
 6. **Deploy config**: `Caddyfile.example` (marketing domain -> site, `app.` subdomain -> app), `ANALYTICS_ORIGIN` in `docker-compose.yml` (only with the `analytics` profile), the deploy path in `.github/workflows/ci.yml`.
 
 Architecture details live in `backend/CLAUDE.md` and `frontend/CLAUDE.md`.
@@ -125,7 +125,7 @@ uv run poe dev      # dev server on :8000
 uv run poe fix   # ruff format + autofix
 uv run poe check     # ty (type check) + ruff + import-linter boundary/layer contracts
 uv run poe test     # pytest against PostgreSQL (see below)
-uv run poe test-platform-only   # the same without the optional modules (CI runs both)
+uv run poe test-foundation-only   # the same without the optional modules (CI runs both)
 alembic revision --autogenerate -m "..."   # new migration
 alembic upgrade head
 ```
@@ -147,7 +147,7 @@ dev server run on the host. Only with `APP_ENV=local`.
 ```bash
 npm run dev         # vite dev server on :5173
 npm run typecheck   # vue-tsc -b (needs the types `dev`/`build` generate)
-npm run lint        # eslint --fix (includes the platform/product boundary rule)
+npm run lint        # eslint --fix (includes the foundation/product boundary rule)
 npm run gen:api     # regenerate the API types from ../backend/openapi.internal.json
 npm run build       # production build (SPA)
 npm test            # component tests (vitest)
@@ -155,18 +155,18 @@ npm run format      # prettier (CI checks it)
 npm run test:e2e    # playwright (needs the dev stack running)
 ```
 
-Routes are file-based: adding a page under `src/platform/pages/` or a module's `pages/` (`src/billing/`, `src/example/`) creates a route. Components in every `components/` root are auto-registered.
+Routes are file-based: adding a page under `src/foundation/pages/` or a module's `pages/` (`src/billing/`, `src/example/`) creates a route. Components in every `components/` root are auto-registered.
 
 ### Key backend conventions
 
 - **Layering**: routers → services → repositories → models; services raise `ClientException(ErrorCode.X)`, middleware renders consistent JSON errors.
 - **Tenant isolation**: repositories extending `OrganizationScopedRepository` refuse unscoped queries unless `.unscoped` is used explicitly.
-- **Permissions**: `Permission` (platform), module and product StrEnums (`ExamplePermission`), merged by `bootstrap.py` and synced into the database on every deploy (`python -m src.sync_permissions`, which also grants them to every Owner); guard routes with `require_permission(...)` and frontend UI with `<PermissionGuard>` / `hasPermission()`.
+- **Permissions**: `Permission` (foundation), module and product StrEnums (`ExamplePermission`), merged by `bootstrap.py` and synced into the database on every deploy (`python -m src.sync_permissions`, which also grants them to every Owner); guard routes with `require_permission(...)` and frontend UI with `<PermissionGuard>` / `hasPermission()`.
 
 ### Key frontend conventions
 
 - **Stores are the data gateway**: components never import `api/*` modules directly; every read/write goes through a Pinia store action.
-- **i18n everywhere**: all user-facing strings come from `vue-i18n` (`da` default, `en`), platform and product locale trees merged at startup.
+- **i18n everywhere**: all user-facing strings come from `vue-i18n` (`da` default, `en`), foundation and product locale trees merged at startup.
 
 ## Repository Layout
 

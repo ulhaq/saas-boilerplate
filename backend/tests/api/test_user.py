@@ -8,8 +8,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from src.bootstrap import ALL_PERMISSIONS, PERMISSION_DESCRIPTIONS
-from src.platform.models.organization import Organization
-from src.platform.models.user import User
+from src.foundation.models.organization import Organization
+from src.foundation.models.user import User
 from tests.conftest import TestSessionLocal
 from tests.utils import (
     assert_filtering_of_items_list,
@@ -52,7 +52,7 @@ def test_get_authenticated_user(admin_authenticated: TestClient) -> None:
 
 
 def test_invite_a_user(admin_authenticated: TestClient, mocker: MockerFixture) -> None:
-    mocker.patch("src.platform.services.user.send_email")
+    mocker.patch("src.foundation.services.user.send_email")
     response = admin_authenticated.post(
         "/v1/users/invite",
         json={"email": "new@testing.com", "role_ids": [2]},

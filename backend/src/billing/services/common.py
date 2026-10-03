@@ -3,9 +3,9 @@ from datetime import UTC, date, datetime
 from src.billing.enums import BillingPermission
 from src.billing.models.billing import Subscription
 from src.billing.repositories.manager import BillingRepositoryManager
-from src.platform.models.organization import Organization
-from src.platform.services.email_content import format_date
-from src.platform.services.email_outbox import queue_email
+from src.foundation.models.organization import Organization
+from src.foundation.services.email_content import format_date
+from src.foundation.services.email_outbox import queue_email
 
 
 def _ts(ts: int | None) -> datetime | None:

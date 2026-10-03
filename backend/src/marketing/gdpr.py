@@ -2,8 +2,8 @@
 
 from typing import Any
 
+from src.foundation.repositories.repository_manager import RepositoryManager
 from src.marketing.repositories.manager import MarketingRepositoryManager
-from src.platform.repositories.repository_manager import RepositoryManager
 
 
 async def export_user_data(

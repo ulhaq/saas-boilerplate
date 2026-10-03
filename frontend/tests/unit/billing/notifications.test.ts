@@ -2,9 +2,9 @@ import { mount } from '@vue/test-utils'
 import { defineComponent } from 'vue'
 import { describe, expect, test } from 'vitest'
 import { BILLING_NOTIFICATION_TYPES, registerBillingNotifications } from '@/billing/notifications'
-import { useNotificationPresenter } from '@/platform/composables/useNotificationPresenter'
+import { useNotificationPresenter } from '@/foundation/composables/useNotificationPresenter'
 import { i18n, type SupportedLocale } from '@/plugins/i18n'
-import type { NotificationOut } from '@/platform/types/notification'
+import type { NotificationOut } from '@/foundation/types/notification'
 
 registerBillingNotifications()
 

@@ -2,9 +2,9 @@ from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Request, status
 
+from src.foundation.core.limiter import limiter
 from src.marketing.schemas.contact import ContactMessageIn, ContactMessageOut
 from src.marketing.services.contact import ContactService
-from src.platform.core.limiter import limiter
 
 router = APIRouter(prefix="/contact")
 

@@ -4,12 +4,12 @@
 
 from pathlib import Path
 
+from src.foundation.core.module import Module
+from src.foundation.core.routing import RouterMount
 from src.marketing import models
 from src.marketing.emails import MARKETING_EMAIL_SUBJECTS
 from src.marketing.gdpr import export_user_data
 from src.marketing.routers import contact, waitlist
-from src.platform.core.module import Module
-from src.platform.core.routing import RouterMount
 
 MARKETING = Module(
     name="marketing",

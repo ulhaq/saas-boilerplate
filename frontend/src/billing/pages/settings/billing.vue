@@ -439,23 +439,23 @@ meta:
 
 <script setup lang="ts">
 import { Loader2, ExternalLink, ShieldCheck, CreditCard } from 'lucide-vue-next'
-import { Button } from '@/platform/components/ui/button'
-import { Badge } from '@/platform/components/ui/badge'
-import { Input } from '@/platform/components/ui/input'
-import { Skeleton } from '@/platform/components/ui/skeleton'
+import { Button } from '@/foundation/components/ui/button'
+import { Badge } from '@/foundation/components/ui/badge'
+import { Input } from '@/foundation/components/ui/input'
+import { Skeleton } from '@/foundation/components/ui/skeleton'
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/platform/components/ui/tooltip'
-import PageHeader from '@/platform/components/common/PageHeader.vue'
+} from '@/foundation/components/ui/tooltip'
+import PageHeader from '@/foundation/components/common/PageHeader.vue'
 import CurrentPrice from '@/billing/components/CurrentPrice.vue'
 import PlanCard from '@/billing/components/PlanCard.vue'
 import PriceLabel from '@/billing/components/PriceLabel.vue'
 import { useBillingFormat } from '@/billing/composables/useBillingFormat'
 import { useBillingPage } from '@/billing/composables/useBillingPage'
-import { useFormatDate } from '@/platform/composables/useFormatDate'
+import { useFormatDate } from '@/foundation/composables/useFormatDate'
 
 const { formatDate, formatDateTime } = useFormatDate()
 const { formatPrice, monthlyEquivalent, statusBadgeVariant } = useBillingFormat()

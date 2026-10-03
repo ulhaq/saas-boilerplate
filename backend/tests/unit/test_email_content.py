@@ -1,8 +1,8 @@
-"""Unit tests for src/platform/services/email_content.py."""
+"""Unit tests for src/foundation/services/email_content.py."""
 
 from datetime import date
 
-from src.platform.services.email_content import (
+from src.foundation.services.email_content import (
     format_date,
     normalize_locale,
     subject_for,

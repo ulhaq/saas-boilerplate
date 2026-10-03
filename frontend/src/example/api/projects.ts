@@ -1,4 +1,4 @@
-import { api } from '@/platform/api/client'
+import { api } from '@/foundation/api/client'
 import type { ProjectIn, ProjectPatch } from '@/example/types/project'
 
 type ListParams = Record<string, string | number | undefined>

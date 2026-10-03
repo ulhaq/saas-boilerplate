@@ -1,8 +1,8 @@
-"""Billing extension of the platform repository manager.
+"""Billing extension of the foundation repository manager.
 
-Billing services and routers depend on this subclass instead of the platform
-``RepositoryManager`` so the platform stays free of billing repositories.
-Hook handlers that receive a platform manager wrap its session via
+Billing services and routers depend on this subclass instead of the foundation
+``RepositoryManager`` so the foundation stays free of billing repositories.
+Hook handlers that receive a foundation manager wrap its session via
 ``BillingRepositoryManager(repos.db)`` to join the same transaction.
 """
 
@@ -18,7 +18,7 @@ from src.billing.repositories.billing import (
     SubscriptionRepository,
     WebhookEventRepository,
 )
-from src.platform.repositories.repository_manager import RepositoryManager
+from src.foundation.repositories.repository_manager import RepositoryManager
 
 
 class BillingRepositoryManager(RepositoryManager):

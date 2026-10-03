@@ -9,12 +9,12 @@
 import { computed, defineAsyncComponent } from 'vue'
 import { useRoute } from 'vue-router'
 import { useHead } from '@unhead/vue'
-import { Toaster } from '@/platform/components/ui/toast'
-import { useAuthStore } from '@/platform/stores/auth'
+import { Toaster } from '@/foundation/components/ui/toast'
+import { useAuthStore } from '@/foundation/stores/auth'
 import { buildRouteHead } from '@/router/seo'
 
-const AuthLayout = defineAsyncComponent(() => import('@/platform/layouts/AuthLayout.vue'))
-const DashboardLayout = defineAsyncComponent(() => import('@/platform/layouts/DashboardLayout.vue'))
+const AuthLayout = defineAsyncComponent(() => import('@/foundation/layouts/AuthLayout.vue'))
+const DashboardLayout = defineAsyncComponent(() => import('@/foundation/layouts/DashboardLayout.vue'))
 
 const route = useRoute()
 const authStore = useAuthStore()

@@ -1,5 +1,5 @@
 # Grafana-managed alert rules. Metric names follow the OTLP -> Prometheus
-# translation of what src/platform/core/telemetry.py and the FastAPI
+# translation of what src/foundation/core/telemetry.py and the FastAPI
 # instrumentation emit; browser errors come from Faro via Loki.
 apiVersion: 1
 

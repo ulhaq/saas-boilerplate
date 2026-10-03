@@ -18,26 +18,26 @@ from sqlalchemy.exc import IntegrityError
 from starlette.routing import BaseRoute
 
 from src.bootstrap import AUDIT_ACTION, bootstrap
-from src.platform.core.config import settings
-from src.platform.core.database import DbSession
-from src.platform.core.error_response import (
+from src.foundation.core.config import settings
+from src.foundation.core.database import DbSession
+from src.foundation.core.error_response import (
     ErrorResponse,
     ValidationDetail,
     ValidationErrorResponse,
 )
-from src.platform.core.exceptions import ClientException
-from src.platform.core.limiter import limiter
-from src.platform.core.logging import setup_logging
-from src.platform.core.middlewares import (
+from src.foundation.core.exceptions import ClientException
+from src.foundation.core.limiter import limiter
+from src.foundation.core.logging import setup_logging
+from src.foundation.core.middlewares import (
     AccessLogMiddleware,
     AuditContextMiddleware,
     ErrorHandlingMiddleware,
     SecurityHeadersMiddleware,
 )
-from src.platform.core.routing import API_PREFIX, RouterMount
-from src.platform.core.telemetry import instrument_app, setup_telemetry
-from src.platform.enums import ErrorCode
-from src.platform.routers import (
+from src.foundation.core.routing import API_PREFIX, RouterMount
+from src.foundation.core.telemetry import instrument_app, setup_telemetry
+from src.foundation.enums import ErrorCode
+from src.foundation.routers import (
     api_token,
     audit_log,
     auth,

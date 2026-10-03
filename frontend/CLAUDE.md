@@ -1,6 +1,6 @@
 # Frontend
 
-Vue 3 + TypeScript SPA for the SaaS boilerplate: the signed-in app (auth, organizations, users, roles, settings), the optional billing module (plans, subscriptions, checkout) and the example product's Projects feature. The marketing site (home, pricing, legal pages) is the separate `site/` package on its own domain; the app links to its terms/privacy pages via `legalUrl()` in `platform/constants.ts`. Built with Vite, Pinia state management, file-based routing via `unplugin-vue-router`, Tailwind + Reka UI components.
+Vue 3 + TypeScript SPA for the SaaS boilerplate: the signed-in app (auth, organizations, users, roles, settings), the optional billing module (plans, subscriptions, checkout) and the example product's Projects feature. The marketing site (home, pricing, legal pages) is the separate `site/` package on its own domain; the app links to its terms/privacy pages via `legalUrl()` in `foundation/constants.ts`. Built with Vite, Pinia state management, file-based routing via `unplugin-vue-router`, Tailwind + Reka UI components.
 
 ## Commands (`cd frontend` first)
 
@@ -16,15 +16,15 @@ npm run test:e2e  # end-to-end (playwright; needs the dev stack running)
 ## Project Structure
 
 The source tree mirrors the backend's split: a generic SaaS shell under
-`src/platform/`, the optional billing module under `src/billing/`, the product
+`src/foundation/`, the optional billing module under `src/billing/`, the product
 under `src/example/`, and a thin assembly layer at the `src/` root.
-**`src/platform` must never import from `src/billing` or `src/example`, and
+**`src/foundation` must never import from `src/billing` or `src/example`, and
 billing never imports the product** - enforced by `no-restricted-imports` ESLint
 rules.
 
 ```
 src/
-├── platform/         # generic SaaS shell (auth, orgs, users, roles, settings)
+├── foundation/         # generic SaaS shell (auth, orgs, users, roles, settings)
 │   ├── api/          # Axios client + domain API modules (auth, users, roles, ...)
 │   ├── components/
 │   │   ├── ui/       # Base shadcn-style components (Button, Input, Dialog, Card, etc.)
@@ -33,7 +33,7 @@ src/
 │   │   └── users/, roles/, organizations/
 │   ├── composables/  # useDataTable, useErrorHandler, usePermission, useNotificationPresenter, ...
 │   ├── layouts/      # DashboardLayout, AuthLayout
-│   ├── locales/      # platform i18n strings (en, da)
+│   ├── locales/      # foundation i18n strings (en, da)
 │   ├── pages/        # login, register, users, roles, settings/**, notifications
 │   ├── stores/       # auth, users, roles, organizations, notifications, ui, ...
 │   ├── types/
@@ -44,7 +44,7 @@ src/
 ├── billing/          # optional module: plans, subscriptions, Stripe checkout
 │   ├── api/, stores/subscription.ts, components/, composables/, types.ts
 │   ├── pages/        # settings/billing.vue, billing/success|cancel.vue
-│   ├── entitlements.ts # the plan as the platform's Entitlements + app-access guard
+│   ├── entitlements.ts # the plan as the foundation's Entitlements + app-access guard
 │   ├── notifications.ts # presenters for `billing.*` in-app notifications
 │   ├── locales/      # subscription.*, notifications.billing.*, nav.subscription
 │   └── index.ts      # manifest: messages + setup() registering all of the above
@@ -52,23 +52,23 @@ src/
 │   ├── api/projects.ts · stores/projects.ts · components/projects/
 │   ├── pages/        # dashboard.vue, projects/index.vue
 │   ├── components/, types/, constants.ts
-│   ├── locales/      # product i18n strings, deep-merged over platform messages
+│   ├── locales/      # product i18n strings, deep-merged over foundation messages
 │   └── index.ts      # manifest (Module): messages, homeRoute, nav setup
 ├── brand.ts          # product identity: name, marketing + app origins
-├── plugins/          # i18n setup (merges platform + product messages)
+├── plugins/          # i18n setup (merges foundation + product messages)
 ├── router/           # Router config + navigation guards, seo.ts (head tags)
 ├── products.ts       # `products` and `modules` (billing + products) - the only runtime file naming them
 └── main.ts           # assembly: runs each module's setup(), sets the homeRoute
 ```
 
-**Platform extension points** (how billing and the product hook in without the
-platform knowing about them): the `Module` manifest in `platform/module.ts`,
-`registerNavItems()` / `registerSettingsNavItems()` in `platform/navigation.ts`,
-`registerNotificationPresenter()` in `platform/composables/useNotificationPresenter.ts`,
-`configureApp()` in `platform/config.ts`, `provideEntitlements()` in
-`platform/entitlements.ts`, `registerBanner()` in `platform/banners.ts`,
-`registerRouteGuard()` in `platform/routeGuards.ts`, and the locale deep-merge in
-`plugins/i18n.ts`. Platform code asks `useEntitlements()` for plan features and
+**Foundation extension points** (how billing and the product hook in without the
+foundation knowing about them): the `Module` manifest in `foundation/module.ts`,
+`registerNavItems()` / `registerSettingsNavItems()` in `foundation/navigation.ts`,
+`registerNotificationPresenter()` in `foundation/composables/useNotificationPresenter.ts`,
+`configureApp()` in `foundation/config.ts`, `provideEntitlements()` in
+`foundation/entitlements.ts`, `registerBanner()` in `foundation/banners.ts`,
+`registerRouteGuard()` in `foundation/routeGuards.ts`, and the locale deep-merge in
+`plugins/i18n.ts`. Foundation code asks `useEntitlements()` for plan features and
 limits (`hasFeature`, `limitFor`) - never the billing store. To run without
 billing, drop it from `src/products.ts` and `modulePackages` in
 `products.config.js` and delete `src/billing/` (`node scripts/remove-billing.mjs`
@@ -80,9 +80,9 @@ again): every feature is then on, with no limits.
 and change its folder name in `productPackages` in `products.config.js` (read by
 `vite.config.ts` for pages/components and by the ESLint boundary rules).
 
-**Product-provided i18n keys the platform reads**: `planDescriptions.<PlanName>` and
-`planComparisonRows` (read by billing's page), and optionally `seo.*` overrides. Everything else the platform renders is defined in
-the platform locales; billing's strings are in `billing/locales`.
+**Product-provided i18n keys the foundation reads**: `planDescriptions.<PlanName>` and
+`planComparisonRows` (read by billing's page), and optionally `seo.*` overrides. Everything else the foundation renders is defined in
+the foundation locales; billing's strings are in `billing/locales`.
 
 ### Example product: Projects
 
@@ -94,7 +94,7 @@ Permissions: `read:project`, `create:project`, `update:project`, `delete:project
 
 ## Routing
 
-Routes are auto-generated by `unplugin-vue-router` from merged page roots: `src/platform/pages/**` plus each module's `pages/**` (`src/billing/pages/**`, `src/example/pages/**`; see `products.config.js` and `routesFolder` in `vite.config.ts`). No manual route definitions - adding a file in any root creates a route; a module's `pages/settings/x.vue` nests under the platform's settings layout.
+Routes are auto-generated by `unplugin-vue-router` from merged page roots: `src/foundation/pages/**` plus each module's `pages/**` (`src/billing/pages/**`, `src/example/pages/**`; see `products.config.js` and `routesFolder` in `vite.config.ts`). No manual route definitions - adding a file in any root creates a route; a module's `pages/settings/x.vue` nests under the foundation's settings layout.
 
 Route metadata is declared with YAML frontmatter in each page file:
 
@@ -156,7 +156,7 @@ Store ↔ api naming must match the domain (`stores/organizations.ts` ↔ `api/o
 
 ## API Layer
 
-`src/platform/api/client.ts` - Axios instance with:
+`src/foundation/api/client.ts` - Axios instance with:
 
 - Request interceptor: attaches `Authorization: Bearer <token>`
 - Response interceptor: on 401, queues concurrent requests, refreshes token, retries - or clears session and redirects to login on failure
@@ -175,7 +175,7 @@ The path, method, path params, body and response type are checked against the ge
 
 ### API types are generated - never hand-write them
 
-`src/api-schema.ts` is generated from `backend/openapi.internal.json`, the schema of every route that the backend writes (`uv run poe openapi`). The files in `platform/types/` (and a product's `types/`) alias it by schema name: `export type RoleOut = Schema<'RoleOut'>` (`Schema` is in `platform/types/api.ts`). A type with no backend schema (e.g. form state) stays hand-written. Narrow a generated field only where the backend declares a plain string the frontend relies on as a union - say so in a comment (see `platform/types/billing.ts`).
+`src/api-schema.ts` is generated from `backend/openapi.internal.json`, the schema of every route that the backend writes (`uv run poe openapi`). The files in `foundation/types/` (and a product's `types/`) alias it by schema name: `export type RoleOut = Schema<'RoleOut'>` (`Schema` is in `foundation/types/api.ts`). A type with no backend schema (e.g. form state) stays hand-written. Narrow a generated field only where the backend declares a plain string the frontend relies on as a union - say so in a comment (see `foundation/types/billing.ts`).
 
 After changing a backend request/response schema: `cd backend && uv run poe openapi`, then `npm run gen:api`, and commit the backend's schema files + `src/api-schema.ts` (the pre-commit hook does this when backend code changes). CI regenerates them and fails if they are out of date.
 
@@ -229,7 +229,7 @@ Permission names follow `resource:action` convention (e.g., `users:read`, `roles
 
 ## Internationalization
 
-All user-facing strings go through `vue-i18n`. Use `const { t } = useI18n()` in script, `$t('key')` in templates. Platform strings live in `src/platform/locales/{en,da}.ts`; product strings in `src/example/locales/{en,da}.ts`. Each product's manifest hands its trees over, and they are deep-merged in `src/plugins/i18n.ts`, so product files can extend shared namespaces (e.g. `nav.*`, `errors.fields.*`). Add keys to both locales of the owning package.
+All user-facing strings go through `vue-i18n`. Use `const { t } = useI18n()` in script, `$t('key')` in templates. Foundation strings live in `src/foundation/locales/{en,da}.ts`; product strings in `src/example/locales/{en,da}.ts`. Each product's manifest hands its trees over, and they are deep-merged in `src/plugins/i18n.ts`, so product files can extend shared namespaces (e.g. `nav.*`, `errors.fields.*`). Add keys to both locales of the owning package.
 
 Key namespaces: `auth.*`, `nav.*`, `common.*`, `settings.*`, `errors.api.*`, `errors.fields.*`
 
@@ -237,11 +237,11 @@ Key namespaces: `auth.*`, `nav.*`, `common.*`, `settings.*`, `errors.api.*`, `er
 
 Component tests live in `tests/unit/`, mirroring the `src/` path of the code they test (`tests/unit/billing/pages/settings/billing.test.ts` tests `src/billing/pages/settings/billing.vue`), and run with Vitest in a simulated DOM (`happy-dom`, `@vue/test-utils`); `vitest.config.ts` reuses the Vite config. `billing.test.ts` is the model: mount the page per state with a real Pinia store whose API-calling actions are replaced by `vi.fn()`, mock `useConfirm`/`useToast` with `vi.mock`, then assert what the user sees and which store action a click calls. Look up visible text through i18n keys (`i18n.global.t(...)`), not hard-coded copy. Fixtures use the generated API types, so `npm run typecheck` flags fixtures that drift from the backend. CI runs `npm test`.
 
-Platform tests must not depend on billing or product content - their locale strings are merged in at runtime, so assert platform keys only, and stub `useEntitlements` (`vi.mock('@/platform/entitlements')`) rather than reaching into billing's store.
+Foundation tests must not depend on billing or product content - their locale strings are merged in at runtime, so assert foundation keys only, and stub `useEntitlements` (`vi.mock('@/foundation/entitlements')`) rather than reaching into billing's store.
 
 ## Styling
 
-Tailwind CSS with a CSS variable-based theme (HSL tokens defined in `src/assets/index.css`). Use `cn()` from `@/platform/lib/utils` to merge classes conditionally. Dark mode is supported via the theme variables.
+Tailwind CSS with a CSS variable-based theme (HSL tokens defined in `src/assets/index.css`). Use `cn()` from `@/foundation/lib/utils` to merge classes conditionally. Dark mode is supported via the theme variables.
 
 ## Conventions
 
@@ -251,4 +251,4 @@ Tailwind CSS with a CSS variable-based theme (HSL tokens defined in `src/assets/
 - **API modules**: camelCase with `Api` suffix (e.g., `usersApi`)
 - Path alias `@` maps to `src/`
 - Auto-imported: Vue reactivity APIs, vue-router composables, Pinia helpers - no explicit imports needed for these
-- Auto-registered: all components in `src/platform/components/` and `src/example/components/` - no explicit imports needed
+- Auto-registered: all components in `src/foundation/components/` and `src/example/components/` - no explicit imports needed

@@ -2,12 +2,12 @@
 
 import pytest
 
-from src.platform.core.exceptions import NotFoundException, ValidationException
-from src.platform.core.security import Auth
-from src.platform.enums import Permission as PermEnum
-from src.platform.repositories.repository_manager import RepositoryManager
-from src.platform.schemas.api_token import ApiTokenCreate
-from src.platform.services.api_token import ApiTokenService
+from src.foundation.core.exceptions import NotFoundException, ValidationException
+from src.foundation.core.security import Auth
+from src.foundation.enums import Permission as PermEnum
+from src.foundation.repositories.repository_manager import RepositoryManager
+from src.foundation.schemas.api_token import ApiTokenCreate
+from src.foundation.services.api_token import ApiTokenService
 from tests.conftest import TestSessionLocal
 
 

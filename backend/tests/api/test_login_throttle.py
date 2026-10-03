@@ -5,9 +5,9 @@ from datetime import UTC, datetime, timedelta
 from fastapi.testclient import TestClient
 from sqlalchemy import select, update
 
-from src.platform.core.config import settings
-from src.platform.models.login_throttle import LoginThrottle
-from src.platform.repositories.repository_manager import RepositoryManager
+from src.foundation.core.config import settings
+from src.foundation.models.login_throttle import LoginThrottle
+from src.foundation.repositories.repository_manager import RepositoryManager
 from tests.conftest import TestSessionLocal
 
 ADMIN = "admin@example.org"

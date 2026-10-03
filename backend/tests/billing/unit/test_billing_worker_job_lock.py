@@ -1,5 +1,5 @@
 """Billing's worker loops take their job lock: an iteration runs in one worker
-at a time (the platform's `try_job_lock`). The customer sync is the exception -
+at a time (the foundation's `try_job_lock`). The customer sync is the exception -
 it is safe to run concurrently (see `sync_customer_emails`)."""
 
 import pytest
@@ -8,7 +8,7 @@ from src.billing.services.maintenance import (
     run_stale_checkout_cleanup_loop,
     run_trial_reminder_loop,
 )
-from src.platform.core.database import try_job_lock
+from src.foundation.core.database import try_job_lock
 from tests.conftest import TestSessionLocal
 from tests.unit.test_worker_job_lock import run_one_iteration
 

@@ -1,4 +1,4 @@
-import { api } from '@/platform/api/client'
+import { api } from '@/foundation/api/client'
 
 export const billingApi = {
   // Plans

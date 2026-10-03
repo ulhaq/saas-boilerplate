@@ -1,4 +1,4 @@
-"""The example product's manifest: everything it plugs into the platform."""
+"""The example product's manifest: everything it plugs into the foundation."""
 
 from src.example import models
 from src.example.enums import (
@@ -11,9 +11,9 @@ from src.example.enums import (
 from src.example.hooks import log_projects_over_plan_limit
 from src.example.routers import projects
 from src.example.worker import run_example_loop
-from src.platform.core.hooks import HookEvent
-from src.platform.core.module import Module
-from src.platform.core.routing import RouterMount
+from src.foundation.core.hooks import HookEvent
+from src.foundation.core.module import Module
+from src.foundation.core.routing import RouterMount
 
 EXAMPLE = Module(
     name="example",

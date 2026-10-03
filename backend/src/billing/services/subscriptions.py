@@ -21,14 +21,14 @@ from src.billing.schemas.billing import (
 )
 from src.billing.services.base import BillingBaseService
 from src.billing.services.common import _is_active_free_sub
-from src.platform.core.exceptions import (
+from src.foundation.core.exceptions import (
     AlreadyExistsException,
     NotFoundException,
     ValidationException,
 )
-from src.platform.core.hooks import HookEvent, emit
-from src.platform.core.security import Auth
-from src.platform.services.access import authenticate
+from src.foundation.core.hooks import HookEvent, emit
+from src.foundation.core.security import Auth
+from src.foundation.services.access import authenticate
 
 
 class SubscriptionService(BillingBaseService):

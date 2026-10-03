@@ -21,18 +21,18 @@ from src.billing.provider import (
     WebhookPayload,
     get_billing_provider,
 )
+from src.foundation.enums import PlanFeature
+from src.foundation.models.organization import Organization
 from src.init_db import INIT_AUTH_DATA
 from src.main import app
-from src.platform.enums import PlanFeature
-from src.platform.models.organization import Organization
 from tests.conftest import TestSessionLocal
 
 
 @pytest.fixture(autouse=True)
 async def seed_billing(
-    prepare_database: None,  # noqa: ARG001 - orders this after the platform seed
+    prepare_database: None,  # noqa: ARG001 - orders this after the foundation seed
 ) -> None:
-    """Runs after the platform seed (`prepare_database`)."""
+    """Runs after the foundation seed (`prepare_database`)."""
     async with TestSessionLocal() as session, session.begin():
         organizations = list(
             (await session.execute(select(Organization).order_by(Organization.id)))

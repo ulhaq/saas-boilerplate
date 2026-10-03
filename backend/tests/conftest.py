@@ -11,18 +11,18 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 # The environment the settings read at import time, and the installed modules,
 # are set up by the `tests.preload` plugin, which runs before this file.
-import src.platform.core.security as _security_mod
+import src.foundation.core.security as _security_mod
 from src.bootstrap import ALL_PERMISSIONS, PERMISSION_DESCRIPTIONS
+from src.foundation.core.config import settings
+from src.foundation.core.database import Base, get_db
+from src.foundation.core.security import hash_secret
+from src.foundation.models.organization import Organization
+from src.foundation.models.permission import Permission
+from src.foundation.models.role import Role
+from src.foundation.models.user import User
+from src.foundation.models.user_organization import UserOrganization
 from src.init_db import INIT_AUTH_DATA
 from src.main import app
-from src.platform.core.config import settings
-from src.platform.core.database import Base, get_db
-from src.platform.core.security import hash_secret
-from src.platform.models.organization import Organization
-from src.platform.models.permission import Permission
-from src.platform.models.role import Role
-from src.platform.models.user import User
-from src.platform.models.user_organization import UserOrganization
 from tests.preload import WITHOUT_MODULES
 
 # Tests run against a real PostgreSQL server so Postgres-only behaviour (JSONB,
@@ -177,12 +177,12 @@ async def prepare_database() -> AsyncGenerator[None]:
 @pytest.fixture(autouse=True)
 def mock_send_email(mocker):
     """Prevent real SMTP calls in unit/integration tests."""
-    mocker.patch("src.platform.services.email_outbox.send_email")
-    mocker.patch("src.platform.services.auth.registration.send_email")
-    mocker.patch("src.platform.services.auth.invites.send_email")
-    mocker.patch("src.platform.services.auth.credentials.send_email")
-    mocker.patch("src.platform.services.user.send_email")
-    mocker.patch("src.platform.services.mailer._MAX_EMAIL_ATTEMPTS", 1)
+    mocker.patch("src.foundation.services.email_outbox.send_email")
+    mocker.patch("src.foundation.services.auth.registration.send_email")
+    mocker.patch("src.foundation.services.auth.invites.send_email")
+    mocker.patch("src.foundation.services.auth.credentials.send_email")
+    mocker.patch("src.foundation.services.user.send_email")
+    mocker.patch("src.foundation.services.mailer._MAX_EMAIL_ATTEMPTS", 1)
 
 
 @pytest.fixture

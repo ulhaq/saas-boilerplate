@@ -1,7 +1,7 @@
 from sqlalchemy import ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from src.platform.models.mixins import ResourceModel
+from src.foundation.models.mixins import ResourceModel
 
 
 class Project(ResourceModel):

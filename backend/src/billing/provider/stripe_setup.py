@@ -18,8 +18,8 @@ from src.billing.config import billing_settings
 from src.billing.exceptions import BillingProviderException
 from src.billing.models.billing import Plan
 from src.billing.provider.stripe_provider import StripeProvider
-from src.platform.core.database import ASYNC_SESSION_LOCAL
-from src.platform.core.logging import setup_logging
+from src.foundation.core.database import ASYNC_SESSION_LOCAL
+from src.foundation.core.logging import setup_logging
 
 setup_logging("stripe_setup")
 log = logging.getLogger(__name__)

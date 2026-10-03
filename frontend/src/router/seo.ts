@@ -1,6 +1,6 @@
 import { i18n } from '@/plugins/i18n'
 import { BRAND } from '@/brand'
-import { MARKETING_ORIGIN } from '@/platform/constants'
+import { MARKETING_ORIGIN } from '@/foundation/constants'
 
 /**
  * The only indexable app pages, with their `seo.*` copy key. Everything else

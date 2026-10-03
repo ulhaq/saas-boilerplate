@@ -15,12 +15,12 @@ APP HOST (docker-compose.yml, profile `observability`)       MONITORING HOST (do
 
 | Signal | Source | Where it lands |
 |---|---|---|
-| Request traces (FastAPI, SQL, outgoing Stripe HTTP) | `src/platform/core/telemetry.py` | Tempo |
+| Request traces (FastAPI, SQL, outgoing Stripe HTTP) | `src/foundation/core/telemetry.py` | Tempo |
 | HTTP metrics (rate, status, latency per route) | FastAPI instrumentation | Prometheus `http_server_request_duration_seconds_*` |
 | Worker loops (runs, failures, duration, last success) | `track_worker_run()` | Prometheus `worker_*` |
 | Stripe webhook outcomes | `record_webhook_event()` | Prometheus `billing_webhook_events_total` |
 | Logs (redacted, with `trace_id`) | container stdout, `LOG_FORMAT=json` | Loki, labels `service_name`, `level` |
-| Browser errors + web vitals | `frontend/src/platform/lib/telemetry.ts` (Faro) | Loki `{service_name="browser"}` |
+| Browser errors + web vitals | `frontend/src/foundation/lib/telemetry.ts` (Faro) | Loki `{service_name="browser"}` |
 
 Provisioned from this directory (edit the files, not the UI): data sources with
 log ↔ trace links, the **App overview** dashboard, and alert rules emailed to
@@ -97,12 +97,12 @@ Processes run on the host (`uv run poe dev`) can't resolve `alloy`; leave
 
 ## Privacy
 
-- Logs are redacted before they leave the process (`src/platform/core/logging.py`);
+- Logs are redacted before they leave the process (`src/foundation/core/logging.py`);
   traces record SQL with bind placeholders, never values.
 - Faro runs without session tracking and without user identity, so nothing is
   stored in the visitor's browser (no cookie consent needed). URL parameters
   carrying secrets (`?token=`, ...) are redacted before sending
-  (`scrubUrls` in `frontend/src/platform/lib/telemetry.ts`).
+  (`scrubUrls` in `frontend/src/foundation/lib/telemetry.ts`).
 - The agent needs the Docker socket to read container logs, which is
   root-equivalent access on the app host.
 - Mention error monitoring in your privacy policy.

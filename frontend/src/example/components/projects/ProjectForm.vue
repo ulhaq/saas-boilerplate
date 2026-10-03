@@ -64,16 +64,16 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/platform/components/ui/dialog'
-import { Button } from '@/platform/components/ui/button'
-import { Input } from '@/platform/components/ui/input'
-import { Textarea } from '@/platform/components/ui/textarea'
-import { Label } from '@/platform/components/ui/label'
-import { useToast } from '@/platform/components/ui/toast/use-toast'
+} from '@/foundation/components/ui/dialog'
+import { Button } from '@/foundation/components/ui/button'
+import { Input } from '@/foundation/components/ui/input'
+import { Textarea } from '@/foundation/components/ui/textarea'
+import { Label } from '@/foundation/components/ui/label'
+import { useToast } from '@/foundation/components/ui/toast/use-toast'
 import { useProjectsStore } from '@/example/stores/projects'
-import { useErrorHandler } from '@/platform/composables/useErrorHandler'
-import { useValidation } from '@/platform/composables/useValidation'
-import { useRules } from '@/platform/composables/useRules'
+import { useErrorHandler } from '@/foundation/composables/useErrorHandler'
+import { useValidation } from '@/foundation/composables/useValidation'
+import { useRules } from '@/foundation/composables/useRules'
 import type { ProjectOut } from '@/example/types/project'
 
 const props = defineProps<{ open: boolean; project?: ProjectOut | null }>()

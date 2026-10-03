@@ -8,8 +8,8 @@ from src.billing.provider.abc import BillingProviderABC
 from src.billing.repositories.manager import BillingRepositoryManager
 from src.billing.services.base import BillingBaseService
 from src.billing.services.common import notify_subscription_managers
-from src.platform.core.config import settings
-from src.platform.core.hooks import HookEvent, emit
+from src.foundation.core.config import settings
+from src.foundation.core.hooks import HookEvent, emit
 
 log = logging.getLogger(__name__)
 

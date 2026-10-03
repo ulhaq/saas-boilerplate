@@ -10,8 +10,8 @@ const t = i18n.global.t
 
 const confirm = vi.fn(async (..._args: unknown[]) => true)
 const toast = vi.fn()
-vi.mock('@/platform/composables/useConfirm', () => ({ useConfirm: () => ({ confirm }) }))
-vi.mock('@/platform/composables/useToast', () => ({ useToast: () => ({ toast }) }))
+vi.mock('@/foundation/composables/useConfirm', () => ({ useConfirm: () => ({ confirm }) }))
+vi.mock('@/foundation/composables/useToast', () => ({ useToast: () => ({ toast }) }))
 
 function price(id: number, amount: number, interval: string, trial: number | null): PlanPriceOut {
   return {

@@ -1,9 +1,9 @@
-"""Marketing extension of the platform repository manager."""
+"""Marketing extension of the foundation repository manager."""
 
 from functools import cached_property
 
+from src.foundation.repositories.repository_manager import RepositoryManager
 from src.marketing.repositories.waitlist_entry import WaitlistEntryRepository
-from src.platform.repositories.repository_manager import RepositoryManager
 
 
 class MarketingRepositoryManager(RepositoryManager):

@@ -52,10 +52,10 @@ import type { Locale } from 'date-fns'
 import { Loader2, CreditCard } from 'lucide-vue-next'
 import type { SupportedLocale } from '@/plugins/i18n'
 import { useSubscriptionStore } from '@/billing/stores/subscription'
-import { useToast } from '@/platform/composables/useToast'
-import { useErrorHandler } from '@/platform/composables/useErrorHandler'
-import { Button } from '@/platform/components/ui/button'
-import { MS_PER_DAY } from '@/platform/constants'
+import { useToast } from '@/foundation/composables/useToast'
+import { useErrorHandler } from '@/foundation/composables/useErrorHandler'
+import { Button } from '@/foundation/components/ui/button'
+import { MS_PER_DAY } from '@/foundation/constants'
 
 const dateFnsLocales: Record<SupportedLocale, Locale> = { da: daLocale, en: enLocale }
 

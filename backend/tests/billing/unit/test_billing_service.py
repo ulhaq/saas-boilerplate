@@ -25,13 +25,13 @@ from src.billing.services import (
 )
 from src.billing.services.common import _get_period_field
 from src.billing.services.webhooks.invoices import InvoiceWebhookHandlers
-from src.platform.core.exceptions import (
+from src.foundation.core.exceptions import (
     AlreadyExistsException,
     NotFoundException,
     ValidationException,
 )
-from src.platform.core.security import Auth
-from src.platform.models.audit_log import AuditLog
+from src.foundation.core.security import Auth
+from src.foundation.models.audit_log import AuditLog
 from tests.conftest import TestSessionLocal
 
 
@@ -45,7 +45,7 @@ def _admin_auth(organization_id: int = 1) -> Auth:
         permissions=[
             p.value
             for p in __import__(
-                "src.platform.enums",
+                "src.foundation.enums",
                 fromlist=["Permission"],
             ).Permission
         ],

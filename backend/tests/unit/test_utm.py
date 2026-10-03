@@ -1,6 +1,6 @@
 from urllib.parse import parse_qs, urlsplit
 
-from src.platform.services.utm import append_utm, apply_utm
+from src.foundation.services.utm import append_utm, apply_utm
 
 
 def _params(url: str) -> dict[str, list[str]]:

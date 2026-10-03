@@ -3,7 +3,7 @@
 from typing import Any
 
 from src.billing.repositories.manager import BillingRepositoryManager
-from src.platform.repositories.repository_manager import RepositoryManager
+from src.foundation.repositories.repository_manager import RepositoryManager
 
 
 async def export_user_data(

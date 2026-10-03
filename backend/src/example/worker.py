@@ -12,8 +12,8 @@ from typing import Any
 
 from src.example.config import settings
 from src.example.repositories.project import ProjectRepository
-from src.platform.core.telemetry import track_worker_run
-from src.platform.repositories.worker_run import WorkerRunRepository
+from src.foundation.core.telemetry import track_worker_run
+from src.foundation.repositories.worker_run import WorkerRunRepository
 
 log = logging.getLogger(__name__)
 

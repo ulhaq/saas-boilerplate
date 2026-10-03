@@ -3,8 +3,8 @@ from typing import Any
 from fastapi import status
 
 from src.billing.enums import BillingErrorCode
-from src.platform.core.exceptions import ClientException
-from src.platform.enums import ErrorCodeEnum
+from src.foundation.core.exceptions import ClientException
+from src.foundation.enums import ErrorCodeEnum
 
 
 class BillingProviderException(ClientException):

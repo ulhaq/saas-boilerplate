@@ -2,19 +2,23 @@
 
 import pytest
 
-from src.platform.core.exceptions import (
+from src.foundation.core.exceptions import (
     AlreadyExistsException,
     NotFoundException,
     PermissionDeniedException,
 )
-from src.platform.core.security import Auth
-from src.platform.enums import Permission as PermEnum
-from src.platform.repositories.repository_manager import RepositoryManager
-from src.platform.schemas.common import PageQueryParams
-from src.platform.schemas.permission import PermissionIn, PermissionOut, PermissionPatch
-from src.platform.schemas.role import RoleIn, RoleOut, RolePatch, RolePermissionIn
-from src.platform.services.permission import PermissionService
-from src.platform.services.role import RoleService
+from src.foundation.core.security import Auth
+from src.foundation.enums import Permission as PermEnum
+from src.foundation.repositories.repository_manager import RepositoryManager
+from src.foundation.schemas.common import PageQueryParams
+from src.foundation.schemas.permission import (
+    PermissionIn,
+    PermissionOut,
+    PermissionPatch,
+)
+from src.foundation.schemas.role import RoleIn, RoleOut, RolePatch, RolePermissionIn
+from src.foundation.services.permission import PermissionService
+from src.foundation.services.role import RoleService
 from tests.conftest import TestSessionLocal
 
 

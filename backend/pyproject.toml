@@ -94,7 +94,7 @@ help = "Format the code with ruff"
 cmd = "pytest ./tests -n auto"
 help = "Run the test suite in parallel"
 
-[tool.poe.tasks."test-platform-only"]
+[tool.poe.tasks."test-foundation-only"]
 cmd = "pytest ./tests -n auto"
 env = { TEST_WITHOUT_MODULES = "optional" }
 help = "Run the suite without the optional modules (billing, marketing)"
@@ -104,7 +104,7 @@ cmd = "pytest ./tests -n auto --cov=src --cov-report=term-missing --cov-report=h
 help = "Run the suite with a coverage report (terminal + htmlcov/)"
 
 [tool.ruff]
-exclude = ["src/platform/templates"]
+exclude = ["src/foundation/templates"]
 
 [tool.ruff.lint]
 select = [
@@ -188,14 +188,14 @@ mypy-init-return = true
 [tool.ruff.lint.per-file-ignores]
 "*/*.py" = ["TRY003"]
 "tests/**" = ["ANN", "PL", "SLF", "S101", "S105", "S106", "S107"]
-"src/platform/enums.py" = ["S105"]
+"src/foundation/enums.py" = ["S105"]
 
 [tool.ty.src]
-exclude = ["src/platform/templates"]
+exclude = ["src/foundation/templates"]
 
 [tool.coverage.run]
 source = ["src"]
-omit = ["src/platform/templates/*"]
+omit = ["src/foundation/templates/*"]
 concurrency = ["greenlet", "thread"]
 
 [tool.coverage.report]
@@ -211,13 +211,13 @@ exclude_lines = [
 root_packages = ["src"]
 
 [[tool.importlinter.contracts]]
-name = "Platform must not import its modules or the product domain"
+name = "Foundation must not import its modules or the product domain"
 type = "forbidden"
-source_modules = ["src.platform"]
+source_modules = ["src.foundation"]
 forbidden_modules = ["src.billing", "src.marketing", "src.example"]
 
-# Billing and marketing are optional platform modules: none depends on another
-# or on the product, and the product reaches them only through the platform
+# Billing and marketing are optional foundation modules: none depends on another
+# or on the product, and the product reaches them only through the foundation
 # (entitlements, hooks) - so each can be removed. If your product must import
 # one directly, narrow this contract.
 [[tool.importlinter.contracts]]
@@ -226,13 +226,13 @@ type = "independence"
 modules = ["src.billing", "src.marketing", "src.example"]
 
 # Each layer may import the layers below it, never the ones above. Applied to
-# the platform, billing and the product package; `provider` (the payment
+# the foundation, billing and the product package; `provider` (the payment
 # provider adapter) only exists in billing. Keep `src.example` pointed at your
 # product package when you rename it.
 [[tool.importlinter.contracts]]
 name = "Layers: routers > services > provider > repositories > models | schemas"
 type = "layers"
-containers = ["src.platform", "src.billing", "src.marketing", "src.example"]
+containers = ["src.foundation", "src.billing", "src.marketing", "src.example"]
 layers = [
     "routers",
     "services",
@@ -245,14 +245,14 @@ layers = [
 name = "Routers reach data only through services"
 type = "forbidden"
 source_modules = [
-    "src.platform.routers",
+    "src.foundation.routers",
     "src.billing.routers",
     "src.marketing.routers",
     "src.example.routers",
 ]
 forbidden_modules = [
-    "src.platform.repositories",
-    "src.platform.models",
+    "src.foundation.repositories",
+    "src.foundation.models",
     "src.billing.repositories",
     "src.billing.models",
     "src.marketing.repositories",
@@ -269,11 +269,11 @@ allow_indirect_imports = true
 [[tool.importlinter.contracts]]
 name = "Core does not import the layers built on it"
 type = "forbidden"
-source_modules = ["src.platform.core"]
+source_modules = ["src.foundation.core"]
 forbidden_modules = [
-    "src.platform.routers",
-    "src.platform.services",
-    "src.platform.repositories",
-    "src.platform.models",
-    "src.platform.schemas",
+    "src.foundation.routers",
+    "src.foundation.services",
+    "src.foundation.repositories",
+    "src.foundation.models",
+    "src.foundation.schemas",
 ]

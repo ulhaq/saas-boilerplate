@@ -1,9 +1,9 @@
-"""Billing enums: what the billing module adds to the platform's permissions,
+"""Billing enums: what the billing module adds to the foundation's permissions,
 audit actions and error codes (merged in by the composition root)."""
 
 from enum import StrEnum
 
-from src.platform.enums import ErrorCodeEnum
+from src.foundation.enums import ErrorCodeEnum
 
 # The organization's current subscription: billing, or able to resume billing.
 LIVE_STATUSES = ("active", "trialing", "past_due", "paused")

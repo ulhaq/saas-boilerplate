@@ -5,8 +5,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from src.bootstrap import ALL_PERMISSIONS, PERMISSION_DESCRIPTIONS
-from src.platform.enums import Permission
-from src.platform.models.permission import Permission as PermissionModel
+from src.foundation.enums import Permission
+from src.foundation.models.permission import Permission as PermissionModel
 from tests.conftest import TestSessionLocal
 from tests.utils import (
     assert_filtering_of_items_list,

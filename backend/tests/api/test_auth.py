@@ -6,8 +6,8 @@ from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
 from src.bootstrap import ALL_PERMISSIONS
+from src.foundation.core.limiter import limiter
 from src.main import app
-from src.platform.core.limiter import limiter
 from tests.utils import advance_clock
 
 
@@ -21,7 +21,7 @@ def _do_verify(
     email: str = "new_user@example.org",
 ) -> str:
     """Register, capture verification token, verify email, return setup_token."""
-    mock_send = mocker.patch("src.platform.services.auth.registration.send_email")
+    mock_send = mocker.patch("src.foundation.services.auth.registration.send_email")
     _do_register(client, email)
     verify_url = mock_send.call_args.kwargs["data"]["verify_url"]
     token = verify_url.split("token=")[1]
@@ -69,7 +69,7 @@ def test_cannot_register_without_accepting_terms(client: TestClient) -> None:
 
 
 def test_verify_email(mocker: MockerFixture, client: TestClient) -> None:
-    mock_send = mocker.patch("src.platform.services.auth.registration.send_email")
+    mock_send = mocker.patch("src.foundation.services.auth.registration.send_email")
     _do_register(client)
 
     verify_url = mock_send.call_args.kwargs["data"]["verify_url"]
@@ -158,7 +158,7 @@ def test_cannot_verify_email_token_twice(
     mocker: MockerFixture,
     client: TestClient,
 ) -> None:
-    mock_send = mocker.patch("src.platform.services.auth.registration.send_email")
+    mock_send = mocker.patch("src.foundation.services.auth.registration.send_email")
     _do_register(client)
     token = mock_send.call_args.kwargs["data"]["verify_url"].split("token=")[1]
 
@@ -197,7 +197,7 @@ def test_get_access_token(client: TestClient) -> None:
 
 
 def test_refresh_access_token(client: TestClient) -> None:
-    with patch("src.platform.core.config.settings.auth_access_token_expiry", 2):
+    with patch("src.foundation.core.config.settings.auth_access_token_expiry", 2):
         response = client.post(
             "v1/auth/token",
             data={"username": "admin@example.org", "password": "password"},
@@ -260,7 +260,7 @@ def test_request_password_reset(client: TestClient) -> None:
 
 
 def test_reset_password(mocker: MockerFixture, client: TestClient) -> None:
-    mock_send = mocker.patch("src.platform.services.auth.credentials.send_email")
+    mock_send = mocker.patch("src.foundation.services.auth.credentials.send_email")
 
     client.post("v1/auth/reset-password/request", json={"email": "admin@example.org"})
 
@@ -311,7 +311,7 @@ def test_cannot_refresh_access_token_with_invalid_token(client: TestClient) -> N
 
 
 def test_cannot_refresh_access_token_with_expired_token(client: TestClient) -> None:
-    with patch("src.platform.core.config.settings.auth_refresh_token_expiry", -1):
+    with patch("src.foundation.core.config.settings.auth_refresh_token_expiry", -1):
         response = client.post(
             "v1/auth/token",
             data={"username": "admin@example.org", "password": "password"},
@@ -345,9 +345,9 @@ def test_cannot_reset_password_with_expired_token(
     mocker: MockerFixture,
     client: TestClient,
 ) -> None:
-    mock_send = mocker.patch("src.platform.services.auth.credentials.send_email")
+    mock_send = mocker.patch("src.foundation.services.auth.credentials.send_email")
 
-    with patch("src.platform.core.config.settings.auth_password_reset_expiry", -1):
+    with patch("src.foundation.core.config.settings.auth_password_reset_expiry", -1):
         client.post(
             "v1/auth/reset-password/request",
             json={"email": "admin@example.org"},
@@ -509,7 +509,7 @@ async def test_revoked_membership_invalidates_access_token(
     expires - authenticate() re-verifies membership on every request."""
     from sqlalchemy import delete
 
-    from src.platform.models.user_organization import UserOrganization
+    from src.foundation.models.user_organization import UserOrganization
     from tests.conftest import TestSessionLocal
 
     response = client.post(
@@ -714,7 +714,7 @@ def _do_invite(
     email: str = "invited@example.org",
 ) -> str:
     """Send an invite and return the raw invite token captured from the mocked email."""
-    mock_send = mocker.patch("src.platform.services.user.send_email")
+    mock_send = mocker.patch("src.foundation.services.user.send_email")
     admin_client.post("/v1/users/invite", json={"email": email, "role_ids": [2]})
     invite_url = mock_send.call_args.kwargs["data"]["invite_url"]
     return invite_url.split("token=")[1]
@@ -761,7 +761,7 @@ def test_invited_user_is_added_to_organization_with_roles(
     admin_authenticated: TestClient,
     client: TestClient,
 ) -> None:
-    mock_send = mocker.patch("src.platform.services.user.send_email")
+    mock_send = mocker.patch("src.foundation.services.user.send_email")
     admin_authenticated.post(
         "/v1/users/invite",
         json={"email": "invited@example.org", "role_ids": [2]},
@@ -800,7 +800,7 @@ def test_cannot_complete_invite_with_expired_token(
     admin_authenticated: TestClient,
     client: TestClient,
 ) -> None:
-    with patch("src.platform.core.config.settings.invite_expiry", -1):
+    with patch("src.foundation.core.config.settings.invite_expiry", -1):
         token = _do_invite(mocker, admin_authenticated)
     response = client.post(
         "/v1/auth/complete-invite",
@@ -866,7 +866,7 @@ def test_invite_status_expired_token(
     admin_authenticated: TestClient,
     client: TestClient,
 ) -> None:
-    with patch("src.platform.core.config.settings.invite_expiry", -1):
+    with patch("src.foundation.core.config.settings.invite_expiry", -1):
         token = _do_invite(mocker, admin_authenticated)
     response = client.post("/v1/auth/invite-status", json={"token": token})
     assert response.status_code == 401
@@ -883,10 +883,10 @@ def test_invites_from_different_orgs_coexist(
 ) -> None:
     """Regression: a second org inviting the same email must not invalidate
     the first org's pending invite."""
-    mocker.patch("src.platform.services.auth.invites.send_email")
+    mocker.patch("src.foundation.services.auth.invites.send_email")
     email = "shared@example.org"
     token_org1 = _do_invite(mocker, admin_authenticated, email=email)
-    mock_send = mocker.patch("src.platform.services.user.send_email")
+    mock_send = mocker.patch("src.foundation.services.user.send_email")
     organization2_admin_authenticated.post(
         "/v1/users/invite",
         json={"email": email, "role_ids": [4]},
@@ -969,7 +969,7 @@ def test_rejected_complete_invite_leaves_invite_usable(
     admin_authenticated: TestClient,
     admin2_client: TestClient,
 ) -> None:
-    mocker.patch("src.platform.services.auth.invites.send_email")
+    mocker.patch("src.foundation.services.auth.invites.send_email")
     token = _do_invite(mocker, admin_authenticated, email="admin2@example.org")
     with TestClient(app) as anonymous:
         anonymous.post("/v1/auth/complete-invite", json={"invite_token": token})
@@ -986,7 +986,7 @@ def test_accept_invite_switches_session_to_new_org(
     admin_authenticated: TestClient,
     admin2_client: TestClient,
 ) -> None:
-    mocker.patch("src.platform.services.auth.invites.send_email")
+    mocker.patch("src.foundation.services.auth.invites.send_email")
     token = _do_invite(mocker, admin_authenticated, email="admin2@example.org")
 
     response = admin2_client.post(
@@ -1012,7 +1012,7 @@ def test_accept_invite_sends_added_to_org_email(
     admin_authenticated: TestClient,
     admin2_client: TestClient,
 ) -> None:
-    mock_send = mocker.patch("src.platform.services.auth.invites.send_email")
+    mock_send = mocker.patch("src.foundation.services.auth.invites.send_email")
     token = _do_invite(mocker, admin_authenticated, email="admin2@example.org")
     admin2_client.post("/v1/auth/accept-invite", json={"invite_token": token})
     mock_send.assert_called_once()
@@ -1037,7 +1037,7 @@ def test_accept_invite_rejects_other_users_invite(
     admin_authenticated: TestClient,
     admin2_client: TestClient,
 ) -> None:
-    mocker.patch("src.platform.services.auth.invites.send_email")
+    mocker.patch("src.foundation.services.auth.invites.send_email")
     token = _do_invite(mocker, admin_authenticated, email="invited@example.org")
 
     response = admin2_client.post(
@@ -1083,12 +1083,12 @@ def test_cannot_invite_user_already_in_org(
     admin2_client: TestClient,
 ) -> None:
     # Accept first invite, then verify re-invite is blocked via invite_user
-    mocker.patch("src.platform.services.auth.invites.send_email")
+    mocker.patch("src.foundation.services.auth.invites.send_email")
     token = _do_invite(mocker, admin_authenticated, email="admin2@example.org")
     admin2_client.post("/v1/auth/accept-invite", json={"invite_token": token})
 
     # Now admin2 is in Org 1 - invite_user should block a second invite
-    mocker.patch("src.platform.services.user.send_email")
+    mocker.patch("src.foundation.services.user.send_email")
     response = admin_authenticated.post(
         "/v1/users/invite",
         json={"email": "admin2@example.org", "role_ids": [2]},

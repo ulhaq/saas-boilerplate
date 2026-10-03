@@ -2,7 +2,7 @@ from typing import Annotated
 
 from pydantic import BaseModel, Field, StringConstraints
 
-from src.platform.schemas.types import ConstrainedEmail
+from src.foundation.schemas.types import ConstrainedEmail
 
 _Trimmed = StringConstraints(strip_whitespace=True)
 

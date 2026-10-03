@@ -7,9 +7,9 @@ import pytest
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
-import src.platform.core.mfa as mfa_module
+import src.foundation.core.mfa as mfa_module
+from src.foundation.core.config import settings
 from src.main import app
-from src.platform.core.config import settings
 from tests.utils import advance_clock
 
 ADMIN = {"username": "admin@example.org", "password": "password"}
@@ -273,7 +273,7 @@ def test_verify_mfa_locks_after_repeated_failures(
     assert rs.json()["error_code"] == "mfa_locked"
 
     with advance_clock(
-        "src.platform.services.auth.sessions",
+        "src.foundation.services.auth.sessions",
         seconds=settings.mfa_lockout_seconds + 1,
     ):
         rs = fresh_client.post(
@@ -429,7 +429,7 @@ def test_existing_mfa_user_must_complete_sign_in_to_accept_invite(
         # admin (Org 1) invites admin2.
         rs = _login(admin)
         admin.headers["Authorization"] = f"Bearer {rs.json()['access_token']}"
-        mock_send = mocker.patch("src.platform.services.user.send_email")
+        mock_send = mocker.patch("src.foundation.services.user.send_email")
         admin.post(
             "/v1/users/invite",
             json={"email": "admin2@example.org", "role_ids": [2]},
@@ -437,7 +437,7 @@ def test_existing_mfa_user_must_complete_sign_in_to_accept_invite(
         invite_token = mock_send.call_args.kwargs["data"]["invite_url"].split("token=")[
             1
         ]
-        mocker.patch("src.platform.services.auth.invites.send_email")
+        mocker.patch("src.foundation.services.auth.invites.send_email")
 
         # The invite link alone neither signs in nor joins the org.
         rs = invitee.post(

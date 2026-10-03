@@ -5,11 +5,11 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 
 from src.bootstrap import ALL_PERMISSIONS, PERMISSION_DESCRIPTIONS
-from src.platform.enums import OWNER_ROLE_NAME
-from src.platform.models.permission import Permission
-from src.platform.models.role import Role
-from src.platform.repositories.repository_manager import RepositoryManager
-from src.platform.services.permission import PermissionSync, sync_permissions
+from src.foundation.enums import OWNER_ROLE_NAME
+from src.foundation.models.permission import Permission
+from src.foundation.models.role import Role
+from src.foundation.repositories.repository_manager import RepositoryManager
+from src.foundation.services.permission import PermissionSync, sync_permissions
 from tests.conftest import TestSessionLocal
 
 DECLARED = {p.value: PERMISSION_DESCRIPTIONS[p] for p in ALL_PERMISSIONS}

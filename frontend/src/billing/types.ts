@@ -1,4 +1,4 @@
-import type { Schema } from '@/platform/types/api'
+import type { Schema } from '@/foundation/types/api'
 
 export type PlanPriceOut = Schema<'PlanPriceOut'>
 export type PlanSettingOut = Schema<'PlanSettingOut'>

@@ -6,21 +6,21 @@ from unittest.mock import AsyncMock
 import pytest
 from pydantic import ValidationError
 
-from src.platform.core.exceptions import (
+from src.foundation.core.exceptions import (
     NotFoundException,
 )
-from src.platform.core.security import Auth
-from src.platform.enums import ComparisonOperator
-from src.platform.enums import Permission as PermEnum
-from src.platform.models.user import User
-from src.platform.models.user_organization import UserOrganization
-from src.platform.repositories.repository_manager import RepositoryManager
-from src.platform.schemas.common import FilterItem
-from src.platform.schemas.organization import TransferOwnershipIn
-from src.platform.schemas.permission import PermissionIn
-from src.platform.schemas.user import ChangePasswordIn, CompleteInviteIn
-from src.platform.services.organization import OrganizationService
-from src.platform.services.permission import PermissionService
+from src.foundation.core.security import Auth
+from src.foundation.enums import ComparisonOperator
+from src.foundation.enums import Permission as PermEnum
+from src.foundation.models.user import User
+from src.foundation.models.user_organization import UserOrganization
+from src.foundation.repositories.repository_manager import RepositoryManager
+from src.foundation.schemas.common import FilterItem
+from src.foundation.schemas.organization import TransferOwnershipIn
+from src.foundation.schemas.permission import PermissionIn
+from src.foundation.schemas.user import ChangePasswordIn, CompleteInviteIn
+from src.foundation.services.organization import OrganizationService
+from src.foundation.services.permission import PermissionService
 from tests.conftest import TestSessionLocal
 
 

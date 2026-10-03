@@ -13,7 +13,7 @@ npm run build    # static output in dist/
 ## Layout
 
 - `src/config.ts` - product name, company details, support email, and env-driven settings (`PUBLIC_APP_URL`, `PUBLIC_CTA_MODE`, ...). See `.env.example`.
-- `src/i18n/routes.ts` - the page inventory: one key per page with its slug per locale. Links, the language switch and hreflang tags are built from it. The legal slugs are linked from the app (`LEGAL_PATHS` in `frontend/src/platform/constants.ts`); keep them in sync.
+- `src/i18n/routes.ts` - the page inventory: one key per page with its slug per locale. Links, the language switch and hreflang tags are built from it. The legal slugs are linked from the app (`LEGAL_PATHS` in `frontend/src/foundation/constants.ts`); keep them in sync.
 - `src/i18n/ui.ts` - all copy, `en` first; `da` is typed against it, so a missing key fails `npm run check`.
 - `src/content/plans.ts` - plans, prices and the comparison table. Static: keep in sync with the plan seeds and the app's `planComparisonRows`.
 - `src/content/legal/` - privacy policy and terms per locale (templates - get them reviewed before launch).

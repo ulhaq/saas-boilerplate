@@ -6,7 +6,7 @@ from src.billing.provider.dependencies import BillingProviderDep
 from src.billing.repositories.manager import BillingRepositoryManager
 from src.billing.schemas.billing import PlanOut
 from src.billing.services.base import BillingBaseService
-from src.platform.core.exceptions import NotFoundException
+from src.foundation.core.exceptions import NotFoundException
 
 
 class PlanService(BillingBaseService):

@@ -9,12 +9,12 @@ hooks and consumes the composed permission/role sets defined here.
 from collections.abc import Sequence
 from enum import StrEnum
 
-from src.platform import enums as core_enums
-from src.platform.core import composition
-from src.platform.core.composition import Composition, RoleSpec
-from src.platform.core.entitlements import UNLIMITED
-from src.platform.core.hooks import Handler, HookEvent
-from src.platform.core.module import Module
+from src.foundation import enums as core_enums
+from src.foundation.core import composition
+from src.foundation.core.composition import Composition, RoleSpec
+from src.foundation.core.entitlements import UNLIMITED
+from src.foundation.core.hooks import Handler, HookEvent
+from src.foundation.core.module import Module
 from src.products import MODULES
 
 ALL_PERMISSIONS: list[StrEnum] = [
@@ -33,7 +33,7 @@ PERMISSION_DESCRIPTIONS: dict[StrEnum, str] = {
 
 
 # Every action the installed modules record, as one enum named like the
-# platform's: the audit log filters by it (`audit_log.build_router`).
+# foundation's: the audit log filters by it (`audit_log.build_router`).
 AUDIT_ACTION: type[StrEnum] = StrEnum(
     "AuditAction",
     [
@@ -50,7 +50,7 @@ def compose_default_roles(
     roles: Sequence[RoleSpec],
     products: Sequence[Module],
 ) -> list[RoleSpec]:
-    """Add each product's grants to the platform default roles, and apply its
+    """Add each product's grants to the foundation default roles, and apply its
     description overrides (a later product wins)."""
     composed = []
     for name, base_description, permissions in roles:
@@ -64,7 +64,7 @@ def compose_default_roles(
 
 
 def compose(products: Sequence[Module]) -> Composition:
-    """Merge what ``products`` add to the platform (in list order) into one
+    """Merge what ``products`` add to the foundation (in list order) into one
     read-only `Composition`."""
     providers = [p.entitlements for p in products if p.entitlements is not None]
     if len(providers) > 1:

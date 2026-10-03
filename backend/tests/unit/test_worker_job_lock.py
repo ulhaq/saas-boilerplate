@@ -4,8 +4,8 @@ import asyncio
 
 import pytest
 
-from src.platform.core.database import try_job_lock
-from src.platform.services.gdpr import run_gdpr_retention_loop
+from src.foundation.core.database import try_job_lock
+from src.foundation.services.gdpr import run_gdpr_retention_loop
 from tests.conftest import TestSessionLocal
 
 
@@ -33,7 +33,7 @@ LOOPS = [
     pytest.param(
         "gdpr_retention",
         run_gdpr_retention_loop,
-        "src.platform.services.gdpr.purge_expired_tokens",
+        "src.foundation.services.gdpr.purge_expired_tokens",
         id="gdpr-retention",
     ),
 ]

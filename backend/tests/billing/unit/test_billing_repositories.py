@@ -1,5 +1,5 @@
 """Tests for billing repositories, the provider factory, plan entitlements and
-the platform's require_limit over them."""
+the foundation's require_limit over them."""
 
 import asyncio
 from datetime import UTC, date, datetime, timedelta
@@ -20,12 +20,12 @@ from src.billing.provider.dependencies import get_billing_provider
 from src.billing.provider.stripe_provider import StripeProvider
 from src.billing.repositories.manager import BillingRepositoryManager
 from src.billing.services.entitlements import PlanEntitlements, current_period_start
-from src.platform.core.entitlements import Entitlements
-from src.platform.core.exceptions import LimitExceededException
-from src.platform.core.security import Auth
-from src.platform.enums import Permission as PermEnum
-from src.platform.enums import PlanFeature
-from src.platform.models.organization import Organization
+from src.foundation.core.entitlements import Entitlements
+from src.foundation.core.exceptions import LimitExceededException
+from src.foundation.core.security import Auth
+from src.foundation.enums import Permission as PermEnum
+from src.foundation.enums import PlanFeature
+from src.foundation.models.organization import Organization
 from tests.conftest import TestSessionLocal
 
 
@@ -61,7 +61,7 @@ def test_current_period_start_is_first_of_month():
 
 
 # ---------------------------------------------------------------------------
-# require_limit (platform) over the installed Entitlements
+# require_limit (foundation) over the installed Entitlements
 # ---------------------------------------------------------------------------
 
 
@@ -86,13 +86,13 @@ class _FakeEntitlements(Entitlements):
 
 def _install(mocker, entitlements: _FakeEntitlements) -> None:
     mocker.patch(
-        "src.platform.services.access.composition.current",
+        "src.foundation.services.access.composition.current",
         return_value=MagicMock(entitlements=entitlements),
     )
 
 
 async def test_require_limit_consumes_one_use(mocker):
-    from src.platform.services.access import require_limit
+    from src.foundation.services.access import require_limit
 
     entitlements = _FakeEntitlements(allows=True)
     _install(mocker, entitlements)
@@ -101,7 +101,7 @@ async def test_require_limit_consumes_one_use(mocker):
 
 
 async def test_require_limit_exceeded_raises(mocker):
-    from src.platform.services.access import require_limit
+    from src.foundation.services.access import require_limit
 
     _install(mocker, _FakeEntitlements(allows=False))
     check = require_limit(_Metric.API_CALLS)

@@ -1,10 +1,10 @@
 import type { Router, RouteRecordRaw } from 'vue-router'
 import { createRouter, createWebHistory } from 'vue-router'
 import { routes as fileRoutes } from 'vue-router/auto-routes'
-import { useAuthStore } from '@/platform/stores/auth'
-import { useProfileStore } from '@/platform/stores/profile'
-import { appConfig } from '@/platform/config'
-import { routeGuards } from '@/platform/routeGuards'
+import { useAuthStore } from '@/foundation/stores/auth'
+import { useProfileStore } from '@/foundation/stores/profile'
+import { appConfig } from '@/foundation/config'
+import { routeGuards } from '@/foundation/routeGuards'
 
 // The app has no page at `/`: it sends visitors to the home route, and the
 // guard below bounces anyone signed out to the login page from there. The

@@ -1,4 +1,4 @@
-"""Billing's handlers for the platform's organization lifecycle hooks.
+"""Billing's handlers for the foundation's organization lifecycle hooks.
 
 Listed in `src.billing.module` and installed by the composition root
 (`src.bootstrap`). Each runs in the caller's transaction, through
@@ -9,8 +9,8 @@ import logging
 
 from src.billing.enums import BillingErrorCode
 from src.billing.repositories.manager import BillingRepositoryManager
-from src.platform.core.exceptions import PermissionDeniedException
-from src.platform.repositories.repository_manager import RepositoryManager
+from src.foundation.core.exceptions import PermissionDeniedException
+from src.foundation.repositories.repository_manager import RepositoryManager
 
 log = logging.getLogger(__name__)
 

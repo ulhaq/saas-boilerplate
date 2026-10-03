@@ -2,8 +2,8 @@ from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from src.platform.core.schema import ResponseSchema
-from src.platform.schemas.common import Timestamp
+from src.foundation.core.schema import ResponseSchema
+from src.foundation.schemas.common import Timestamp
 
 
 class ProjectBase(BaseModel):

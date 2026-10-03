@@ -1,10 +1,10 @@
 """Tests for dead-code paths in repository base and service base."""
 
-from src.platform.core.security import Auth
-from src.platform.enums import Permission as PermEnum
-from src.platform.enums import PlanFeature
-from src.platform.repositories.repository_manager import RepositoryManager
-from src.platform.services.organization import OrganizationService
+from src.foundation.core.security import Auth
+from src.foundation.enums import Permission as PermEnum
+from src.foundation.enums import PlanFeature
+from src.foundation.repositories.repository_manager import RepositoryManager
+from src.foundation.services.organization import OrganizationService
 from tests.conftest import TestSessionLocal
 
 # ---------------------------------------------------------------------------

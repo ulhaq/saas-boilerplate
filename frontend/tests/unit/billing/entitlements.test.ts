@@ -4,7 +4,7 @@ import type { RouteLocationNormalized } from 'vue-router'
 import { billingApi } from '@/billing/api/billing'
 import { BILLING_ROUTE, requireAppAccess, useBillingEntitlements } from '@/billing/entitlements'
 import { useSubscriptionStore } from '@/billing/stores/subscription'
-import { useProfileStore } from '@/platform/stores/profile'
+import { useProfileStore } from '@/foundation/stores/profile'
 import { i18n } from '@/plugins/i18n'
 
 const route = (path: string, requiresAuth = true) =>

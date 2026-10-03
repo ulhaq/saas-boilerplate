@@ -4,9 +4,9 @@ pytest plugin (`-p tests.preload` in pytest.ini), loaded before any conftest.
 Sets the environment the settings read at import time, and picks the installed
 modules: `TEST_WITHOUT_MODULES=billing,marketing` runs the suite against an app
 assembled without those modules, and `TEST_WITHOUT_MODULES=optional` without
-every module that isn't a product (`poe test-platform-only`; CI runs it). Their
+every module that isn't a product (`poe test-foundation-only`; CI runs it). Their
 tests (`tests/<module>/`, and tests marked with the module's name) are then
-skipped and their fixtures seed nothing, so the platform and the product are
+skipped and their fixtures seed nothing, so the foundation and the product are
 checked to work on their own. Each installed module's fixtures
 (`tests/<module>/plugin.py`) are loaded too.
 """

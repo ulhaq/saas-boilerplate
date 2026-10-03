@@ -1,13 +1,13 @@
 import type { RouteLocationNormalized, RouteLocationRaw } from 'vue-router'
 import { useSubscriptionStore } from '@/billing/stores/subscription'
-import type { Entitlements } from '@/platform/entitlements'
-import { useProfileStore } from '@/platform/stores/profile'
+import type { Entitlements } from '@/foundation/entitlements'
+import { useProfileStore } from '@/foundation/stores/profile'
 import { i18n } from '@/plugins/i18n'
 
 export const BILLING_ROUTE = '/settings/billing'
 const BILLING_PATHS = [BILLING_ROUTE, '/billing/success', '/billing/cancel']
 
-/** The organization's plan, as the platform's `Entitlements`. */
+/** The organization's plan, as the foundation's `Entitlements`. */
 export function useBillingEntitlements(): Entitlements {
   const subscription = useSubscriptionStore()
   const profile = useProfileStore()

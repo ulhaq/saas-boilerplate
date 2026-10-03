@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 from sqlalchemy import DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from src.platform.core.database import Base
+from src.foundation.core.database import Base
 
 
 class WaitlistEntry(Base):

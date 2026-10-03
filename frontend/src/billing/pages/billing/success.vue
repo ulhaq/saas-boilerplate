@@ -51,13 +51,13 @@ meta:
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
-import { appConfig } from '@/platform/config'
+import { appConfig } from '@/foundation/config'
 import { useRouter } from 'vue-router'
-import { Button } from '@/platform/components/ui/button'
-import { Skeleton } from '@/platform/components/ui/skeleton'
-import PageHeader from '@/platform/components/common/PageHeader.vue'
+import { Button } from '@/foundation/components/ui/button'
+import { Skeleton } from '@/foundation/components/ui/skeleton'
+import PageHeader from '@/foundation/components/common/PageHeader.vue'
 import { useSubscriptionStore } from '@/billing/stores/subscription'
-import { useErrorHandler } from '@/platform/composables/useErrorHandler'
+import { useErrorHandler } from '@/foundation/composables/useErrorHandler'
 
 // The subscription is activated by Stripe webhooks, which can lag the
 // redirect back from checkout - poll briefly before settling on "pending".

@@ -6,5 +6,5 @@
  */
 export const productPackages = ['example']
 
-/** Optional platform modules (billing) plus the products. */
+/** Optional foundation modules (billing) plus the products. */
 export const modulePackages = ['billing', ...productPackages]

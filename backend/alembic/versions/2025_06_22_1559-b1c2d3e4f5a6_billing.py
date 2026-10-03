@@ -5,7 +5,7 @@ Revises: 2c3b2ee136dc
 Create Date: 2025-06-22 15:59:00.000000
 
 Owned by `src.billing`; seeds the plans, their prices, the api_token feature
-and the platform's seat limits. Drop this file (and point the next revision at
+and the foundation's seat limits. Drop this file (and point the next revision at
 the one before it) to run without billing.
 """
 
@@ -375,7 +375,7 @@ def upgrade() -> None:
         ],
     )
 
-    # Seat limits per plan (platform `UsageMetric.SEATS`)
+    # Seat limits per plan (foundation `UsageMetric.SEATS`)
     op.bulk_insert(
         billing_plan_setting_table,
         [
