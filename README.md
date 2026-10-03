@@ -8,7 +8,8 @@ The product-specific code lives in one package per side (`backend/src/example/`,
 
 - **Multi-tenant** organisations with enforced tenant isolation and fine-grained RBAC (roles, permissions, API tokens)
 - **Auth**: JWT access tokens + httponly refresh cookies, email verification, password reset, invites, multiple organisations per user, optional TOTP two-factor auth with recovery codes (`MFA_ENABLED` / `VITE_MFA_ENABLED`)
-- **Billing** via Stripe: plans, trials, checkout, customer portal, webhooks, plan features, seat/usage/capacity limits
+- **Billing** via Stripe (optional module): plans, trials, checkout, customer portal, webhooks, plan features, seat/usage/capacity limits - without it every feature is on and nothing is limited
+- **Marketing endpoints** (optional module): waitlist sign-ups and the contact form the marketing site posts to
 - **Audit log, GDPR export/erasure/retention**
 - **Notifications**: localized transactional email (Danish/English, MJML templates) and in-app notifications
 - **Observability** (opt-in, self-hosted): OpenTelemetry traces/metrics, JSON logs, browser errors via Grafana Faro, and a provisioned Grafana dashboard + alerts (Prometheus, Loki, Tempo) - see [`observability/README.md`](observability/README.md)
@@ -19,46 +20,49 @@ The product-specific code lives in one package per side (`backend/src/example/`,
 | Layer    | Stack                                                                                                                                                                                |
 | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Backend  | Python 3.14, FastAPI, async SQLAlchemy, PostgreSQL, Alembic, `uv`                                                                                                                    |
-| Worker   | Standalone asyncio process (product loops, GDPR retention, billing cleanup, trial reminders)                                                                                         |
+| Worker   | Standalone asyncio process (product loops, email outbox, GDPR retention, billing's loops)                                                                                            |
 | Frontend | Vue 3, TypeScript, Vite, Pinia, vue-i18n, Tailwind + Reka UI, file-based routing                                                                                                     |
 | Infra    | Docker Compose (postgres, pgadmin, mailpit, backend, worker, frontend, site); opt-in profiles: `analytics` (Umami), `observability` (Alloy agent + Grafana, Prometheus, Loki, Tempo) |
 
 ## Architecture
 
-Both sides of the codebase are split into a generic, reusable **SaaS platform** and the **product domain**, wired together by a thin assembly layer. The platform never imports product code - enforced in CI by [import-linter](https://import-linter.readthedocs.io) on the backend and an ESLint `no-restricted-imports` rule on the frontend.
+Both sides of the codebase are split into a generic, reusable **SaaS platform**, optional **modules** (billing; marketing on the backend) and the **product domain**, wired together by a thin assembly layer. The platform never imports a module or the product, and they don't import each other - enforced in CI by [import-linter](https://import-linter.readthedocs.io) on the backend and ESLint `no-restricted-imports` rules on the frontend. CI also runs the tests with the optional modules removed.
 
 ```
-backend/src/                          frontend/src/
-├── platform/   generic SaaS core     ├── platform/   generic app shell
-│   ├── core/   config, db, security  │   ├── pages/ components/ stores/
-│   ├── models/ repositories/         │   ├── api/ composables/ layouts/
-│   ├── services/ routers/ schemas/   │   ├── locales/ types/
-│   ├── billing/ templates/           │   ├── config.ts    (homeRoute)
-│   └── enums.py                      │   └── navigation.ts (nav registry)
-├── example/    the product           ├── example/    the product
-│   ├── models/ repositories/         │   ├── pages/ components/ stores/
-│   ├── services/ routers/ schemas/   │   ├── api/ locales/ types/
-│   ├── hooks.py enums.py worker.py   │   └── index.ts  (manifest)
-│   └── product.py  (manifest)        ├── products.ts   installed products
-├── products.py   installed products  ├── brand.ts      product identity
-├── bootstrap.py  composition root    ├── main.ts       assembly
-├── main.py       API assembly        │
-└── init_db.py    seeding             └── router/ plugins/ App.vue
+backend/src/                            frontend/src/
+├── platform/    generic SaaS core      ├── platform/   generic app shell
+│   ├── core/    config, db, security,  │   ├── pages/ components/ stores/
+│   │            hooks, entitlements    │   ├── api/ composables/ layouts/
+│   ├── models/ repositories/           │   ├── locales/ types/
+│   ├── services/ routers/ schemas/     │   ├── entitlements.ts navigation.ts
+│   ├── templates/                      │   └── config.ts banners.ts routeGuards.ts
+│   └── enums.py                        ├── billing/    optional module
+├── billing/     optional module        │   └── index.ts  (manifest)
+│   └── module.py  (manifest)           ├── example/    the product
+├── marketing/   optional module        │   └── index.ts  (manifest)
+│   └── module.py  (manifest)           ├── products.ts   installed modules
+├── example/     the product            ├── brand.ts      product identity
+│   └── product.py  (manifest)          ├── main.ts       assembly
+├── products.py      installed modules  └── router/ plugins/ App.vue
+├── bootstrap.py     composition root
+├── main.py          API assembly
+├── sync_permissions.py, init_db.py
 ```
 
 How the two halves connect without the platform knowing about the product:
 
-- **Product manifest**: each product declares everything it plugs in - one `Module` per side (`src/example/product.py`, `src/example/index.ts`). The assembly layer reads the installed list (`src/products.py`, `src/products.ts`), so swapping the product is a one-line change on each side.
-- **Hooks** (backend): the platform emits lifecycle events (`MEMBER_ADDED`, `MEMBER_REMOVED`, `PLAN_CHANGED`); the product lists async handlers in its manifest.
-- **Composition registry** (backend): `bootstrap.py` merges platform + product permissions, roles, email subjects, and template directories at startup.
-- **Registries** (frontend): the product's manifest registers sidebar nav items and notification presenters, and sets the authenticated home route; its locale trees are deep-merged in the i18n plugin.
+- **Module manifest**: each module declares everything it plugs in - one `Module` per side (`src/example/product.py`, `src/billing/module.py`, `src/example/index.ts`, ...). The assembly layer reads the installed list (`src/products.py`, `src/products.ts`), so swapping the product or dropping a module is a small change on each side.
+- **Hooks** (backend): lifecycle events (`MEMBER_ADDED`, `MEMBER_REMOVED`, `ORGANIZATION_CREATED`, `ORGANIZATION_DELETING`, `OWNERSHIP_TRANSFERRED`, `PLAN_CHANGED`); modules list async handlers in their manifest.
+- **Entitlements** (both sides): the platform asks "is this feature on, what's this limit?" through one interface; billing answers from the organization's plan, and without billing everything is on and unlimited.
+- **Composition** (backend): `bootstrap()` merges the modules' permissions, roles, audit actions, hooks, email subjects, templates and entitlements into one read-only `Composition` at startup.
+- **Registries** (frontend): manifests register sidebar and settings nav items, notification presenters, dashboard banners and route guards, and set the authenticated home route; their locale trees are deep-merged in the i18n plugin.
 
 ### Two-process backend
 
 | Process | Entry point             | Role                                                            |
 | ------- | ----------------------- | --------------------------------------------------------------- |
 | API     | `src/main.py` (uvicorn) | HTTP requests                                                   |
-| Worker  | `worker.py`             | Product loops, email outbox, GDPR retention, billing cleanup, trial reminders |
+| Worker  | `worker.py`             | Every module's loops (the example heartbeat; billing's checkout cleanup, trial reminders, customer sync), the email outbox, GDPR retention |
 
 Background loops live only in the worker so the API can scale horizontally without duplicate job runs or duplicate emails.
 
@@ -66,9 +70,10 @@ Background loops live only in the worker so the API can scale horizontally witho
 
 1. **Brand**: edit `frontend/src/brand.ts` (name, app and marketing domains) and set `APP_NAME` / `EMAIL_FROM_NAME` in `backend/.env`. Replace `frontend/public/{favicon.svg,logo.png}`.
 2. **Product code**: replace the `example` package on both sides - step-by-step in [`docs/adding-a-domain-module.md`](docs/adding-a-domain-module.md).
-3. **Plans**: adjust the seeded plans/prices/seat limits in the billing migration, product limits in your product migration, and the plan copy (`planComparisonRows`, `planDescriptions`) in the product locales.
-4. **Marketing site**: `site/` (static Astro). Set the name, company details and support email in `site/src/config.ts`, the plans in `site/src/content/plans.ts`, the copy in `site/src/i18n/ui.ts` and the legal texts in `site/src/content/legal/`. `SITE_THEME` picks one of eight designs at build time (editorial, tech, soft, swiss, brutal, enterprise, nordic, aurora), and `PUBLIC_CTA_MODE=waitlist` switches every call to action to the waitlist for a pre-launch. The app links to its terms and privacy pages (`LEGAL_PATHS` in `frontend/src/platform/constants.ts`) and to its `/og-image.png`.
-5. **Deploy config**: `Caddyfile.example` (marketing domain -> site, `app.` subdomain -> app), `ANALYTICS_ORIGIN` in `docker-compose.yml` (only with the `analytics` profile), the deploy path in `.github/workflows/ci.yml`.
+3. **Optional modules**: keep or drop billing (no Stripe, no plans - everything unlimited) and marketing (no marketing site) - see "Keeping or dropping the optional modules" in the same guide.
+4. **Plans** (with billing): adjust the seeded plans/prices/seat limits in the billing migration, product limits in your product migration, and the plan copy (`planComparisonRows`, `planDescriptions`) in the product locales.
+5. **Marketing site**: `site/` (static Astro). Set the name, company details and support email in `site/src/config.ts`, the plans in `site/src/content/plans.ts`, the copy in `site/src/i18n/ui.ts` and the legal texts in `site/src/content/legal/`. `SITE_THEME` picks one of eight designs at build time (editorial, tech, soft, swiss, brutal, enterprise, nordic, aurora), and `PUBLIC_CTA_MODE=waitlist` switches every call to action to the waitlist for a pre-launch. The app links to its terms and privacy pages (`LEGAL_PATHS` in `frontend/src/platform/constants.ts`) and to its `/og-image.png`.
+6. **Deploy config**: `Caddyfile.example` (marketing domain -> site, `app.` subdomain -> app), `ANALYTICS_ORIGIN` in `docker-compose.yml` (only with the `analytics` profile), the deploy path in `.github/workflows/ci.yml`.
 
 Architecture details live in `backend/CLAUDE.md` and `frontend/CLAUDE.md`.
 
@@ -120,6 +125,7 @@ uv run poe dev      # dev server on :8000
 uv run poe format   # ruff format + autofix
 uv run poe lint     # ty (type check) + ruff + import-linter boundary/layer contracts
 uv run poe test     # pytest against PostgreSQL (see below)
+uv run poe test-platform-only   # the same without the optional modules (CI runs both)
 alembic revision --autogenerate -m "..."   # new migration
 alembic upgrade head
 ```
@@ -140,7 +146,7 @@ dev server run on the host. Only with `APP_ENV=local`.
 
 ```bash
 npm run dev         # vite dev server on :5173
-npm run typecheck   # vue-tsc -b
+npm run typecheck   # vue-tsc -b (needs the types `dev`/`build` generate)
 npm run lint        # eslint --fix (includes the platform/product boundary rule)
 npm run gen:api     # regenerate the API types from ../backend/openapi.internal.json
 npm run build       # production build (SPA)
@@ -149,13 +155,13 @@ npm run format      # prettier (CI checks it)
 npm run test:e2e    # playwright (needs the dev stack running)
 ```
 
-Routes are file-based: adding a page under `src/platform/pages/` or `src/example/pages/` creates a route. Components in both `components/` roots are auto-registered.
+Routes are file-based: adding a page under `src/platform/pages/` or a module's `pages/` (`src/billing/`, `src/example/`) creates a route. Components in every `components/` root are auto-registered.
 
 ### Key backend conventions
 
 - **Layering**: routers → services → repositories → models; services raise `ClientException(ErrorCode.X)`, middleware renders consistent JSON errors.
 - **Tenant isolation**: repositories extending `OrganizationScopedRepository` refuse unscoped queries unless `.unscoped` is used explicitly.
-- **Permissions**: `Permission` (platform) and `ExamplePermission` (product) StrEnums, merged and seeded by `bootstrap.py`; guard routes with `require_permission(...)` and frontend UI with `<PermissionGuard>` / `hasPermission()`.
+- **Permissions**: `Permission` (platform), module and product StrEnums (`ExamplePermission`), merged by `bootstrap.py` and synced into the database on every deploy (`python -m src.sync_permissions`, which also grants them to every Owner); guard routes with `require_permission(...)` and frontend UI with `<PermissionGuard>` / `hasPermission()`.
 
 ### Key frontend conventions
 

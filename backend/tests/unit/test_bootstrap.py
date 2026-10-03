@@ -13,13 +13,14 @@ from src.bootstrap import (
     compose,
     compose_default_roles,
 )
+from src.platform import enums as core_enums
 from src.platform.core import composition
 from src.platform.core.entitlements import UNLIMITED
 from src.platform.core.hooks import HookEvent, emit
 from src.platform.core.module import Module
 from src.platform.core.template import templates
 from src.platform.services.email_content import subject_for
-from tests.preload import WITHOUT_BILLING
+from src.products import MODULES
 
 
 class _Perm(StrEnum):
@@ -180,7 +181,10 @@ def test_the_audit_action_enum_lists_every_installed_modules_actions():
     actions = {action.value for action in AUDIT_ACTION}
 
     assert AUDIT_ACTION.__name__ == "AuditAction"
-    assert "auth.login" in actions
-    # Billing's actions are listed exactly when billing is installed.
-    assert ("billing.plan_switch" in actions) is not WITHOUT_BILLING
-    assert "project.create" in actions
+    assert {action.value for action in core_enums.AuditAction} <= actions
+    # Exactly the installed modules' actions - whichever modules those are.
+    for module in MODULES:
+        assert {action.value for action in module.audit_actions} <= actions
+    assert len(actions) == len(core_enums.AuditAction) + sum(
+        len(module.audit_actions) for module in MODULES
+    )

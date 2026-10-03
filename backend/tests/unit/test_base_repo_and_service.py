@@ -1,10 +1,5 @@
 """Tests for dead-code paths in repository base and service base."""
 
-from enum import StrEnum
-
-import pytest
-
-from src.platform.core.exceptions import PlanFeatureUnavailableException
 from src.platform.core.security import Auth
 from src.platform.enums import Permission as PermEnum
 from src.platform.enums import PlanFeature
@@ -109,18 +104,3 @@ async def test_require_feature_passes_when_feature_available():
             service = OrganizationService(repos, _admin_auth())
             # Should complete without raising
             await service._require_feature(PlanFeature.API_TOKEN, organization_id=1)
-
-
-@pytest.mark.billing
-async def test_require_feature_raises_when_feature_unavailable():
-    """A feature the organization's plan doesn't include - should raise."""
-
-    class _Feature(StrEnum):
-        SSO = "sso"
-
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            repos = RepositoryManager(session)
-            service = OrganizationService(repos, _admin_auth())
-            with pytest.raises(PlanFeatureUnavailableException):
-                await service._require_feature(_Feature.SSO, organization_id=1)

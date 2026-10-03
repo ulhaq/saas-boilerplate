@@ -6,8 +6,8 @@ from fastapi.testclient import TestClient
 
 from src.billing.repositories.manager import BillingRepositoryManager
 from src.billing.services.maintenance import sync_customer_emails
+from tests.billing.utils import get_billing_account
 from tests.conftest import TestSessionLocal
-from tests.utils import get_billing_account
 
 
 async def _set_customer(customer_id: str | None) -> None:

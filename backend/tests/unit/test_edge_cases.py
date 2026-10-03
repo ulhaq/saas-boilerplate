@@ -6,8 +6,6 @@ from unittest.mock import AsyncMock
 import pytest
 from pydantic import ValidationError
 
-from src.billing.repositories.manager import BillingRepositoryManager
-from src.billing.services import WebhookService
 from src.platform.core.exceptions import (
     NotFoundException,
 )
@@ -197,24 +195,3 @@ async def test_transfer_ownership_no_owner_role_raises(mocker):
 # ---------------------------------------------------------------------------
 # services/billing/webhooks/customers.py - early return when customer_id is None
 # ---------------------------------------------------------------------------
-
-
-@pytest.mark.billing
-async def test_handle_payment_method_detached_no_customer_id(mock_billing_provider):
-    """payment_method.detached returns early when no customer_id."""
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            repos = BillingRepositoryManager(session)
-            service = WebhookService(repos, mock_billing_provider)
-
-            raw = {
-                "data": {
-                    "object": {"customer": None},
-                    "previous_attributes": {},
-                }
-            }
-            # Should complete without querying the database
-            await service._dispatch("payment_method.detached", raw)
-
-    # The organization repo must not have been touched
-    mock_billing_provider.has_payment_method.assert_not_called()

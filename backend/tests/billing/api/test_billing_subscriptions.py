@@ -9,8 +9,8 @@ from sqlalchemy import select
 from src.billing.models.billing import Plan, PlanPrice, Subscription
 from src.billing.provider.types import WebhookPayload
 from src.platform.models.audit_log import AuditLog
+from tests.billing.utils import get_billing_account
 from tests.conftest import TestSessionLocal
-from tests.utils import get_billing_account
 
 
 def test_start_checkout_returns_url(

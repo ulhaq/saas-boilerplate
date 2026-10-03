@@ -2,12 +2,10 @@ import hashlib
 import secrets
 from datetime import UTC, datetime, timedelta
 
-import pytest
 from fastapi.testclient import TestClient
 from httpx import Headers, Response
-from sqlalchemy import delete, select
+from sqlalchemy import select
 
-from src.billing.models.billing import PlanFeature as PlanFeatureModel
 from src.main import app
 from src.platform.models.api_token import ApiToken
 from tests.conftest import TestSessionLocal
@@ -134,43 +132,6 @@ def test_cannot_manage_tokens_without_permission(
 # ── plan feature guard ────────────────────────────────────────────────────────
 
 
-async def _remove_api_access_feature() -> None:
-    async with TestSessionLocal() as session:
-        await session.execute(delete(PlanFeatureModel))
-        await session.commit()
-
-
-@pytest.mark.billing
-async def test_list_tokens_blocked_without_api_access_feature(
-    admin_authenticated: TestClient,
-) -> None:
-    await _remove_api_access_feature()
-    rs = admin_authenticated.get("/v1/api-tokens")
-    assert rs.status_code == 402
-    assert rs.json()["error_code"] == "plan_feature_unavailable"
-
-
-@pytest.mark.billing
-async def test_create_token_blocked_without_api_access_feature(
-    admin_authenticated: TestClient,
-) -> None:
-    await _remove_api_access_feature()
-    rs = _create_token(admin_authenticated)
-    assert rs.status_code == 402
-    assert rs.json()["error_code"] == "plan_feature_unavailable"
-
-
-@pytest.mark.billing
-async def test_revoke_token_blocked_without_api_access_feature(
-    admin_authenticated: TestClient,
-) -> None:
-    token_id = _create_token(admin_authenticated).json()["id"]
-    await _remove_api_access_feature()
-    rs = admin_authenticated.delete(f"/v1/api-tokens/{token_id}")
-    assert rs.status_code == 402
-    assert rs.json()["error_code"] == "plan_feature_unavailable"
-
-
 # ── authentication ────────────────────────────────────────────────────────────
 
 
@@ -203,15 +164,6 @@ async def test_expired_token_rejected(client: TestClient) -> None:
 def test_invalid_token_rejected(client: TestClient) -> None:
     rs = _api_token_client(client, "sk_totallyinvalid").get("/v1/users/me")
     assert rs.status_code == 401
-
-
-@pytest.mark.billing
-async def test_auth_blocked_without_api_access_feature(client: TestClient) -> None:
-    _, plaintext = await _seed_token(user_id=1, organization_id=1)
-    await _remove_api_access_feature()
-    rs = _api_token_client(client, plaintext).get("/v1/users/me")
-    assert rs.status_code == 402
-    assert rs.json()["error_code"] == "plan_feature_unavailable"
 
 
 # ── is_expired computed field ─────────────────────────────────────────────────

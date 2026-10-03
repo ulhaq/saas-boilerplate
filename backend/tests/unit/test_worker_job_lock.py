@@ -4,10 +4,6 @@ import asyncio
 
 import pytest
 
-from src.billing.services.maintenance import (
-    run_stale_checkout_cleanup_loop,
-    run_trial_reminder_loop,
-)
 from src.platform.core.database import try_job_lock
 from src.platform.services.gdpr import run_gdpr_retention_loop
 from tests.conftest import TestSessionLocal
@@ -24,28 +20,16 @@ async def test_a_job_lock_is_held_until_the_transaction_ends():
         assert await try_job_lock(third, "job-a") is True
 
 
-async def _run_one_iteration(loop, mocker) -> None:
+async def run_one_iteration(loop, mocker) -> None:
     """Run a worker loop for exactly one iteration."""
     mocker.patch("asyncio.sleep", side_effect=asyncio.CancelledError)
     with pytest.raises(asyncio.CancelledError):
         await loop(TestSessionLocal)
 
 
+# Every installed module's loops follow the same pattern; billing's are
+# checked in tests/billing/unit/test_billing_worker_job_lock.py.
 LOOPS = [
-    pytest.param(
-        "trial_reminder",
-        run_trial_reminder_loop,
-        "src.billing.services.maintenance."
-        "BillingMaintenanceService.send_trial_reminders",
-        id="trial-reminders",
-    ),
-    pytest.param(
-        "stale_checkout_cleanup",
-        run_stale_checkout_cleanup_loop,
-        "src.billing.services.maintenance."
-        "BillingMaintenanceService.cleanup_stale_checkouts",
-        id="stale-checkout-cleanup",
-    ),
     pytest.param(
         "gdpr_retention",
         run_gdpr_retention_loop,
@@ -60,7 +44,7 @@ async def test_an_iteration_runs_when_no_other_worker_holds_the_job(
     job, loop, work, mocker
 ):
     do_work = mocker.patch(work, return_value=0)
-    await _run_one_iteration(loop, mocker)
+    await run_one_iteration(loop, mocker)
     do_work.assert_called_once()
 
 
@@ -71,5 +55,5 @@ async def test_an_iteration_is_skipped_while_another_worker_runs_the_job(
     do_work = mocker.patch(work, return_value=0)
     async with TestSessionLocal() as other_worker, other_worker.begin():
         assert await try_job_lock(other_worker, job)
-        await _run_one_iteration(loop, mocker)
+        await run_one_iteration(loop, mocker)
     do_work.assert_not_called()

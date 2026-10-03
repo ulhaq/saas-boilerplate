@@ -95,21 +95,6 @@ def test_complete_registration(mocker: MockerFixture, client: TestClient) -> Non
     assert rs["token_type"] == "bearer"
 
 
-@pytest.mark.billing
-def test_registration_seeds_billing_email_from_owner(
-    mocker: MockerFixture, client: TestClient
-) -> None:
-    token_data = _do_complete(mocker, client, password="password1")
-    access_token = token_data["access_token"]
-
-    response = client.get(
-        "/v1/billing/subscriptions/current",
-        headers={"Authorization": f"Bearer {access_token}"},
-    )
-    assert response.status_code == 200
-    assert response.json()["billing_email"] == "new_user@example.org"
-
-
 def test_registered_user_can_login(mocker: MockerFixture, client: TestClient) -> None:
     _do_complete(mocker, client, password="password1")
     response = client.post(

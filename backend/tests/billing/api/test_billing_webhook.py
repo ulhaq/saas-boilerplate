@@ -9,8 +9,8 @@ from sqlalchemy import delete, select
 from src.billing.exceptions import BillingProviderException, BillingWebhookException
 from src.billing.models.billing import PlanPrice, Subscription
 from src.billing.provider.types import WebhookPayload
+from tests.billing.utils import get_billing_account
 from tests.conftest import TestSessionLocal
-from tests.utils import get_billing_account
 
 
 def test_webhook_valid_payload(

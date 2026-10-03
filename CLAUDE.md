@@ -11,6 +11,7 @@ Product-specific code lives in one package per side - `backend/src/example/` and
 Starting a new product from this template:
 
 - Replace/rename the `example` package on both sides - see `docs/adding-a-domain-module.md`.
+- Keep or drop the optional modules (billing, marketing) - see "Keeping or dropping the optional modules" in the same guide.
 - Set the product identity in `frontend/src/brand.ts` (name, app and marketing domains) and `APP_NAME` / `EMAIL_FROM_*` in `backend/.env`.
 - Adapt plan seeds (billing migration + product migration), and plan copy (`planComparisonRows` / `planDescriptions` in the product locales). Mirror plan and brand changes in the marketing site (`site/src/config.ts`, `site/src/content/plans.ts`); the app links to its terms/privacy pages (`LEGAL_PATHS` in `frontend/src/platform/constants.ts`).
 - Replace `frontend/public/{favicon.svg,logo.png}`.

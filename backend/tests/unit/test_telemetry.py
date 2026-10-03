@@ -17,7 +17,6 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
 )
 from opentelemetry.trace import StatusCode
 
-from src.billing.telemetry import record_webhook_event
 from src.platform.core.logging import add_trace_context
 from src.platform.core.telemetry import track_worker_run
 
@@ -80,7 +79,12 @@ def test_track_worker_run_error_reraises_and_keeps_last_success():
     assert span.status.status_code == StatusCode.ERROR
 
 
+# Here rather than in tests/billing/: the meter provider above can be installed
+# only once per process. Imported in the test so the file loads without billing.
+@pytest.mark.billing
 def test_record_webhook_event_counts_by_type_and_outcome():
+    from src.billing.telemetry import record_webhook_event
+
     record_webhook_event("invoice.paid", "processed")
     record_webhook_event("invoice.paid", "processed")
     record_webhook_event("invoice.paid", "failed")

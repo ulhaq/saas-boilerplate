@@ -1,7 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from src.billing.models.billing import PlanSetting
 from src.example.enums import ExampleUsageMetric
 from tests.conftest import TestSessionLocal
 
@@ -9,6 +8,11 @@ _FREE_PLAN_ID = 1  # seeded in conftest
 
 
 async def _set_project_limit(limit_value: int | None) -> None:
+    """The free plan's project limit - billing's plan settings, so only the
+    tests marked `billing` use it (imported here, so the file loads without
+    the billing package)."""
+    from src.billing.models.billing import PlanSetting
+
     async with TestSessionLocal() as session:
         session.add(
             PlanSetting(
