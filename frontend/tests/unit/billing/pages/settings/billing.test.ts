@@ -68,6 +68,7 @@ function subscription(overrides: Partial<SubscriptionOut> = {}): SubscriptionOut
     billing_email: 'billing@acme.dk',
     has_payment_method: true,
     trial_used: false,
+    has_access: true,
     features: [],
     plan_settings: [],
     created_at: '2026-01-01T00:00:00Z',

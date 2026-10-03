@@ -1,11 +1,12 @@
 from collections.abc import Sequence
 from datetime import UTC, date, datetime
 
-from sqlalchemy import exists, select, update
+from sqlalchemy import ColumnElement, exists, func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.billing.enums import ENTITLED_STATUSES, LIVE_STATUSES
 from src.billing.models.billing import (
     Plan,
     PlanFeature,
@@ -20,6 +21,35 @@ from src.platform.repositories.base import (
     SoftDeleteRepository,
     SQLResourceRepository,
 )
+
+
+def entitled_plan_id(organization_id: int) -> ColumnElement[int]:
+    """The plan whose features and limits apply to the organization: its
+    entitled subscription's (`ENTITLED_STATUSES`), otherwise the free plan."""
+    entitled = (
+        select(PlanPrice.plan_id)
+        .join(Subscription, Subscription.plan_price_id == PlanPrice.id)
+        .where(
+            Subscription.organization_id == organization_id,
+            Subscription.status.in_(ENTITLED_STATUSES),
+            Subscription.deleted_at.is_(None),
+        )
+        .order_by(Subscription.id.desc())
+        .limit(1)
+        .scalar_subquery()
+    )
+    free = (
+        select(PlanPrice.plan_id)
+        .where(
+            PlanPrice.amount == 0,
+            PlanPrice.is_active.is_(True),
+            PlanPrice.deleted_at.is_(None),
+        )
+        .order_by(PlanPrice.id)
+        .limit(1)
+        .scalar_subquery()
+    )
+    return func.coalesce(entitled, free)
 
 
 class PlanRepository(SoftDeleteRepository[Plan]):
@@ -147,16 +177,8 @@ class PlanFeatureRepository(SoftDeleteRepository[PlanFeature]):
         super().__init__(PlanFeature, db)
 
     async def get_features_for_organization(self, organization_id: int) -> set[str]:
-        stmt = (
-            select(PlanFeature.feature)
-            .join(Plan, Plan.id == PlanFeature.plan_id)
-            .join(PlanPrice, PlanPrice.plan_id == Plan.id)
-            .join(Subscription, Subscription.plan_price_id == PlanPrice.id)
-            .where(
-                Subscription.organization_id == organization_id,
-                Subscription.status.in_(["active", "trialing", "past_due", "paused"]),
-                Subscription.deleted_at.is_(None),
-            )
+        stmt = select(PlanFeature.feature).where(
+            PlanFeature.plan_id == entitled_plan_id(organization_id)
         )
         rs = await self.db.execute(stmt)
         return set(rs.scalars().all())
@@ -173,9 +195,7 @@ class SubscriptionRepository(OrganizationScopedRepository[Subscription]):
             select(self.model)
             .filter(
                 self.model.organization_id == organization_id,
-                self.model.status.in_(
-                    ["active", "trialing", "past_due", "incomplete", "paused"]
-                ),
+                self.model.status.in_([*LIVE_STATUSES, "incomplete"]),
                 self.model.deleted_at.is_(None),
             )
             .order_by(self.model.id.desc())
@@ -196,9 +216,7 @@ class SubscriptionRepository(OrganizationScopedRepository[Subscription]):
             select(self.model)
             .filter(
                 self.model.organization_id == organization_id,
-                self.model.status.in_(
-                    ["active", "trialing", "past_due", "incomplete", "paused"]
-                ),
+                self.model.status.in_([*LIVE_STATUSES, "incomplete"]),
                 self.model.deleted_at.is_(None),
             )
             .order_by(self.model.id.desc())
@@ -294,13 +312,8 @@ class PlanSettingRepository(SoftDeleteRepository[PlanSetting]):
     ) -> PlanSetting | None:
         stmt = (
             select(PlanSetting)
-            .join(Plan, Plan.id == PlanSetting.plan_id)
-            .join(PlanPrice, PlanPrice.plan_id == Plan.id)
-            .join(Subscription, Subscription.plan_price_id == PlanPrice.id)
             .where(
-                Subscription.organization_id == organization_id,
-                Subscription.status.in_(["active", "trialing", "past_due", "paused"]),
-                Subscription.deleted_at.is_(None),
+                PlanSetting.plan_id == entitled_plan_id(organization_id),
                 PlanSetting.key == key,
                 PlanSetting.deleted_at.is_(None),
             )
@@ -312,17 +325,9 @@ class PlanSettingRepository(SoftDeleteRepository[PlanSetting]):
     async def get_settings_for_organization(
         self, organization_id: int
     ) -> Sequence[PlanSetting]:
-        stmt = (
-            select(PlanSetting)
-            .join(Plan, Plan.id == PlanSetting.plan_id)
-            .join(PlanPrice, PlanPrice.plan_id == Plan.id)
-            .join(Subscription, Subscription.plan_price_id == PlanPrice.id)
-            .where(
-                Subscription.organization_id == organization_id,
-                Subscription.status.in_(["active", "trialing", "past_due", "paused"]),
-                Subscription.deleted_at.is_(None),
-                PlanSetting.deleted_at.is_(None),
-            )
+        stmt = select(PlanSetting).where(
+            PlanSetting.plan_id == entitled_plan_id(organization_id),
+            PlanSetting.deleted_at.is_(None),
         )
         rs = await self.db.execute(stmt)
         return rs.unique().scalars().all()

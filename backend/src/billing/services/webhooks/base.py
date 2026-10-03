@@ -2,7 +2,7 @@ import logging
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 
-from src.billing.enums import BillingAuditAction
+from src.billing.enums import LIVE_STATUSES, BillingAuditAction
 from src.billing.models.billing import PlanPrice, Subscription
 from src.billing.provider.abc import BillingProviderABC
 from src.billing.repositories.manager import BillingRepositoryManager
@@ -14,11 +14,6 @@ from src.platform.core.hooks import HookEvent, emit
 log = logging.getLogger(__name__)
 
 WebhookHandler = Callable[[dict], Awaitable[None]]
-
-
-# Statuses in which a local row follows a Stripe subscription that is still
-# live (billing, or able to resume billing).
-LIVE_SUBSCRIPTION_STATUSES = ("active", "trialing", "past_due", "paused")
 
 
 class WebhookHandlerGroup(BillingBaseService):
@@ -133,7 +128,7 @@ class WebhookHandlerGroup(BillingBaseService):
         return (
             sub.external_subscription_id is not None
             and sub.external_subscription_id != external_subscription_id
-            and sub.status in LIVE_SUBSCRIPTION_STATUSES
+            and sub.status in LIVE_STATUSES
         )
 
     async def _cancel_duplicate_subscription(

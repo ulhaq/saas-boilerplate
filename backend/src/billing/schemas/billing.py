@@ -3,6 +3,7 @@ from datetime import date, datetime
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 from src.billing.config import billing_settings
+from src.billing.enums import ENTITLED_STATUSES
 from src.platform.core.schema import ResponseSchema
 from src.platform.schemas.types import ConstrainedEmail
 
@@ -84,6 +85,13 @@ class SubscriptionOut(ResponseSchema):
     plan_settings: list[PlanSettingOut] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
+
+    @computed_field
+    @property
+    def has_access(self) -> bool:
+        """Whether the plan applies (`ENTITLED_STATUSES`) - the app's access
+        policy, so the frontend never keeps its own list of statuses."""
+        return self.status in ENTITLED_STATUSES
 
 
 class UsageItemOut(BaseModel):

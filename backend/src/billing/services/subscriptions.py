@@ -4,7 +4,7 @@ from typing import Annotated
 from fastapi import Depends
 
 from src.billing.config import billing_settings
-from src.billing.enums import BillingAuditAction, BillingErrorCode
+from src.billing.enums import LIVE_STATUSES, BillingAuditAction, BillingErrorCode
 from src.billing.models.account import BillingAccount
 from src.billing.models.billing import PlanPrice, Subscription
 from src.billing.provider.dependencies import BillingProviderDep
@@ -323,7 +323,7 @@ class SubscriptionService(BillingBaseService):
         )
         if (
             existing
-            and existing.status in ("active", "trialing", "past_due", "paused")
+            and existing.status in LIVE_STATUSES
             and not _is_active_free_sub(existing)
         ):
             raise AlreadyExistsException(

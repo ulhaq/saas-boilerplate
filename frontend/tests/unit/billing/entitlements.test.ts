@@ -1,6 +1,7 @@
 import { createPinia, setActivePinia } from 'pinia'
-import { beforeEach, describe, expect, test } from 'vitest'
+import { beforeEach, describe, expect, test, vi } from 'vitest'
 import type { RouteLocationNormalized } from 'vue-router'
+import { billingApi } from '@/billing/api/billing'
 import { BILLING_ROUTE, requireAppAccess, useBillingEntitlements } from '@/billing/entitlements'
 import { useSubscriptionStore } from '@/billing/stores/subscription'
 import { useProfileStore } from '@/platform/stores/profile'
@@ -34,8 +35,8 @@ describe('billing entitlements', () => {
 })
 
 describe('app access guard', () => {
-  test('sends an organization without a usable subscription to the billing page', () => {
-    subscription.subscriptionStatus = 'canceled'
+  test('sends an organization without access to the billing page', () => {
+    subscription.hasAppAccess = false
 
     expect(requireAppAccess(route('/projects'))).toEqual({ path: BILLING_ROUTE })
     // Not from billing's own pages, nor from public ones.
@@ -44,15 +45,26 @@ describe('app access guard', () => {
     expect(requireAppAccess(route('/login', false))).toBeUndefined()
   })
 
-  test('lets active, trialing and past-due organizations in', () => {
-    for (const status of ['active', 'trialing', 'past_due']) {
-      subscription.subscriptionStatus = status
-      expect(requireAppAccess(route('/projects')), status).toBeUndefined()
-    }
+  test('lets organizations with access in', () => {
+    subscription.hasAppAccess = true
+    expect(requireAppAccess(route('/projects'))).toBeUndefined()
+  })
+
+  test("access is the API's verdict, not a status list kept here", async () => {
+    const paused = { status: 'paused', has_access: false, trial_end: null, trial_used: true }
+    const sub = { ...paused, features: [], plan_settings: [] }
+    subscription.hasAppAccess = true
+    vi.spyOn(billingApi, 'getCurrentSubscription').mockResolvedValue({
+      data: sub,
+    } as unknown as Awaited<ReturnType<typeof billingApi.getCurrentSubscription>>)
+
+    await subscription.fetchSubscriptionStatus()
+    expect(subscription.subscriptionStatus).toBe('paused')
+    expect(subscription.hasAppAccess).toBe(false)
   })
 
   test('does not redirect users who cannot manage the subscription', () => {
-    subscription.subscriptionStatus = 'canceled'
+    subscription.hasAppAccess = false
     useProfileStore().permissions = []
 
     expect(requireAppAccess(route('/projects'))).toBeUndefined()

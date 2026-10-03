@@ -1,5 +1,7 @@
 """Tests for dead-code paths in repository base and service base."""
 
+from enum import StrEnum
+
 import pytest
 
 from src.platform.core.exceptions import PlanFeatureUnavailableException
@@ -110,21 +112,14 @@ async def test_require_feature_passes_when_feature_available(mock_billing_provid
 
 
 async def test_require_feature_raises_when_feature_unavailable(mock_billing_provider):
-    """An org with no subscription has no features - should raise."""
-    from src.platform.models.organization import Organization
+    """A feature the organization's plan doesn't include - should raise."""
 
-    async with TestSessionLocal() as session:
-        async with session.begin():
-            org = Organization(name="No Feature Org")
-            session.add(org)
-            await session.flush()
-            org_id = org.id
+    class _Feature(StrEnum):
+        SSO = "sso"
 
     async with TestSessionLocal() as session:
         async with session.begin():
             repos = RepositoryManager(session)
             service = OrganizationService(repos, _admin_auth())
             with pytest.raises(PlanFeatureUnavailableException):
-                await service._require_feature(
-                    PlanFeature.API_TOKEN, organization_id=org_id
-                )
+                await service._require_feature(_Feature.SSO, organization_id=1)

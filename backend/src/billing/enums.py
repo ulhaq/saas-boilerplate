@@ -5,6 +5,16 @@ from enum import StrEnum
 
 from src.platform.enums import ErrorCodeEnum
 
+# The organization's current subscription: billing, or able to resume billing.
+LIVE_STATUSES = ("active", "trialing", "past_due", "paused")
+
+# The states in which a subscription's plan applies - the access policy, shared
+# by the API's entitlements and the app (`SubscriptionOut.has_access`). past_due
+# keeps access while Stripe retries. paused (a trial that ended without a
+# payment method) is live but not entitled: the organization gets the free
+# plan until it adds a card or switches, as after an uncollectible payment.
+ENTITLED_STATUSES = ("active", "trialing", "past_due")
+
 
 class BillingPermission(StrEnum):
     MANAGE_SUBSCRIPTION = "manage:subscription"

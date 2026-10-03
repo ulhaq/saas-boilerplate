@@ -6392,6 +6392,12 @@
             "type": "string",
             "format": "date-time",
             "title": "Updated At"
+          },
+          "has_access": {
+            "type": "boolean",
+            "title": "Has Access",
+            "description": "Whether the plan applies (`ENTITLED_STATUSES`) - the app's access\npolicy, so the frontend never keeps its own list of statuses.",
+            "readOnly": true
           }
         },
         "type": "object",
@@ -6413,7 +6419,8 @@
           "features",
           "plan_settings",
           "created_at",
-          "updated_at"
+          "updated_at",
+          "has_access"
         ],
         "title": "SubscriptionOut"
       },

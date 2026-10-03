@@ -13,6 +13,7 @@ from src.billing.models.billing import (
     PlanSetting,
     WebhookEvent,
 )
+from src.billing.models.billing import PlanFeature as PlanFeatureModel
 from src.billing.provider.dependencies import get_billing_provider
 from src.billing.provider.stripe_provider import StripeProvider
 from src.billing.repositories.manager import BillingRepositoryManager
@@ -588,3 +589,74 @@ async def test_webhook_event_mark_failed():
             )
             assert updated.status == "failed"
             assert updated.error == "something went wrong"
+
+
+# ---------------------------------------------------------------------------
+# Access policy: whose plan applies (ENTITLED_STATUSES, else the free plan)
+# ---------------------------------------------------------------------------
+
+
+async def _paid_plan(session) -> tuple[int, int]:
+    """A paid plan with the `sso` feature and 50 seats; returns (plan, price)."""
+    plan = Plan(name="Paid", is_active=True)
+    session.add(plan)
+    await session.flush()
+    price = PlanPrice(
+        plan_id=plan.id, amount=999, currency="dkk", interval="month", is_active=True
+    )
+    session.add(price)
+    session.add(PlanSetting(plan_id=plan.id, key="seats", value=50))
+    session.add(PlanFeatureModel(plan_id=plan.id, feature="sso"))
+    await session.flush()
+    return plan.id, price.id
+
+
+@pytest.mark.parametrize(
+    ("status", "paid_plan_applies"),
+    [
+        ("active", True),
+        ("trialing", True),
+        ("past_due", True),
+        # A trial that ended without a card: still live, but on the free plan.
+        ("paused", False),
+        ("incomplete", False),
+        ("canceled", False),
+    ],
+)
+async def test_the_paid_plan_applies_only_while_entitled(status, paid_plan_applies):
+    entitlements = PlanEntitlements()
+    async with TestSessionLocal() as session, session.begin():
+        repos = BillingRepositoryManager(session)
+        _, price_id = await _paid_plan(session)
+        free_price = await repos.plan_price.get_free_price()
+        assert free_price
+        session.add(PlanSetting(plan_id=free_price.plan_id, key="seats", value=1))
+        sub = await repos.subscription.get_active_for_organization(1)
+        assert sub
+        await repos.subscription.update(sub, plan_price_id=price_id, status=status)
+
+        assert await entitlements.has_feature(session, 1, "sso") is paid_plan_applies
+        assert await entitlements.limit(session, 1, "seats") == (
+            50 if paid_plan_applies else 1
+        )
+        # The free plan's own feature applies whenever the paid plan doesn't.
+        assert (
+            await entitlements.has_feature(session, 1, PlanFeature.API_TOKEN)
+            is not paid_plan_applies
+        )
+
+
+async def test_an_organization_without_a_subscription_is_on_the_free_plan():
+    entitlements = PlanEntitlements()
+    async with TestSessionLocal() as session, session.begin():
+        repos = BillingRepositoryManager(session)
+        free_price = await repos.plan_price.get_free_price()
+        assert free_price
+        session.add(PlanSetting(plan_id=free_price.plan_id, key="seats", value=1))
+        sub = await repos.subscription.get_active_for_organization(1)
+        assert sub
+        await session.delete(sub)
+        await session.flush()
+
+        assert await entitlements.limit(session, 1, "seats") == 1
+        assert await entitlements.has_feature(session, 1, PlanFeature.API_TOKEN)

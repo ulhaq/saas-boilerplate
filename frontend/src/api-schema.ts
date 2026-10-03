@@ -1808,6 +1808,12 @@ export interface components {
        * Format: date-time
        */
       updated_at: string
+      /**
+       * Has Access
+       * @description Whether the plan applies (`ENTITLED_STATUSES`) - the app's access
+       *     policy, so the frontend never keeps its own list of statuses.
+       */
+      readonly has_access: boolean
     }
     /** SwitchOrganizationIn */
     SwitchOrganizationIn: {

@@ -19,16 +19,9 @@ export const useSubscriptionStore = defineStore('subscription', () => {
   const seatLimit = computed(() => limitFor('seats'))
   const planSettings = ref<Record<string, number | null>>({})
 
-  const hasActiveSubscription = computed(
-    () => subscriptionStatus.value === 'active' || subscriptionStatus.value === 'trialing',
-  )
-
-  // Mirrors the backend access policy: past_due keeps full access (with a
-  // warning banner) until Stripe gives up collecting and fires
-  // invoice.marked_uncollectible, which downgrades the org to free.
-  const hasAppAccess = computed(
-    () => hasActiveSubscription.value || subscriptionStatus.value === 'past_due',
-  )
+  // The backend's access policy (`SubscriptionOut.has_access`): whether the
+  // subscription's plan applies. Kept server-side so the two can't drift.
+  const hasAppAccess = ref(false)
 
   function limitFor(metric: string): number | null {
     return usageLimits.value[metric] ?? null
@@ -42,6 +35,7 @@ export const useSubscriptionStore = defineStore('subscription', () => {
     try {
       const { data: subscription } = await billingApi.getCurrentSubscription()
       subscriptionStatus.value = subscription.status
+      hasAppAccess.value = subscription.has_access
       subscriptionTrialEnd.value = subscription.trial_end
       trialUsed.value = subscription.trial_used
       planFeatures.value = subscription.features
@@ -50,6 +44,7 @@ export const useSubscriptionStore = defineStore('subscription', () => {
       )
     } catch {
       subscriptionStatus.value = null
+      hasAppAccess.value = false
       subscriptionTrialEnd.value = null
       planFeatures.value = []
       planSettings.value = {}
@@ -146,6 +141,7 @@ export const useSubscriptionStore = defineStore('subscription', () => {
 
   function clear(): void {
     subscriptionStatus.value = null
+    hasAppAccess.value = false
     subscriptionTrialEnd.value = null
     trialUsed.value = false
     availableTrialDays.value = null
@@ -164,7 +160,6 @@ export const useSubscriptionStore = defineStore('subscription', () => {
     seatLimit,
     limitFor,
     planSettings,
-    hasActiveSubscription,
     hasAppAccess,
     hasFeature,
     fetchSubscriptionStatus,
