@@ -5,8 +5,9 @@ lifecycle points; domain modules register async handlers for them. This keeps
 the core free of imports from product-specific packages - a new product
 registers its own handlers (or none) without touching core services.
 
-Handlers are registered at process startup by the composition root
-(`src.bootstrap`) and receive keyword arguments only. Every event includes
+Products list their handlers in their manifest; the composition root
+(`src.bootstrap`) installs them with the rest of the `Composition`. Handlers
+receive keyword arguments only. Every event includes
 `repos` (the request/job-scoped RepositoryManager) so handlers participate in
 the caller's transaction.
 """
@@ -14,6 +15,8 @@ the caller's transaction.
 import logging
 from collections.abc import Awaitable, Callable
 from enum import StrEnum
+
+from src.platform.core import composition
 
 log = logging.getLogger(__name__)
 
@@ -32,21 +35,6 @@ class HookEvent(StrEnum):
     PLAN_CHANGED = "plan_changed"
 
 
-_registry: dict[HookEvent, list[Handler]] = {}
-
-
-def register(event: HookEvent, handler: Handler) -> None:
-    handlers = _registry.setdefault(event, [])
-    if handler in handlers:
-        return
-    handlers.append(handler)
-
-
-def clear() -> None:
-    """Remove all registered handlers - intended for test isolation."""
-    _registry.clear()
-
-
 async def emit(event: HookEvent, **kwargs: object) -> None:
     """Run all handlers for an event, in registration order.
 
@@ -54,5 +42,5 @@ async def emit(event: HookEvent, **kwargs: object) -> None:
     a failing handler must abort the surrounding operation rather than
     leave domain state half-applied.
     """
-    for handler in _registry.get(event, []):
+    for handler in composition.current().hooks.get(event, ()):
         await handler(**kwargs)

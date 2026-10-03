@@ -1,23 +1,40 @@
+from collections.abc import Callable
 from pathlib import Path
 
 from fastapi.templating import Jinja2Templates
-from jinja2 import ChoiceLoader, FileSystemLoader
+from jinja2 import (
+    BaseLoader,
+    ChoiceLoader,
+    Environment,
+    FileSystemLoader,
+    select_autoescape,
+)
 from markupsafe import Markup, escape
 
+from src.platform.core import composition
+
 _TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates"
-templates = Jinja2Templates(directory=_TEMPLATE_DIR)
 
 
-def add_template_directory(directory: str | Path) -> None:
-    """Register an additional template root.
+class _ProductTemplateLoader(BaseLoader):
+    """The installed products' template roots (from the `Composition`),
+    searched after the platform's own."""
 
-    Called by the composition root (`src.bootstrap`) so product packages can
-    ship their own templates without the platform knowing about them.
-    """
-    env = templates.env
-    loader = env.loader
-    assert loader is not None
-    env.loader = ChoiceLoader([loader, FileSystemLoader(directory)])
+    def get_source(
+        self, environment: Environment, template: str
+    ) -> tuple[str, str | None, Callable[[], bool] | None]:
+        directories = composition.current().template_directories
+        return FileSystemLoader(directories).get_source(environment, template)
+
+
+templates = Jinja2Templates(
+    env=Environment(
+        loader=ChoiceLoader(
+            [FileSystemLoader(_TEMPLATE_DIR), _ProductTemplateLoader()]
+        ),
+        autoescape=select_autoescape(),
+    )
+)
 
 
 def _nl2br(value: str) -> Markup:

@@ -5,12 +5,14 @@ Email *bodies* are localized as per-locale compiled templates under
 Subject lines are localized here so callers don't carry hard-coded English strings.
 
 Tier-1 localization: the fixed copy in all templates plus subjects. Product
-packages contribute their own subject lines via ``register_email_subjects``,
-called from the composition root (``src.bootstrap``).
+packages contribute their own subject lines in their manifest, installed by
+the composition root (``src.bootstrap``) and looked up after the platform's.
 """
 
 from collections import defaultdict
 from datetime import date
+
+from src.platform.core import composition
 
 DEFAULT_EMAIL_LOCALE = "da"
 SUPPORTED_EMAIL_LOCALES: frozenset[str] = frozenset({"en", "da"})
@@ -132,14 +134,10 @@ EMAIL_SUBJECTS: dict[str, dict[str, str]] = {
 }
 
 
-def register_email_subjects(subjects: dict[str, dict[str, str]]) -> None:
-    """Merge product subject lines into the catalog, keyed [locale][template].
-
-    Called by the composition root so the platform catalog stays product-free.
-    Idempotent: re-registering the same entries is a no-op.
-    """
-    for locale, entries in subjects.items():
-        EMAIL_SUBJECTS.setdefault(locale, {}).update(entries)
+def _lookup(locale: str, template: str) -> str | None:
+    """A product's subject line for the template, else the platform's."""
+    product = composition.current().email_subjects.get(locale, {})
+    return product.get(template) or EMAIL_SUBJECTS.get(locale, {}).get(template)
 
 
 def subject_for(template: str, locale: str, **values: object) -> str:
@@ -149,9 +147,8 @@ def subject_for(template: str, locale: str, **values: object) -> str:
     missing format values (renders them as empty) so a subject is always returned.
     """
     loc = normalize_locale(locale)
-    catalog = EMAIL_SUBJECTS.get(loc, EMAIL_SUBJECTS[DEFAULT_EMAIL_LOCALE])
-    template_str = catalog.get(template) or EMAIL_SUBJECTS[DEFAULT_EMAIL_LOCALE].get(
-        template, ""
+    template_str = (
+        _lookup(loc, template) or _lookup(DEFAULT_EMAIL_LOCALE, template) or ""
     )
     # defaultdict so a missing placeholder formats to "" instead of raising.
     safe_values: defaultdict[str, object] = defaultdict(str, values)

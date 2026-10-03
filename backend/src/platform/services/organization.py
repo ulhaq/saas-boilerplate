@@ -5,7 +5,7 @@ from typing import Annotated
 from fastapi import Depends
 
 from src.platform.billing.dependencies import BillingProviderDep
-from src.platform.core.composition import DEFAULT_ROLES
+from src.platform.core import composition
 from src.platform.core.config import settings
 from src.platform.core.exceptions import (
     AlreadyExistsException,
@@ -51,7 +51,11 @@ async def setup_new_organization(
     await repos.role.add_permissions(owner_role, *permission_map.values())
     await repos.user.add_roles(user, owner_role.id)
 
-    for role_name, role_description, role_permissions in DEFAULT_ROLES:
+    for (
+        role_name,
+        role_description,
+        role_permissions,
+    ) in composition.current().default_roles:
         role = await repos.role.create(
             name=role_name,
             description=role_description,

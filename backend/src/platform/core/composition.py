@@ -1,32 +1,57 @@
-"""Composed permission/role sets for the running product.
+"""What the installed products add to the platform, as one read-only object.
 
-The platform defines its own enums in `src.platform.enums`; product domains
-contribute theirs on top. The composition root (`src.bootstrap`) merges the
-two and installs the result here at startup via `configure()`, so platform
-code can consume the composed sets without importing the composition root
+The platform defines its own enums, hooks, email subjects and templates; product
+domains contribute theirs on top. The composition root (`src.bootstrap`) merges
+them into a `Composition` and installs it here at startup via `install()`, so
+platform code can consume the result without importing the composition root
 (which would create a platform -> product dependency).
 
-Defaults to the bare platform sets, so the platform works standalone.
+Reading it before `install()` raises instead of silently falling back to the
+bare platform - a process that forgot `bootstrap()` would otherwise seed new
+organizations without the product's permissions and skip its hook handlers.
+A platform without products still calls `bootstrap()`, with no products listed.
 """
 
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from enum import StrEnum
+from pathlib import Path
+from typing import TYPE_CHECKING
 
-from src.platform import enums as core_enums
+if TYPE_CHECKING:
+    from src.platform.core.hooks import Handler, HookEvent
 
-ALL_PERMISSIONS: list[StrEnum] = [*core_enums.Permission]
-
-PERMISSION_DESCRIPTIONS: dict[StrEnum, str] = {**core_enums.PERMISSION_DESCRIPTIONS}
-
-DEFAULT_ROLES: list[tuple[str, str, list[StrEnum]]] = [*core_enums.DEFAULT_ROLES]
+type RoleSpec = tuple[str, str, Sequence[StrEnum]]
 
 
-def configure(
-    all_permissions: list[StrEnum],
-    permission_descriptions: dict[StrEnum, str],
-    default_roles: list[tuple[str, str, list[StrEnum]]],
-) -> None:
-    """Install the composed sets. Called once by the composition root."""
-    ALL_PERMISSIONS[:] = all_permissions
-    PERMISSION_DESCRIPTIONS.clear()
-    PERMISSION_DESCRIPTIONS.update(permission_descriptions)
-    DEFAULT_ROLES[:] = default_roles
+@dataclass(frozen=True, kw_only=True)
+class Composition:
+    # Seeded into every new organization: (name, description, permissions).
+    default_roles: Sequence[RoleSpec]
+    # Run in order by `hooks.emit`.
+    hooks: Mapping[HookEvent, Sequence[Handler]]
+    # Product email subject lines, keyed [locale][template].
+    email_subjects: Mapping[str, Mapping[str, str]]
+    # Product template roots, searched after the platform's own.
+    template_directories: Sequence[Path]
+
+
+_installed: Composition | None = None
+
+
+def install(composition: Composition) -> None:
+    """Install the composition. Called once per process by the composition
+    root; installing a different one later is an error."""
+    global _installed
+    if _installed is None:
+        _installed = composition
+    elif _installed != composition:
+        raise RuntimeError("A different composition is already installed")
+
+
+def current() -> Composition:
+    if _installed is None:
+        raise RuntimeError(
+            "No composition installed - call src.bootstrap.bootstrap() at startup"
+        )
+    return _installed

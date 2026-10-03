@@ -10,10 +10,10 @@ from collections.abc import Sequence
 from enum import StrEnum
 
 from src.platform import enums as core_enums
-from src.platform.core import composition, hooks
+from src.platform.core import composition
+from src.platform.core.composition import Composition, RoleSpec
+from src.platform.core.hooks import Handler, HookEvent
 from src.platform.core.product import ProductModule
-from src.platform.core.template import add_template_directory
-from src.platform.services.email_content import register_email_subjects
 from src.products import PRODUCTS
 
 ALL_PERMISSIONS: list[StrEnum] = [
@@ -31,9 +31,6 @@ PERMISSION_DESCRIPTIONS: dict[StrEnum, str] = {
 }
 
 
-type RoleSpec = tuple[str, str, list[StrEnum]]
-
-
 def compose_default_roles(
     roles: Sequence[RoleSpec], products: Sequence[ProductModule]
 ) -> list[RoleSpec]:
@@ -49,29 +46,29 @@ def compose_default_roles(
     return composed
 
 
-DEFAULT_ROLES: list[RoleSpec] = compose_default_roles(
-    core_enums.DEFAULT_ROLES, PRODUCTS
-)
-
-_bootstrapped = False
+def compose(products: Sequence[ProductModule]) -> Composition:
+    """Merge what ``products`` add to the platform (in list order) into one
+    read-only `Composition`."""
+    hook_handlers: dict[HookEvent, list[Handler]] = {}
+    email_subjects: dict[str, dict[str, str]] = {}
+    for product in products:
+        for event, handlers in product.hooks.items():
+            hook_handlers.setdefault(event, []).extend(handlers)
+        for locale, subjects in product.email_subjects.items():
+            email_subjects.setdefault(locale, {}).update(subjects)
+    return Composition(
+        default_roles=compose_default_roles(core_enums.DEFAULT_ROLES, products),
+        hooks={event: tuple(handlers) for event, handlers in hook_handlers.items()},
+        email_subjects=email_subjects,
+        template_directories=[
+            product.template_directory
+            for product in products
+            if product.template_directory
+        ],
+    )
 
 
 def bootstrap() -> None:
-    """Install the composed sets and register each product's hooks and
-    emails. Idempotent; called at process startup by both the API
-    (`src.main`) and the worker (`worker.py`)."""
-    global _bootstrapped
-    if _bootstrapped:
-        return
-    composition.configure(ALL_PERMISSIONS, PERMISSION_DESCRIPTIONS, DEFAULT_ROLES)
-    for product in PRODUCTS:
-        for event, handlers in product.hooks.items():
-            for handler in handlers:
-                hooks.register(event, handler)
-        if product.email_subjects:
-            register_email_subjects(
-                {locale: dict(s) for locale, s in product.email_subjects.items()}
-            )
-        if product.template_directory:
-            add_template_directory(product.template_directory)
-    _bootstrapped = True
+    """Install the installed products' composition. Idempotent; called at
+    process startup by both the API (`src.main`) and the worker (`worker.py`)."""
+    composition.install(compose(PRODUCTS))
