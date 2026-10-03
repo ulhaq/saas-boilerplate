@@ -46,14 +46,62 @@ dev = [
     "ty>=0.0.46",
 ]
 
+[tool.poe]
+# Paths every static check covers.
+env = { CHECK_PATHS = "src tests scripts worker.py generate_openapi.py locustfile.py" }
+
 [tool.poe.tasks]
-lint = "bash -c 'ty check src tests scripts && ruff check src tests scripts && ruff format src tests scripts --check && lint-imports'"
-format = "bash -c 'ruff check src tests scripts --fix && ruff format src tests scripts'"
-test = "pytest ./tests -n auto"
-test-platform-only = "bash -c 'TEST_WITHOUT_MODULES=optional pytest ./tests -n auto'"
-test-cov = "pytest ./tests -n auto --cov=src --cov-report=term-missing --cov-report=html:htmlcov"
-dev = "fastapi dev src/main.py --host 0.0.0.0 --port 8000"
-openapi = "python generate_openapi.py"
+dev = { cmd = "fastapi dev src/main.py --host 0.0.0.0 --port 8000", help = "Run the API dev server on :8000" }
+openapi = { cmd = "python generate_openapi.py", help = "Regenerate openapi.json and openapi.internal.json" }
+
+# Static checks - `check` runs all checks and fails if any fail; `fix` applies automatic fixes and formats the code.
+[tool.poe.tasks.check]
+help = "Run every static check: types, lint, formatting, import contracts"
+sequence = ["check:types", "check:lint", "check:format", "check:imports"]
+ignore_fail = "return_non_zero"
+
+[tool.poe.tasks."check:types"]
+cmd = "ty check ${CHECK_PATHS}"
+help = "Type check with ty"
+
+[tool.poe.tasks."check:lint"]
+cmd = "ruff check ${CHECK_PATHS}"
+help = "Lint with ruff"
+
+[tool.poe.tasks."check:format"]
+cmd = "ruff format ${CHECK_PATHS} --check"
+help = "Check formatting without changing files"
+
+[tool.poe.tasks."check:imports"]
+cmd = "lint-imports"
+help = "Check the import-linter boundary and layer contracts"
+
+[tool.poe.tasks.fix]
+help = "Autofix lint issues, then format the code"
+sequence = ["fix:lint", "fix:format"]
+ignore_fail = "return_non_zero"
+
+[tool.poe.tasks."fix:lint"]
+cmd = "ruff check ${CHECK_PATHS} --fix"
+help = "Autofix lint issues with ruff"
+
+[tool.poe.tasks."fix:format"]
+cmd = "ruff format ${CHECK_PATHS}"
+help = "Format the code with ruff"
+
+# Tests (PostgreSQL required, see README).
+[tool.poe.tasks.test]
+cmd = "pytest ./tests -n auto"
+help = "Run the test suite in parallel"
+
+[tool.poe.tasks."test-platform-only"]
+cmd = "pytest ./tests -n auto"
+env = { TEST_WITHOUT_MODULES = "optional" }
+help = "Run the suite without the optional modules (billing, marketing)"
+
+[tool.poe.tasks."test-cov"]
+cmd = "pytest ./tests -n auto --cov=src --cov-report=term-missing --cov-report=html:htmlcov"
+help = "Run the suite with a coverage report (terminal + htmlcov/)"
 
 [tool.ruff]
 exclude = ["src/platform/templates"]

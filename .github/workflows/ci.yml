@@ -39,7 +39,7 @@ jobs:
         run: uv sync --locked
 
       - name: Lint (ty + ruff + import-linter)
-        run: uv run poe lint
+        run: uv run poe check
 
       - name: API schemas match the code
         run: uv run poe openapi && git diff --exit-code openapi.json openapi.internal.json
@@ -63,14 +63,14 @@ jobs:
         run: |
           uv run python scripts/remove_module.py billing
           uv run python scripts/remove_module.py marketing
-          uv run poe format
+          uv run poe fix
 
       - name: Without optional modules - lint, migrate, test
         env:
           APP_SECRET: ci-test-secret-not-for-production
           DB_CONNECTION: postgresql+psycopg://postgres:postgres@localhost:5432/app_without_modules
         run: |
-          uv run poe lint
+          uv run poe check
           uv run python -c "from sqlalchemy import create_engine, text; \
             e = create_engine('postgresql+psycopg://postgres:postgres@localhost:5432/app', \
             isolation_level='AUTOCOMMIT'); \

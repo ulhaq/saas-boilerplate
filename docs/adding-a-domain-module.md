@@ -70,7 +70,7 @@ Never start loops in `main.py` - `worker.py` runs them in a single process.
 uv run alembic revision --autogenerate -m "acme tables"   # one migration per module, chained last
 uv run alembic upgrade head
 uv run python -m src.sync_permissions                       # your permissions reach the DB and every Owner role
-uv run poe lint && uv run poe test && uv run poe test-platform-only
+uv run poe check && uv run poe test && uv run poe test-platform-only
 ```
 
 Permissions are never seeded by migrations: `sync_permissions` adds the declared ones on every deploy (CI runs it after `alembic upgrade head`) and `init_db` runs it too. To seed plan limits for your metrics, insert `billing_plan_setting` rows in your migration only when billing's tables exist (see `*_example_project_table.py`), so the product still migrates without billing.
@@ -136,12 +136,12 @@ Same steps - but delete `src/example/` on both sides (and `backend/tests/api/tes
 
 Billing (plans, subscriptions, Stripe; both sides) and marketing (the waitlist and contact-form endpoints the `site/` posts to; backend only) are installed by default. CI already checks that the platform and the product work without them: it removes them from a throwaway checkout with the scripts below and runs lint, the migrations and the tests again (backend), and build, type-check, lint and tests (frontend).
 
-To drop one for good, in `backend/` run `uv run python scripts/remove_module.py billing` (or `marketing`), then `uv run poe format && uv run poe lint && uv run poe test` and reset the database. The script does these steps, which you can also do by hand:
+To drop one for good, in `backend/` run `uv run python scripts/remove_module.py billing` (or `marketing`), then `uv run poe fix && uv run poe check && uv run poe test` and reset the database. The script does these steps, which you can also do by hand:
 
 1. Remove it from `MODULES` (and its import) in `src/products.py`.
 2. Delete its package (`src/billing/`) and its migration (`alembic/versions/*_billing.py`), and point the next migration's `down_revision` (and `Revises:`) at the one before it.
 3. Remove it from the import-linter contracts in `pyproject.toml` (every list naming `src.billing...`).
-4. Delete its tests: `tests/<module>/` (fixtures included), and the tests elsewhere marked with its name (`@pytest.mark.billing`) along with helpers only they use - `poe lint` points at any left.
+4. Delete its tests: `tests/<module>/` (fixtures included), and the tests elsewhere marked with its name (`@pytest.mark.billing`) along with helpers only they use - `poe check` points at any left.
 5. Reset the database (`python -m src.init_db drop && python -m src.init_db`).
 
 For billing on the frontend, run `node scripts/remove-billing.mjs` in `frontend/`. Without billing every feature is on and nothing is limited; without marketing the `/v1/waitlist` and `/v1/contact` endpoints are gone (drop the site's forms too).

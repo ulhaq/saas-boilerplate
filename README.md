@@ -122,8 +122,8 @@ cd backend && python -m src.init_db
 
 ```bash
 uv run poe dev      # dev server on :8000
-uv run poe format   # ruff format + autofix
-uv run poe lint     # ty (type check) + ruff + import-linter boundary/layer contracts
+uv run poe fix   # ruff format + autofix
+uv run poe check     # ty (type check) + ruff + import-linter boundary/layer contracts
 uv run poe test     # pytest against PostgreSQL (see below)
 uv run poe test-platform-only   # the same without the optional modules (CI runs both)
 alembic revision --autogenerate -m "..."   # new migration

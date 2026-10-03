@@ -90,7 +90,7 @@ your product package when you rename it.
 - `schemas/` - Pydantic request/response models. Response models extend `ResponseSchema` (`src/platform/core/schema.py`) so defaulted fields are required in the OpenAPI schema - the frontend's generated types depend on it.
 - `src/platform/core/` - Cross-cutting concerns: config, security (JWT/passwords), DI dependencies, error handling, rate limiting, hooks
 
-Enforced by import-linter (`uv run poe lint`), for `src/platform/`, `src/billing/` and `src/example/` alike:
+Enforced by import-linter (`uv run poe check`), for `src/platform/`, `src/billing/` and `src/example/` alike:
 
 - `src.platform` imports neither `src.billing` nor the product; billing does not import the product.
 - Each layer imports only the layers below it: `routers > services > provider > repositories > models | schemas` (`provider` is billing's payment-provider adapter; `models` and `schemas` must not import each other).
@@ -142,11 +142,11 @@ The initial migration holds the platform schema; billing's migration its tables 
 ## Commands (`cd backend` first)
 
 ```bash
-# Format code
-uv run poe format
+# Format & fix code
+uv run poe fix
 
 # Lint (ty + ruff + import-linter boundary/layer contracts)
-uv run poe lint
+uv run poe check
 
 # Run all tests
 uv run poe test

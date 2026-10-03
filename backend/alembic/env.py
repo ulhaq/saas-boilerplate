@@ -1,7 +1,8 @@
 from logging.config import fileConfig
 
-from alembic import context
 from sqlalchemy import create_engine, pool
+
+from alembic import context
 from src.platform import models  # noqa: F401  (registers platform tables)
 from src.platform.core.config import settings
 from src.platform.core.database import Base

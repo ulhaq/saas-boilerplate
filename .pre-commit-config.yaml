@@ -1,25 +1,26 @@
 repos:
   - repo: local
     hooks:
-      - id: ruff-lint
-        name: ruff lint
-        entry: bash -c 'cd backend && uv run ruff check src tests --fix'
+      # Backend checks run through the poe tasks, so they cover the same paths as CI.
+      - id: backend-fix
+        name: ruff fix + format
+        entry: uv run --directory backend poe fix
         language: system
         files: ^backend/.*\.py$
         pass_filenames: false
 
-      - id: ruff-format
-        name: ruff format
-        entry: bash -c 'cd backend && uv run ruff format src tests'
-        language: system
-        files: ^backend/.*\.py$
-        pass_filenames: false
-
-      - id: ty
+      - id: backend-types
         name: ty
-        entry: bash -c 'cd backend && uv run ty check src'
+        entry: uv run --directory backend poe check:types
         language: system
         files: ^backend/.*\.py$
+        pass_filenames: false
+
+      - id: backend-imports
+        name: import-linter contracts
+        entry: uv run --directory backend poe check:imports
+        language: system
+        files: ^backend/(.*\.py|pyproject\.toml)$
         pass_filenames: false
 
       # Schemas and the frontend's API types, regenerated together so a commit

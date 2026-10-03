@@ -14,7 +14,7 @@ Fails if anything it expects is missing, so CI (which runs it on a throwaway
 checkout) can't silently stop removing anything. Run from `backend/`:
 
     uv run python scripts/remove_module.py billing
-    uv run poe format && uv run poe lint && uv run poe test
+    uv run poe fix && uv run poe check && uv run poe test
 
 Then reset the database (`python -m src.init_db drop && python -m src.init_db`).
 """

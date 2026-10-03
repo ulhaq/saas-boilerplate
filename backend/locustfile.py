@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 from locust import HttpUser, task
 
 from src.platform.core.config import settings
@@ -5,10 +7,10 @@ from src.platform.core.config import settings
 
 class LoadTesting(HttpUser):
     host = settings.app_url
-    EXCLUDE_PATHS: list[str] = ["/users/me"]
+    EXCLUDE_PATHS: ClassVar[list[str]] = ["/users/me"]
     paths: list[str]
 
-    def get_paths(self):
+    def get_paths(self) -> list[str]:
         res = self.client.get("/openapi.json")
         openapi_schema = res.json()
 
@@ -21,10 +23,10 @@ class LoadTesting(HttpUser):
             rs.append(path)
         return rs
 
-    def on_start(self):
+    def on_start(self) -> None:
         self.paths = self.get_paths()
 
     @task
-    def tests(self):
+    def tests(self) -> None:
         for path in self.paths:
             self.client.get(path)
