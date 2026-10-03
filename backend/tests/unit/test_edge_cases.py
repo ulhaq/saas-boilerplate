@@ -178,7 +178,7 @@ async def test_delete_organization_skips_orphaned_membership():
 # ---------------------------------------------------------------------------
 
 
-async def test_transfer_ownership_no_owner_role_raises(mock_billing_provider, mocker):
+async def test_transfer_ownership_no_owner_role_raises(mocker):
     """
     transfer_ownership raises NotFoundException when Owner role is missing (line 250)
     """

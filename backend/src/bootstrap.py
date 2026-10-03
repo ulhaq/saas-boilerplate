@@ -2,7 +2,7 @@
 SaaS core.
 
 The products are listed in `src.products`; each declares what it contributes
-in a `ProductModule` manifest. The core never imports domain code: it emits
+in a `Module` manifest. The core never imports domain code: it emits
 hooks and consumes the composed permission/role sets defined here.
 """
 
@@ -14,7 +14,7 @@ from src.platform.core import composition
 from src.platform.core.composition import Composition, RoleSpec
 from src.platform.core.entitlements import UNLIMITED
 from src.platform.core.hooks import Handler, HookEvent
-from src.platform.core.product import ProductModule
+from src.platform.core.module import Module
 from src.products import MODULES
 
 ALL_PERMISSIONS: list[StrEnum] = [
@@ -47,7 +47,7 @@ AUDIT_ACTION: type[StrEnum] = StrEnum(
 
 
 def compose_default_roles(
-    roles: Sequence[RoleSpec], products: Sequence[ProductModule]
+    roles: Sequence[RoleSpec], products: Sequence[Module]
 ) -> list[RoleSpec]:
     """Add each product's grants to the platform default roles, and apply its
     description overrides (a later product wins)."""
@@ -61,7 +61,7 @@ def compose_default_roles(
     return composed
 
 
-def compose(products: Sequence[ProductModule]) -> Composition:
+def compose(products: Sequence[Module]) -> Composition:
     """Merge what ``products`` add to the platform (in list order) into one
     read-only `Composition`."""
     providers = [p.entitlements for p in products if p.entitlements is not None]

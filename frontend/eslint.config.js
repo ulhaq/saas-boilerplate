@@ -90,7 +90,7 @@ export default [
     },
   },
   {
-    files: ['playwright.config.ts', 'tests/**/*.ts', 'vite.config.ts'],
+    files: ['playwright.config.ts', 'tests/**/*.ts', 'vite.config.ts', 'scripts/**/*.mjs'],
     languageOptions: {
       globals: {
         ...globals.node,

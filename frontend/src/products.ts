@@ -7,8 +7,8 @@
  */
 import billing from '@/billing'
 import example from '@/example'
-import type { ProductModule } from '@/platform/product'
+import type { Module } from '@/platform/module'
 
-export const products: ProductModule[] = [example]
+export const products: Module[] = [example]
 
-export const modules: ProductModule[] = [billing, ...products]
+export const modules: Module[] = [billing, ...products]

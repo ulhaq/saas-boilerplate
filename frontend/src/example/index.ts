@@ -6,9 +6,9 @@ import { FolderOpen, LayoutDashboard } from 'lucide-vue-next'
 import da from '@/example/locales/da'
 import en from '@/example/locales/en'
 import { registerNavItems } from '@/platform/navigation'
-import type { ProductModule } from '@/platform/product'
+import type { Module } from '@/platform/module'
 
-const example: ProductModule = {
+const example: Module = {
   name: 'example',
   messages: { da, en },
   homeRoute: '/dashboard',

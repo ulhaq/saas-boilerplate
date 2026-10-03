@@ -53,7 +53,7 @@ src/
 │   ├── pages/        # dashboard.vue, projects/index.vue
 │   ├── components/, types/, constants.ts
 │   ├── locales/      # product i18n strings, deep-merged over platform messages
-│   └── index.ts      # manifest (ProductModule): messages, homeRoute, nav setup
+│   └── index.ts      # manifest (Module): messages, homeRoute, nav setup
 ├── brand.ts          # product identity: name, marketing + app origins
 ├── plugins/          # i18n setup (merges platform + product messages)
 ├── router/           # Router config + navigation guards, seo.ts (head tags)
@@ -62,7 +62,7 @@ src/
 ```
 
 **Platform extension points** (how billing and the product hook in without the
-platform knowing about them): the `ProductModule` manifest in `platform/product.ts`,
+platform knowing about them): the `Module` manifest in `platform/module.ts`,
 `registerNavItems()` / `registerSettingsNavItems()` in `platform/navigation.ts`,
 `registerNotificationPresenter()` in `platform/composables/useNotificationPresenter.ts`,
 `configureApp()` in `platform/config.ts`, `provideEntitlements()` in
@@ -71,7 +71,9 @@ platform knowing about them): the `ProductModule` manifest in `platform/product.
 `plugins/i18n.ts`. Platform code asks `useEntitlements()` for plan features and
 limits (`hasFeature`, `limitFor`) - never the billing store. To run without
 billing, drop it from `src/products.ts` and `modulePackages` in
-`products.config.js`: every feature is then on, with no limits.
+`products.config.js` and delete `src/billing/` (`node scripts/remove-billing.mjs`
+does exactly that - CI runs it on a throwaway checkout and checks the app
+again): every feature is then on, with no limits.
 
 **Reusing this frontend for a new product**: edit `src/brand.ts`, then replace
 `src/example/` - point the import in `src/products.ts` at your package's manifest

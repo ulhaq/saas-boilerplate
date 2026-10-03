@@ -47,10 +47,7 @@ def _no_op_schedule(fn, **kwargs):
     pass
 
 
-def _make_service(session, auth: Auth, provider=None) -> UserService:
-    # `provider` is accepted for call-site compatibility but no longer used:
-    # UserService no longer touches the billing provider (billing_email owns the
-    # Stripe customer email).
+def _make_service(session, auth: Auth) -> UserService:
     repos = RepositoryManager(session)
     return UserService(repos, auth)
 
@@ -60,10 +57,10 @@ def _make_service(session, auth: Auth, provider=None) -> UserService:
 # ---------------------------------------------------------------------------
 
 
-async def test_get_authenticated_user(mock_billing_provider):
+async def test_get_authenticated_user():
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(session, _admin_auth(), mock_billing_provider)
+            service = _make_service(session, _admin_auth())
             user_out = await service.get_authenticated_user()
     assert user_out.email == "admin@example.org"
 
@@ -73,10 +70,10 @@ async def test_get_authenticated_user(mock_billing_provider):
 # ---------------------------------------------------------------------------
 
 
-async def test_patch_profile_updates_name(mock_billing_provider):
+async def test_patch_profile_updates_name():
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(session, _admin_auth(), mock_billing_provider)
+            service = _make_service(session, _admin_auth())
             out = await service.patch_profile(UserPatch(name="New Name"))
     assert out.name == "New Name"
 
@@ -92,10 +89,10 @@ def test_user_patch_rejects_email() -> None:
         UserPatch.model_validate({"email": "someone@example.org"})
 
 
-async def test_change_password_success(mock_billing_provider):
+async def test_change_password_success():
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(session, _admin_auth(), mock_billing_provider)
+            service = _make_service(session, _admin_auth())
             out = await service.change_password(
                 ChangePasswordIn(
                     password="password",
@@ -106,10 +103,10 @@ async def test_change_password_success(mock_billing_provider):
     assert out.email == "admin@example.org"
 
 
-async def test_change_password_wrong_current_raises(mock_billing_provider):
+async def test_change_password_wrong_current_raises():
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(session, _admin_auth(), mock_billing_provider)
+            service = _make_service(session, _admin_auth())
             with pytest.raises(NotAuthenticatedException):
                 await service.change_password(
                     ChangePasswordIn(
@@ -125,18 +122,18 @@ async def test_change_password_wrong_current_raises(mock_billing_provider):
 # ---------------------------------------------------------------------------
 
 
-async def test_get_user_returns_user(mock_billing_provider):
+async def test_get_user_returns_user():
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(session, _admin_auth(), mock_billing_provider)
+            service = _make_service(session, _admin_auth())
             out = await service.get_user(2)  # standard user
     assert out.email == "standard@example.org"
 
 
-async def test_patch_user_updates_name(mock_billing_provider):
+async def test_patch_user_updates_name():
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(session, _admin_auth(), mock_billing_provider)
+            service = _make_service(session, _admin_auth())
             out = await service.patch_user(2, UserPatch(name="Patched Name"))
     assert out.name == "Patched Name"
 
@@ -146,10 +143,10 @@ async def test_patch_user_updates_name(mock_billing_provider):
 # ---------------------------------------------------------------------------
 
 
-async def test_invite_user_new_email(mock_billing_provider):
+async def test_invite_user_new_email():
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(session, _admin_auth(), mock_billing_provider)
+            service = _make_service(session, _admin_auth())
             # Should complete without raising
             await service.invite_user(
                 InviteUserIn(email="newinvitee@example.com", role_ids=[3]),
@@ -157,12 +154,12 @@ async def test_invite_user_new_email(mock_billing_provider):
             )
 
 
-async def test_invite_user_owner_role_raises(mock_billing_provider):
+async def test_invite_user_owner_role_raises():
     """Inviting with the Owner role_id raises PermissionDeniedException."""
     # Role id=1 is org 1's Owner (protected)
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(session, _admin_auth(), mock_billing_provider)
+            service = _make_service(session, _admin_auth())
             with pytest.raises(PermissionDeniedException):
                 await service.invite_user(
                     InviteUserIn(email="newperson@example.com", role_ids=[1]),
@@ -170,10 +167,10 @@ async def test_invite_user_owner_role_raises(mock_billing_provider):
                 )
 
 
-async def test_invite_user_already_member_raises(mock_billing_provider):
+async def test_invite_user_already_member_raises():
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(session, _admin_auth(), mock_billing_provider)
+            service = _make_service(session, _admin_auth())
             with pytest.raises(AlreadyExistsException):
                 await service.invite_user(
                     InviteUserIn(email="standard@example.org", role_ids=[3]),
@@ -186,20 +183,20 @@ async def test_invite_user_already_member_raises(mock_billing_provider):
 # ---------------------------------------------------------------------------
 
 
-async def test_remove_user_success(mock_billing_provider):
+async def test_remove_user_success():
     """Remove standard user (id=2) from org 1."""
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(session, _admin_auth(), mock_billing_provider)
+            service = _make_service(session, _admin_auth())
             await service.remove_user(2)
 
 
-async def test_remove_owner_raises(mock_billing_provider):
+async def test_remove_owner_raises():
     """Removing the owner should raise PermissionDeniedException."""
     async with TestSessionLocal() as session:
         async with session.begin():
             # Admin (id=1) tries to remove themselves (the Owner)
-            service = _make_service(session, _standard_auth(), mock_billing_provider)
+            service = _make_service(session, _standard_auth())
             with pytest.raises(PermissionDeniedException):
                 await service.remove_user(1)
 
@@ -209,18 +206,18 @@ async def test_remove_owner_raises(mock_billing_provider):
 # ---------------------------------------------------------------------------
 
 
-async def test_manage_roles_self_raises(mock_billing_provider):
+async def test_manage_roles_self_raises():
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(session, _admin_auth(), mock_billing_provider)
+            service = _make_service(session, _admin_auth())
             with pytest.raises(PermissionDeniedException):
                 await service.manage_roles(1, UserRoleIn(role_ids=[]))
 
 
-async def test_manage_roles_clears_roles(mock_billing_provider):
+async def test_manage_roles_clears_roles():
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(session, _admin_auth(), mock_billing_provider)
+            service = _make_service(session, _admin_auth())
             out = await service.manage_roles(2, UserRoleIn(role_ids=[]))
     assert out.roles == []
 
@@ -230,25 +227,25 @@ async def test_manage_roles_clears_roles(mock_billing_provider):
 # ---------------------------------------------------------------------------
 
 
-async def test_delete_me_non_owner(mock_billing_provider):
+async def test_delete_me_non_owner():
     """Standard user can delete themselves."""
     from src.platform.schemas.user import DeleteMeIn
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(session, _standard_auth(), mock_billing_provider)
+            service = _make_service(session, _standard_auth())
             await service.delete_me(
                 DeleteMeIn(current_password="password"),
                 schedule_task=_no_op_schedule,
             )
 
 
-async def test_delete_me_wrong_password_raises(mock_billing_provider):
+async def test_delete_me_wrong_password_raises():
     from src.platform.schemas.user import DeleteMeIn
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(session, _standard_auth(), mock_billing_provider)
+            service = _make_service(session, _standard_auth())
             with pytest.raises(NotAuthenticatedException):
                 await service.delete_me(
                     DeleteMeIn(current_password="wrongpass"),
@@ -256,13 +253,13 @@ async def test_delete_me_wrong_password_raises(mock_billing_provider):
                 )
 
 
-async def test_delete_me_owner_raises(mock_billing_provider):
+async def test_delete_me_owner_raises():
     """Owner cannot delete themselves without transferring ownership first."""
     from src.platform.schemas.user import DeleteMeIn
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(session, _admin_auth(), mock_billing_provider)
+            service = _make_service(session, _admin_auth())
             with pytest.raises(PermissionDeniedException):
                 await service.delete_me(
                     DeleteMeIn(current_password="password"),
@@ -275,13 +272,13 @@ async def test_delete_me_owner_raises(mock_billing_provider):
 # ---------------------------------------------------------------------------
 
 
-async def test_paginate_returns_paginated_response(mock_billing_provider):
+async def test_paginate_returns_paginated_response():
     from src.platform.schemas.common import PageQueryParams
     from src.platform.schemas.user import UserOut
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(session, _admin_auth(), mock_billing_provider)
+            service = _make_service(session, _admin_auth())
             result = await service.paginate(
                 UserOut,
                 PageQueryParams(page_number=1, page_size=10, sort=[], filters=[]),
@@ -296,7 +293,7 @@ async def test_paginate_returns_paginated_response(mock_billing_provider):
 # ---------------------------------------------------------------------------
 
 
-async def test_invite_user_org_not_found_raises(mock_billing_provider):
+async def test_invite_user_org_not_found_raises():
     """When current_user.organization_id doesn't exist, NotFoundException is raised."""
     from src.platform.core.exceptions import NotFoundException
 
@@ -311,7 +308,7 @@ async def test_invite_user_org_not_found_raises(mock_billing_provider):
 
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(session, ghost_auth, mock_billing_provider)
+            service = _make_service(session, ghost_auth)
             with pytest.raises(NotFoundException):
                 await service.invite_user(
                     InviteUserIn(email="fresh_invite@example.com", role_ids=[3]),
@@ -324,12 +321,12 @@ async def test_invite_user_org_not_found_raises(mock_billing_provider):
 # ---------------------------------------------------------------------------
 
 
-async def test_manage_roles_unknown_role_raises(mock_billing_provider):
+async def test_manage_roles_unknown_role_raises():
     """role_ids referencing a different org's role raises PermissionDeniedException."""
     # Role id=5 belongs to org 2's Owner, not org 1
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(session, _admin_auth(), mock_billing_provider)
+            service = _make_service(session, _admin_auth())
             with pytest.raises(PermissionDeniedException):
                 await service.manage_roles(2, UserRoleIn(role_ids=[5]))
 
@@ -339,12 +336,12 @@ async def test_manage_roles_unknown_role_raises(mock_billing_provider):
 # ---------------------------------------------------------------------------
 
 
-async def test_manage_roles_assign_owner_raises(mock_billing_provider):
+async def test_manage_roles_assign_owner_raises():
     """Trying to assign Owner role to a non-owner raises PermissionDeniedException."""
     # Role id=1 is org 1's Owner (protected)
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(session, _admin_auth(), mock_billing_provider)
+            service = _make_service(session, _admin_auth())
             with pytest.raises(PermissionDeniedException):
                 # User 2 (Member) > assign Owner role >
                 # owner_role_in_new=True, current=False
@@ -356,20 +353,18 @@ async def test_manage_roles_assign_owner_raises(mock_billing_provider):
 # ---------------------------------------------------------------------------
 
 
-async def test_manage_roles_adds_role(mock_billing_provider):
+async def test_manage_roles_adds_role():
     """Assigning a new (non-owner) role to a user hits the add_roles branch."""
     # Role id=2 is org 1's Admin role; user 2 currently has only Member (id=3)
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(session, _admin_auth(), mock_billing_provider)
+            service = _make_service(session, _admin_auth())
             out = await service.manage_roles(2, UserRoleIn(role_ids=[2]))
 
     assert any(r["name"] for r in out.model_dump()["roles"])
 
 
-async def test_manage_roles_removing_manage_permission_calls_assert(
-    mock_billing_provider,
-):
+async def test_manage_roles_removing_manage_permission_calls_assert():
     """Removing MANAGE_USER_ROLE from a user calls _assert_not_last_admin (line 351)."""
     from src.platform.enums import Permission as PermEnum2
     from src.platform.models.role import Role
@@ -401,7 +396,7 @@ async def test_manage_roles_removing_manage_permission_calls_assert(
     # Now remove it (set to Member only) - user 1 still has it via Owner, so no raise
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(session, _admin_auth(), mock_billing_provider)
+            service = _make_service(session, _admin_auth())
             out = await service.manage_roles(2, UserRoleIn(role_ids=[2]))
 
     assert out is not None
@@ -412,7 +407,7 @@ async def test_manage_roles_removing_manage_permission_calls_assert(
 # ---------------------------------------------------------------------------
 
 
-async def test_remove_user_last_admin_raises(mock_billing_provider):
+async def test_remove_user_last_admin_raises():
     """Removing the last user with MANAGE_USER_ROLE in an org raises."""
     from datetime import UTC, datetime
 
@@ -480,7 +475,7 @@ async def test_remove_user_last_admin_raises(mock_billing_provider):
                 roles=["Owner"],
                 permissions=[p.value for p in PermEnum],
             )
-            service = _make_service(session, caller_auth, mock_billing_provider)
+            service = _make_service(session, caller_auth)
             with pytest.raises(PermissionDeniedException):
                 await service.remove_user(target_id)
 
@@ -490,10 +485,10 @@ async def test_remove_user_last_admin_raises(mock_billing_provider):
 # ---------------------------------------------------------------------------
 
 
-async def test_export_me_returns_data(mock_billing_provider):
+async def test_export_me_returns_data():
     async with TestSessionLocal() as session:
         async with session.begin():
-            service = _make_service(session, _admin_auth(), mock_billing_provider)
+            service = _make_service(session, _admin_auth())
             out = await service.export_me()
 
     assert out.user["email"] == "admin@example.org"

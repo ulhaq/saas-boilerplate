@@ -1,7 +1,7 @@
 import { createI18n } from 'vue-i18n'
 import platformEn from '@/platform/locales/en'
 import platformDa from '@/platform/locales/da'
-import type { MessageTree } from '@/platform/product'
+import type { MessageTree } from '@/platform/module'
 import { modules } from '@/products'
 
 /** Deep-merge module messages into the platform tree (objects merge, leaves/arrays replace). */

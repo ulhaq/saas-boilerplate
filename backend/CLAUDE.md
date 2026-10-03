@@ -29,7 +29,7 @@ This file provides comprehensive guidance for working with this FastAPI multi-te
 | `src/example/hooks.py`            | `PLAN_CHANGED` handler (reports orgs above their project limit)                                                                         |
 | `src/example/worker.py`           | `run_example_loop` - heartbeat loop recording `worker_run` rows                                                                         |
 | `src/example/config.py`           | `ExampleSettings` (`env_prefix="example_"`)                                                                                             |
-| `src/example/product.py`          | `EXAMPLE` manifest (`ProductModule`): permissions, role grants, routers, hooks, worker loops, models                                    |
+| `src/example/product.py`          | `EXAMPLE` manifest (`Module`): permissions, role grants, routers, hooks, worker loops, models                                    |
 
 ---
 
@@ -53,7 +53,7 @@ exactly one place:
 | Domain enums       | `src/example/enums.py`         | Product permissions, audit actions, error codes, usage metrics, plus per-role grant/description contributions                                                                                         |
 | Domain hooks       | `src/example/hooks.py`         | Handlers for platform lifecycle events                                                                                                                                                                |
 | Domain settings    | `src/example/config.py`        | Independent settings namespace extending the shared `EnvSettings` base                                                                                                                                |
-| Product manifest   | `src/platform/core/product.py` | `ProductModule`: everything a product contributes (permissions, role grants, routers, hooks, worker loops, models, emails)                                                                            |
+| Product manifest   | `src/platform/core/module.py` | `Module`: everything a product contributes (permissions, role grants, routers, hooks, worker loops, models, emails)                                                                            |
 | Installed modules  | `src/products.py`              | `PRODUCTS` (the product) and `MODULES` (`BILLING` + products) - the only assembly file that names them                                                                                                |
 | Composition root   | `src/bootstrap.py`             | Merges core + every product's permissions (`ALL_PERMISSIONS`, `PERMISSION_DESCRIPTIONS`, for seeding) and, via `bootstrap()`, installs one read-only `Composition` (`src/platform/core/composition.py`: default roles, hooks, email subjects, template directories, entitlements) that platform code reads with `composition.current()`; `AUDIT_ACTION` composes every module's audit actions for the audit-log filter |
 
@@ -75,7 +75,7 @@ your product package when you rename it.
 (full guide: `docs/adding-a-domain-module.md`):
 
 1. Replace `src/example/` with your package (enums, models, repositories, services, routers, hooks).
-2. Declare its `ProductModule` (like `src/example/product.py`), list it in `src/products.py`, and update the import-linter contracts.
+2. Declare its `Module` (like `src/example/product.py`), list it in `src/products.py`, and update the import-linter contracts.
 3. Replace the example migration and `tests/api/test_projects.py`; update the seeded Member role permissions in `src/init_db.py`.
 
 ### Layered Architecture: Routers > Services > Repositories > Models

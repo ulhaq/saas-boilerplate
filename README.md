@@ -48,7 +48,7 @@ backend/src/                          frontend/src/
 
 How the two halves connect without the platform knowing about the product:
 
-- **Product manifest**: each product declares everything it plugs in - one `ProductModule` per side (`src/example/product.py`, `src/example/index.ts`). The assembly layer reads the installed list (`src/products.py`, `src/products.ts`), so swapping the product is a one-line change on each side.
+- **Product manifest**: each product declares everything it plugs in - one `Module` per side (`src/example/product.py`, `src/example/index.ts`). The assembly layer reads the installed list (`src/products.py`, `src/products.ts`), so swapping the product is a one-line change on each side.
 - **Hooks** (backend): the platform emits lifecycle events (`MEMBER_ADDED`, `MEMBER_REMOVED`, `PLAN_CHANGED`); the product lists async handlers in its manifest.
 - **Composition registry** (backend): `bootstrap.py` merges platform + product permissions, roles, email subjects, and template directories at startup.
 - **Registries** (frontend): the product's manifest registers sidebar nav items and notification presenters, and sets the authenticated home route; its locale trees are deep-merged in the i18n plugin.

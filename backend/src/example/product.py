@@ -12,10 +12,10 @@ from src.example.hooks import log_projects_over_plan_limit
 from src.example.routers import projects
 from src.example.worker import run_example_loop
 from src.platform.core.hooks import HookEvent
-from src.platform.core.product import ProductModule
+from src.platform.core.module import Module
 from src.platform.core.routing import RouterMount
 
-EXAMPLE = ProductModule(
+EXAMPLE = Module(
     name="example",
     models=models,
     permissions=list(ExamplePermission),

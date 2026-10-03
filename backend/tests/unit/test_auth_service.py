@@ -82,7 +82,7 @@ def _token(result: object) -> Token:
 # ---------------------------------------------------------------------------
 
 
-async def test_register_new_email(mock_billing_provider):
+async def test_register_new_email():
     async with TestSessionLocal() as session:
         async with session.begin():
             service = await _make_service(session, RegistrationService)
@@ -93,7 +93,7 @@ async def test_register_new_email(mock_billing_provider):
     assert "email" in out.message.lower() or out.message
 
 
-async def test_register_duplicate_email_raises(mock_billing_provider):
+async def test_register_duplicate_email_raises():
     async with TestSessionLocal() as session:
         async with session.begin():
             service = await _make_service(session, RegistrationService)
@@ -109,7 +109,7 @@ async def test_register_duplicate_email_raises(mock_billing_provider):
 # ---------------------------------------------------------------------------
 
 
-async def test_verify_email_valid_token(mock_billing_provider):
+async def test_verify_email_valid_token():
     email = "verify@example.com"
     captured: dict = {}
 
@@ -130,7 +130,7 @@ async def test_verify_email_valid_token(mock_billing_provider):
     assert out.setup_token
 
 
-async def test_verify_email_invalid_token_raises(mock_billing_provider):
+async def test_verify_email_invalid_token_raises():
     async with TestSessionLocal() as session:
         async with session.begin():
             service = await _make_service(session, RegistrationService)
@@ -145,7 +145,7 @@ async def test_verify_email_invalid_token_raises(mock_billing_provider):
 # ---------------------------------------------------------------------------
 
 
-async def test_complete_registration_creates_user_and_org(mock_billing_provider):
+async def test_complete_registration_creates_user_and_org():
     email = "complete@example.com"
     setup_token = sign(
         data={"email": email, "terms_accepted_at": None}, salt="complete-registration"
@@ -167,7 +167,7 @@ async def test_complete_registration_creates_user_and_org(mock_billing_provider)
     assert token.refresh_token
 
 
-async def test_complete_registration_duplicate_email_raises(mock_billing_provider):
+async def test_complete_registration_duplicate_email_raises():
     # admin@example.org already exists in the seeded DB
     setup_token = sign(
         data={"email": "admin@example.org", "terms_accepted_at": None},
@@ -193,7 +193,7 @@ async def test_complete_registration_duplicate_email_raises(mock_billing_provide
 # ---------------------------------------------------------------------------
 
 
-async def test_get_access_token_valid_credentials(mock_billing_provider):
+async def test_get_access_token_valid_credentials():
     async with TestSessionLocal() as session:
         async with session.begin():
             service = await _make_service(session, SessionService)
@@ -205,7 +205,7 @@ async def test_get_access_token_valid_credentials(mock_billing_provider):
     assert token.refresh_token
 
 
-async def test_get_access_token_wrong_password(mock_billing_provider):
+async def test_get_access_token_wrong_password():
     async with TestSessionLocal() as session:
         async with session.begin():
             service = await _make_service(session, SessionService)
@@ -213,7 +213,7 @@ async def test_get_access_token_wrong_password(mock_billing_provider):
                 await service.get_access_token("admin@example.org", "wrong")
 
 
-async def test_get_access_token_unknown_user(mock_billing_provider):
+async def test_get_access_token_unknown_user():
     async with TestSessionLocal() as session:
         async with session.begin():
             service = await _make_service(session, SessionService)
@@ -226,7 +226,7 @@ async def test_get_access_token_unknown_user(mock_billing_provider):
 # ---------------------------------------------------------------------------
 
 
-async def test_refresh_access_token_valid(mock_billing_provider):
+async def test_refresh_access_token_valid():
     async with TestSessionLocal() as session:
         async with session.begin():
             service = await _make_service(session, SessionService)
@@ -240,7 +240,7 @@ async def test_refresh_access_token_valid(mock_billing_provider):
     assert new_tokens.access_token != original.access_token
 
 
-async def test_refresh_access_token_missing_raises(mock_billing_provider):
+async def test_refresh_access_token_missing_raises():
     async with TestSessionLocal() as session:
         async with session.begin():
             service = await _make_service(session, SessionService)
@@ -248,7 +248,7 @@ async def test_refresh_access_token_missing_raises(mock_billing_provider):
                 await service.refresh_access_token(None)
 
 
-async def test_refresh_access_token_bogus_raises(mock_billing_provider):
+async def test_refresh_access_token_bogus_raises():
     async with TestSessionLocal() as session:
         async with session.begin():
             service = await _make_service(session, SessionService)
@@ -261,7 +261,7 @@ async def test_refresh_access_token_bogus_raises(mock_billing_provider):
 # ---------------------------------------------------------------------------
 
 
-async def test_switch_organization_valid(mock_billing_provider):
+async def test_switch_organization_valid():
     from src.platform.core.security import Auth
 
     async with TestSessionLocal() as session:
@@ -279,7 +279,7 @@ async def test_switch_organization_valid(mock_billing_provider):
     assert token.access_token
 
 
-async def test_switch_organization_non_member_raises(mock_billing_provider):
+async def test_switch_organization_non_member_raises():
     from src.platform.core.security import Auth
 
     async with TestSessionLocal() as session:
@@ -300,7 +300,7 @@ async def test_switch_organization_non_member_raises(mock_billing_provider):
 # ---------------------------------------------------------------------------
 
 
-async def test_logout_deletes_refresh_token(mock_billing_provider):
+async def test_logout_deletes_refresh_token():
     async with TestSessionLocal() as session:
         async with session.begin():
             service = await _make_service(session, SessionService)
@@ -311,7 +311,7 @@ async def test_logout_deletes_refresh_token(mock_billing_provider):
             await service.logout(tokens.refresh_token)
 
 
-async def test_logout_invalid_token_is_silent(mock_billing_provider):
+async def test_logout_invalid_token_is_silent():
     async with TestSessionLocal() as session:
         async with session.begin():
             service = await _make_service(session, SessionService)
@@ -319,7 +319,7 @@ async def test_logout_invalid_token_is_silent(mock_billing_provider):
             await service.logout("garbage.token.here")
 
 
-async def test_logout_none_is_silent(mock_billing_provider):
+async def test_logout_none_is_silent():
     async with TestSessionLocal() as session:
         async with session.begin():
             service = await _make_service(session, SessionService)
@@ -331,7 +331,7 @@ async def test_logout_none_is_silent(mock_billing_provider):
 # ---------------------------------------------------------------------------
 
 
-async def test_request_password_reset_existing_user(mock_billing_provider):
+async def test_request_password_reset_existing_user():
     async with TestSessionLocal() as session:
         async with session.begin():
             service = await _make_service(session, CredentialsService)
@@ -343,7 +343,7 @@ async def test_request_password_reset_existing_user(mock_billing_provider):
     assert result is None
 
 
-async def test_request_password_reset_unknown_email_is_silent(mock_billing_provider):
+async def test_request_password_reset_unknown_email_is_silent():
     async with TestSessionLocal() as session:
         async with session.begin():
             service = await _make_service(session, CredentialsService)
@@ -359,7 +359,7 @@ async def test_request_password_reset_unknown_email_is_silent(mock_billing_provi
 # ---------------------------------------------------------------------------
 
 
-async def test_reset_password_valid(mock_billing_provider):
+async def test_reset_password_valid():
     async with TestSessionLocal() as session:
         async with session.begin():
             service = await _make_service(session, CredentialsService)
@@ -382,7 +382,7 @@ async def test_reset_password_valid(mock_billing_provider):
     assert result is None
 
 
-async def test_reset_password_invalid_token_raises(mock_billing_provider):
+async def test_reset_password_invalid_token_raises():
     async with TestSessionLocal() as session:
         async with session.begin():
             service = await _make_service(session, CredentialsService)
@@ -394,7 +394,7 @@ async def test_reset_password_invalid_token_raises(mock_billing_provider):
                 )
 
 
-async def test_reset_password_unknown_email_raises(mock_billing_provider):
+async def test_reset_password_unknown_email_raises():
     async with TestSessionLocal() as session:
         async with session.begin():
             service = await _make_service(session, CredentialsService)
@@ -410,7 +410,7 @@ async def test_reset_password_unknown_email_raises(mock_billing_provider):
 # ---------------------------------------------------------------------------
 
 
-async def test_invite_status_valid(mock_billing_provider):
+async def test_invite_status_valid():
 
     email = "invitee@example.com"
 
@@ -425,7 +425,7 @@ async def test_invite_status_valid(mock_billing_provider):
     assert out.user_exists is False
 
 
-async def test_invite_status_existing_user(mock_billing_provider):
+async def test_invite_status_existing_user():
 
     email = "admin@example.org"  # already seeded
 
@@ -444,7 +444,7 @@ async def test_invite_status_existing_user(mock_billing_provider):
 # ---------------------------------------------------------------------------
 
 
-async def test_complete_invite_new_user(mock_billing_provider):
+async def test_complete_invite_new_user():
 
     email = "invite_new@example.com"
 
@@ -468,7 +468,7 @@ async def test_complete_invite_new_user(mock_billing_provider):
     assert result.access_token
 
 
-async def test_complete_invite_existing_user_requires_sign_in(mock_billing_provider):
+async def test_complete_invite_existing_user_requires_sign_in():
     """The invite link alone can't add an existing account; the invite stays."""
 
     email = "admin@example.org"  # already in org 1
@@ -487,7 +487,7 @@ async def test_complete_invite_existing_user_requires_sign_in(mock_billing_provi
             assert await repos.invitation.get_by_token(token) is not None
 
 
-async def test_accept_invite_existing_user(mock_billing_provider):
+async def test_accept_invite_existing_user():
     """Signed-in user accepts an invite to org 2 and gets an org-2 session."""
     from src.platform.core.security import decode_token
 
@@ -512,7 +512,7 @@ async def test_accept_invite_existing_user(mock_billing_provider):
 # ---------------------------------------------------------------------------
 
 
-async def test_complete_registration_restores_soft_deleted_user(mock_billing_provider):
+async def test_complete_registration_restores_soft_deleted_user():
     """When a soft-deleted user with the same email exists, it is restored."""
     from datetime import UTC, datetime
 
@@ -556,7 +556,7 @@ async def test_complete_registration_restores_soft_deleted_user(mock_billing_pro
 # ---------------------------------------------------------------------------
 
 
-async def test_invite_status_invalid_token_raises(mock_billing_provider):
+async def test_invite_status_invalid_token_raises():
     """Valid signature but no DB record > NotAuthenticatedException."""
 
     token = "not-a-real-invite-token"
@@ -574,7 +574,7 @@ async def test_invite_status_invalid_token_raises(mock_billing_provider):
 # ---------------------------------------------------------------------------
 
 
-async def test_complete_invite_invalid_token_raises(mock_billing_provider):
+async def test_complete_invite_invalid_token_raises():
     """Valid signature but no DB record > NotAuthenticatedException."""
 
     token = "not-a-real-invite-token"
@@ -595,7 +595,7 @@ async def test_complete_invite_invalid_token_raises(mock_billing_provider):
 # ---------------------------------------------------------------------------
 
 
-async def test_complete_invite_org_deleted_raises(mock_billing_provider):
+async def test_complete_invite_org_deleted_raises():
     """The inviting org was (soft-)deleted after the invite was sent."""
     email = "orgnotfound@example.com"
 
@@ -620,7 +620,7 @@ async def test_complete_invite_org_deleted_raises(mock_billing_provider):
 # ---------------------------------------------------------------------------
 
 
-async def test_accept_invite_already_member_raises(mock_billing_provider):
+async def test_accept_invite_already_member_raises():
 
     email = "admin@example.org"  # already in org 1
 
@@ -642,7 +642,7 @@ async def test_accept_invite_already_member_raises(mock_billing_provider):
 # ---------------------------------------------------------------------------
 
 
-async def test_accept_invite_with_roles(mock_billing_provider):
+async def test_accept_invite_with_roles():
     """Existing user invited to new org with role_ids > roles assigned."""
 
     email = "admin@example.org"  # in org 1; being invited to org 2
@@ -670,7 +670,7 @@ async def test_accept_invite_with_roles(mock_billing_provider):
 # ---------------------------------------------------------------------------
 
 
-async def test_complete_invite_new_user_no_credentials_raises(mock_billing_provider):
+async def test_complete_invite_new_user_no_credentials_raises():
     from src.platform.core.exceptions import ValidationException
 
     email = "nocreds@example.com"
@@ -692,7 +692,7 @@ async def test_complete_invite_new_user_no_credentials_raises(mock_billing_provi
 # ---------------------------------------------------------------------------
 
 
-async def test_complete_invite_restores_soft_deleted_user(mock_billing_provider):
+async def test_complete_invite_restores_soft_deleted_user():
     from datetime import UTC, datetime
 
     from src.platform.core.security import hash_secret
@@ -735,7 +735,7 @@ async def test_complete_invite_restores_soft_deleted_user(mock_billing_provider)
 # ---------------------------------------------------------------------------
 
 
-async def test_complete_invite_new_user_with_roles(mock_billing_provider):
+async def test_complete_invite_new_user_with_roles():
 
     email = "newwithroles@example.com"
     # Role id=2 is Org 1's Admin role (non-protected) - valid_roles must be non-empty
@@ -765,7 +765,7 @@ async def test_complete_invite_new_user_with_roles(mock_billing_provider):
 # ---------------------------------------------------------------------------
 
 
-async def test_get_access_token_no_membership_raises(mock_billing_provider):
+async def test_get_access_token_no_membership_raises():
     """User exists and password is correct but has no org membership."""
     from src.platform.core.security import hash_secret
 
@@ -792,7 +792,7 @@ async def test_get_access_token_no_membership_raises(mock_billing_provider):
 # ---------------------------------------------------------------------------
 
 
-async def test_refresh_access_token_zero_user_id_raises(mock_billing_provider, mocker):
+async def test_refresh_access_token_zero_user_id_raises(mocker):
     """JWT decodes successfully but sub='0' > user_id falsy > NotAuthenticated."""
     mocker.patch(
         "src.platform.services.auth.sessions.decode_token",
@@ -811,9 +811,7 @@ async def test_refresh_access_token_zero_user_id_raises(mock_billing_provider, m
 # ---------------------------------------------------------------------------
 
 
-async def test_refresh_access_token_user_not_found_raises(
-    mock_billing_provider, mocker
-):
+async def test_refresh_access_token_user_not_found_raises(mocker):
     """JWT has valid sub but user doesn't exist in DB."""
     mocker.patch(
         "src.platform.services.auth.sessions.decode_token",
@@ -832,7 +830,7 @@ async def test_refresh_access_token_user_not_found_raises(
 # ---------------------------------------------------------------------------
 
 
-async def test_second_login_does_not_invalidate_first_session(mock_billing_provider):
+async def test_second_login_does_not_invalidate_first_session():
     """Logins are independent sessions; both refresh tokens stay valid."""
     async with TestSessionLocal() as session:
         async with session.begin():
@@ -847,7 +845,7 @@ async def test_second_login_does_not_invalidate_first_session(mock_billing_provi
             assert await service.refresh_access_token(second.refresh_token)
 
 
-async def test_refresh_token_reuse_revokes_all_sessions(mock_billing_provider):
+async def test_refresh_token_reuse_revokes_all_sessions():
     """Replaying a rotated refresh token rejects it and revokes every other
     session for the user (token-theft response)."""
     # No session.begin() here: the theft response commits internally so the
@@ -869,7 +867,7 @@ async def test_refresh_token_reuse_revokes_all_sessions(mock_billing_provider):
 # ---------------------------------------------------------------------------
 
 
-async def test_refresh_access_token_no_membership_raises(mock_billing_provider):
+async def test_refresh_access_token_no_membership_raises():
     """Valid token/user but UserOrganization row deleted before refresh."""
     from sqlalchemy import delete
 
@@ -901,7 +899,7 @@ async def test_refresh_access_token_no_membership_raises(mock_billing_provider):
 # ---------------------------------------------------------------------------
 
 
-async def test_switch_organization_user_not_found_raises(mock_billing_provider):
+async def test_switch_organization_user_not_found_raises():
     """Auth object references a non-existent user_id > NotAuthenticated."""
     from src.platform.core.security import Auth
 

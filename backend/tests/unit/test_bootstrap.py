@@ -16,7 +16,7 @@ from src.bootstrap import (
 from src.platform.core import composition
 from src.platform.core.entitlements import UNLIMITED
 from src.platform.core.hooks import HookEvent, emit
-from src.platform.core.product import ProductModule
+from src.platform.core.module import Module
 from src.platform.core.template import templates
 from src.platform.services.email_content import subject_for
 from tests.preload import WITHOUT_BILLING
@@ -28,8 +28,8 @@ class _Perm(StrEnum):
     READ_GADGET = "read:gadget"
 
 
-def _product(name: str, **kwargs) -> ProductModule:
-    return ProductModule(name=name, models=ModuleType(name), **kwargs)
+def _product(name: str, **kwargs) -> Module:
+    return Module(name=name, models=ModuleType(name), **kwargs)
 
 
 def test_compose_default_roles_adds_each_products_grants():

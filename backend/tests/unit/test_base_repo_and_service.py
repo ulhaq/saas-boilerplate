@@ -101,7 +101,7 @@ def _admin_auth() -> Auth:
     )
 
 
-async def test_require_feature_passes_when_feature_available(mock_billing_provider):
+async def test_require_feature_passes_when_feature_available():
     """Org 1 has API_TOKEN on the free plan - should not raise."""
     async with TestSessionLocal() as session:
         async with session.begin():
@@ -112,7 +112,7 @@ async def test_require_feature_passes_when_feature_available(mock_billing_provid
 
 
 @pytest.mark.billing
-async def test_require_feature_raises_when_feature_unavailable(mock_billing_provider):
+async def test_require_feature_raises_when_feature_unavailable():
     """A feature the organization's plan doesn't include - should raise."""
 
     class _Feature(StrEnum):

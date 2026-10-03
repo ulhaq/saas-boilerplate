@@ -1,9 +1,10 @@
-"""The manifest a product package hands to the platform.
+"""The manifest a module hands to the platform.
 
-A product (e.g. `src.example`) declares everything it contributes in one
-`ProductModule`; the assembly layer (`src.products` -> `src.bootstrap`,
-`src.main`, `worker.py`, `alembic/env.py`) iterates over the installed
-modules. The platform defines this shape but never imports a product.
+A module - the product (e.g. `src.example`) or an optional platform module
+(`src.billing`) - declares everything it contributes in one `Module`; the
+assembly layer (`src.products` -> `src.bootstrap`, `src.main`, `worker.py`,
+`alembic/env.py`) iterates over the installed modules. The platform defines
+this shape but never imports a module.
 """
 
 from collections.abc import Callable, Coroutine, Mapping, Sequence
@@ -22,7 +23,7 @@ WorkerLoop = Callable[[Any], Coroutine[Any, Any, None]]
 
 
 @dataclass(frozen=True, kw_only=True)
-class ProductModule:
+class Module:
     name: str
     # Imported so the product's tables register on `Base.metadata` (Alembic).
     models: ModuleType

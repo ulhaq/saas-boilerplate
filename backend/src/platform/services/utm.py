@@ -17,12 +17,12 @@ from src.platform.core import composition
 UTM_SOURCE = "email"
 
 # Links tagged from top-level template data, plus the modules'
-# (`ProductModule.email_link_keys`). Nested or pre-rendered URLs (e.g. per-item
+# (`Module.email_link_keys`). Nested or pre-rendered URLs (e.g. per-item
 # links inside a digest) call append_utm at their build site instead.
 _URL_KEYS = frozenset({"login_url", "invite_url"})
 
 # Template name doubles as the campaign, so there is only one naming scheme to
-# keep in sync. Modules add their templates (`ProductModule.email_campaigns`);
+# keep in sync. Modules add their templates (`Module.email_campaigns`);
 # a template in neither map is never tagged.
 _MEDIUM_BY_TEMPLATE = {
     "welcome": "lifecycle",

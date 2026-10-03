@@ -10,8 +10,8 @@ product packages too; see `docs/adding-a-domain-module.md`.)
 
 from src.billing.module import BILLING
 from src.example.product import EXAMPLE
-from src.platform.core.product import ProductModule
+from src.platform.core.module import Module
 
-PRODUCTS: list[ProductModule] = [EXAMPLE]
+PRODUCTS: list[Module] = [EXAMPLE]
 
-MODULES: list[ProductModule] = [BILLING, *PRODUCTS]
+MODULES: list[Module] = [BILLING, *PRODUCTS]

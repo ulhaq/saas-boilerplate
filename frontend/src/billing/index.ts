@@ -14,10 +14,10 @@ import { registerBanner } from '@/platform/banners'
 import { configureApp } from '@/platform/config'
 import { provideEntitlements } from '@/platform/entitlements'
 import { registerSettingsNavItems } from '@/platform/navigation'
-import type { ProductModule } from '@/platform/product'
+import type { Module } from '@/platform/module'
 import { registerRouteGuard } from '@/platform/routeGuards'
 
-const billing: ProductModule = {
+const billing: Module = {
   name: 'billing',
   messages: { da, en },
   setup() {

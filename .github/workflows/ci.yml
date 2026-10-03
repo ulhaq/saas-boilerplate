@@ -87,6 +87,11 @@ jobs:
       - name: API types match the schema
         run: npm run gen:api && git diff --exit-code src/api-schema.ts
 
+      # Before type-checking: the build generates the route, component and
+      # auto-import types (src/*.d.ts, gitignored) that the type-check reads.
+      - name: Build
+        run: npm run build
+
       - name: Type-check
         run: npm run typecheck
 
@@ -101,8 +106,13 @@ jobs:
       - name: Formatting
         run: npm run format:check
 
-      - name: Build
-        run: npm run build
+      # The app must work without the billing module: remove it from this
+      # throwaway checkout (as a user would) and check everything again.
+      - name: Without billing - remove the module
+        run: node scripts/remove-billing.mjs
+
+      - name: Without billing - build, type-check, lint, test
+        run: npm run build && npm run typecheck && npx eslint . && npm test
 
   site:
     name: Site - check & build

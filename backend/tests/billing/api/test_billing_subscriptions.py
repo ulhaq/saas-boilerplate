@@ -127,7 +127,6 @@ def test_get_current_subscription_features_empty_without_plan_features(
 def test_cannot_checkout_when_already_active(
     admin_authenticated: TestClient,
     plan_with_price: dict,
-    mock_billing_provider: MagicMock,
 ) -> None:
     price_id = plan_with_price["price"]["id"]
 
@@ -473,7 +472,6 @@ def test_switch_from_free_to_paid_is_rejected(
 def test_start_trial_returns_checkout_url(
     admin_authenticated: TestClient,
     plan_with_price: dict,
-    mock_billing_provider: MagicMock,
 ) -> None:
     price_id = plan_with_price["price"]["id"]
     response = admin_authenticated.post(
@@ -505,7 +503,6 @@ def test_start_trial_creates_stripe_customer_and_checkout_session(
 def test_start_trial_does_not_set_trial_used_flag_before_webhook(
     admin_authenticated: TestClient,
     plan_with_price: dict,
-    mock_billing_provider: MagicMock,
 ) -> None:
     price_id = plan_with_price["price"]["id"]
     admin_authenticated.post(
@@ -559,7 +556,6 @@ def test_start_trial_sets_trial_used_flag_on_subscription_created_webhook(
 async def test_start_trial_fails_when_already_trialed(
     admin_authenticated: TestClient,
     plan_with_price: dict,
-    mock_billing_provider: MagicMock,
 ) -> None:
     async with TestSessionLocal() as session:
         account = await get_billing_account(session, 1)
@@ -576,7 +572,6 @@ async def test_start_trial_fails_when_already_trialed(
 
 def test_start_trial_fails_on_free_price(
     admin_authenticated: TestClient,
-    mock_billing_provider: MagicMock,
 ) -> None:
     # Price ID 1 is the free plan price seeded in conftest
     response = admin_authenticated.post(
@@ -588,7 +583,6 @@ def test_start_trial_fails_on_free_price(
 
 def test_start_trial_fails_on_missing_price(
     admin_authenticated: TestClient,
-    mock_billing_provider: MagicMock,
 ) -> None:
     response = admin_authenticated.post(
         "/v1/billing/subscriptions/trial",
@@ -600,7 +594,6 @@ def test_start_trial_fails_on_missing_price(
 async def test_start_trial_fails_when_already_trialing(
     admin_authenticated: TestClient,
     plan_with_price: dict,
-    mock_billing_provider: MagicMock,
 ) -> None:
     price_id = plan_with_price["price"]["id"]
 

@@ -23,7 +23,7 @@ src/acme/
 ├── schemas/          # Pydantic request/response models
 ├── templates/        # optional: emails/<locale>/<name>.html
 ├── email.py          # optional: ACME_EMAIL_SUBJECTS dict (manifest `email_subjects`)
-└── product.py        # the ProductModule manifest (see step 2)
+└── product.py        # the Module manifest (see step 2)
 ```
 
 Conventions that carry over from `example`:
@@ -34,10 +34,10 @@ Conventions that carry over from `example`:
 
 ### 2. Declare its manifest (`src/acme/product.py`)
 
-Everything the package plugs into the platform goes in one `ProductModule` (`src/platform/core/product.py`) - see `src/example/product.py`:
+Everything the package plugs into the platform goes in one `Module` (`src/platform/core/module.py`) - see `src/example/product.py`:
 
 ```python
-ACME = ProductModule(
+ACME = Module(
     name="acme",
     models=models,                                   # registers your tables for Alembic
     permissions=list(AcmePermission),
@@ -88,10 +88,10 @@ src/acme/
 
 ### 2. Declare its manifest (`src/acme/index.ts`)
 
-The module entry default-exports a `ProductModule` (`src/platform/product.ts`) - see `src/example/index.ts`:
+The module entry default-exports a `Module` (`src/platform/module.ts`) - see `src/example/index.ts`:
 
 ```ts
-const acme: ProductModule = {
+const acme: Module = {
   name: 'acme',
   messages: { da, en },          // deep-merged over the platform locales
   homeRoute: '/acme',            // optional: where signed-in users land

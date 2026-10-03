@@ -24,10 +24,10 @@ from src.billing.services.maintenance import (
     run_trial_reminder_loop,
 )
 from src.platform.core.hooks import HookEvent
-from src.platform.core.product import ProductModule
+from src.platform.core.module import Module
 from src.platform.core.routing import RouterMount
 
-BILLING = ProductModule(
+BILLING = Module(
     name="billing",
     models=models,
     permissions=list(BillingPermission),
