@@ -176,7 +176,7 @@ select = [
     "FIX",
     "TD",
 ]
-ignore = ["ANN401"]
+ignore = ["ANN401", "COM812"]
 
 [tool.ruff.lint.pylint]
 max-args = 7
