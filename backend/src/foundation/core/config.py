@@ -82,6 +82,10 @@ class Settings(EnvSettings):
 
     frontend_url: str = "http://localhost:5173"
 
+    redis_url: str = "redis://localhost:6379/0"
+    realtime_heartbeat_seconds: int = 25
+    realtime_stream_max_seconds: int = 15 * 60
+
     rate_limit_enabled: bool = True
 
     gdpr_retention_days: int = 30
@@ -132,6 +136,14 @@ class Settings(EnvSettings):
             raise ValueError(
                 "ALLOW_ORIGINS must not contain '*' when ALLOW_CREDENTIALS is True",
             )
+        return self
+
+    @model_validator(mode="after")
+    def validate_redis_url(self) -> Self:
+        # Without Redis, events published by the worker or another API
+        # replica never reach the app.
+        if self.app_env != "local" and not self.redis_url:
+            raise ValueError("REDIS_URL must be set in non-local environments")
         return self
 
     @model_validator(mode="after")

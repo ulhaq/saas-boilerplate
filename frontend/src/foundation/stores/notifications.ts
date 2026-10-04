@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { notificationsApi } from '@/foundation/api/notifications'
+import { useRealtimeStore } from '@/foundation/stores/realtime'
 import type {
   NotificationOut,
   NotificationPreferenceIn,
@@ -10,16 +11,18 @@ import type { PaginatedResponse } from '@/foundation/types'
 
 type ListParams = Record<string, string | number | undefined>
 
-const POLL_INTERVAL_MS = 60_000
+// Realtime events (`NotificationEvent` in the backend) that change the unread count.
+const UNREAD_COUNT_EVENTS = ['notification.created', 'notification.read']
 
 export const useNotificationsStore = defineStore('notifications', () => {
+  const realtime = useRealtimeStore()
   const notifications = ref<NotificationOut[]>([])
   const total = ref(0)
   const unreadCount = ref(0)
   const isLoading = ref(false)
   // The user's per-category channel choices (settings page).
   const preferences = ref<NotificationPreferenceOut[]>([])
-  let pollTimer: ReturnType<typeof setInterval> | null = null
+  let unsubscribers: Array<() => void> = []
   let onNewNotificationsCallback: ((delta: number) => void) | null = null
 
   const hasUnread = computed(() => unreadCount.value > 0)
@@ -37,7 +40,7 @@ export const useNotificationsStore = defineStore('notifications', () => {
         onNewNotificationsCallback(unread.count - prev)
       }
     } catch {
-      // silent - polling should not surface errors
+      // silent - a background refresh should not surface errors
     }
   }
 
@@ -85,17 +88,20 @@ export const useNotificationsStore = defineStore('notifications', () => {
     preferences.value = data
   }
 
-  function startPolling() {
-    if (pollTimer) return
+  // Keep the unread count current: fetch it now, whenever the realtime stream
+  // (re)connects, and when an event says it changed (e.g. read in another tab).
+  function start() {
+    if (unsubscribers.length) return
     fetchUnreadCount()
-    pollTimer = setInterval(fetchUnreadCount, POLL_INTERVAL_MS)
+    unsubscribers = [
+      realtime.onSync(fetchUnreadCount),
+      ...UNREAD_COUNT_EVENTS.map((type) => realtime.on(type, fetchUnreadCount)),
+    ]
   }
 
-  function stopPolling() {
-    if (pollTimer) {
-      clearInterval(pollTimer)
-      pollTimer = null
-    }
+  function stop() {
+    for (const unsubscribe of unsubscribers) unsubscribe()
+    unsubscribers = []
   }
 
   function clear() {
@@ -103,7 +109,7 @@ export const useNotificationsStore = defineStore('notifications', () => {
     total.value = 0
     unreadCount.value = 0
     preferences.value = []
-    stopPolling()
+    stop()
   }
 
   return {
@@ -121,8 +127,8 @@ export const useNotificationsStore = defineStore('notifications', () => {
     markAllRead,
     fetchPreferences,
     updatePreferences,
-    startPolling,
-    stopPolling,
+    start,
+    stop,
     clear,
   }
 })

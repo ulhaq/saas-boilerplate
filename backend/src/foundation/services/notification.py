@@ -10,8 +10,9 @@ from src.foundation.core import composition
 from src.foundation.core.config import settings
 from src.foundation.core.exceptions import ValidationException
 from src.foundation.core.module import NotificationCategory, NotificationRule
+from src.foundation.core.realtime import RealtimeEvent, publish_to_user
 from src.foundation.core.security import Auth
-from src.foundation.enums import ErrorCode
+from src.foundation.enums import ErrorCode, NotificationEvent
 from src.foundation.models.notification_preference import NotificationPreference
 from src.foundation.models.user import User
 from src.foundation.repositories.repository_manager import RepositoryManager
@@ -74,11 +75,20 @@ async def deliver_notification(  # noqa: PLR0913 - keyword-only
             data=email_data,
         )
     if in_app:
-        await repos.notification.create(
+        notification = await repos.notification.create(
             user_id=user.id,
             organization_id=organization_id,
             notification_type=notification_type,
             payload=payload,
+        )
+        publish_to_user(
+            repos.db,
+            user.id,
+            RealtimeEvent(
+                type=NotificationEvent.CREATED,
+                organization_id=organization_id,
+                data={"id": notification.id, "notification_type": notification_type},
+            ),
         )
 
 
@@ -181,12 +191,25 @@ class NotificationService:
         ):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
         notification = await self.repos.notification.mark_read(notification)
+        self._publish_read()
         return NotificationOut.model_validate(notification)
 
     async def mark_all_read(self) -> None:
         await self.repos.notification.mark_all_read(
             user_id=self.current_user.id,
             organization_id=self.current_user.organization_id,
+        )
+        self._publish_read()
+
+    def _publish_read(self) -> None:
+        """Let the user's other tabs update their unread count."""
+        publish_to_user(
+            self.repos.db,
+            self.current_user.id,
+            RealtimeEvent(
+                type=NotificationEvent.READ,
+                organization_id=self.current_user.organization_id,
+            ),
         )
 
     async def list_preferences(self) -> builtins.list[NotificationPreferenceOut]:

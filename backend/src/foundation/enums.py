@@ -240,6 +240,14 @@ class UsageMetric(StrEnum):
     SEATS = "seats"
 
 
+class NotificationEvent(StrEnum):
+    """Realtime events (`core/realtime.py`) telling the app that the user's
+    notifications changed, so it re-fetches its unread count."""
+
+    CREATED = "notification.created"
+    READ = "notification.read"
+
+
 class RefreshTokenRevokeReason(StrEnum):
     ROTATED = "rotated"
     LOGOUT = "logout"

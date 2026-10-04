@@ -120,6 +120,11 @@ The router guard in `src/router/index.ts` enforces `requiresAuth`, `guestOnly`, 
 - `login()` / `logout()` / `switchOrganization()`
 - `hasPermission(name)` - checks flattened permissions from user roles
 
+**`stores/realtime.ts`** - the signed-in user's realtime event stream (`GET /v1/events`, SSE via `api/realtime.ts` and `lib/sse.ts`), opened and closed by the auth store with the session:
+
+- `on(type, handler)` - run for each event of a type; `onSync(handler)` - run whenever events may have been missed (the stream opened, or a `resync`). Both return an unsubscribe function. Events are hints: re-fetch through the owning store (see `stores/notifications.ts`).
+- Reconnects with backoff, refreshes an expired token (`refreshAccessToken()` in `api/client.ts`), closes in a tab hidden for 5 minutes and reopens when it's shown.
+
 **`stores/ui.ts`** - UI state:
 
 - `sidebarOpen` - mobile sidebar toggle
@@ -160,7 +165,7 @@ Store ↔ api naming must match the domain (`stores/organizations.ts` ↔ `api/o
 `src/foundation/api/client.ts` - Axios instance with:
 
 - Request interceptor: attaches `Authorization: Bearer <token>`
-- Response interceptor: on 401, queues concurrent requests, refreshes token, retries - or clears session and redirects to login on failure
+- Response interceptor: on 401, refreshes the token (`refreshAccessToken()`, one request shared by concurrent callers), retries - or clears session and redirects to login on failure
 - `withCredentials: true` for httponly refresh token cookie
 
 API modules (`api/auth.ts`, `api/users.ts`, etc.) export plain functions that call the shared client through its typed layer, `api` (also in `client.ts`):

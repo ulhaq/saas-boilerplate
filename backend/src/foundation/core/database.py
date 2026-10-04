@@ -1,12 +1,16 @@
-from collections.abc import AsyncGenerator
+import asyncio
+import logging
+from collections.abc import AsyncGenerator, Awaitable, Callable
 from typing import Annotated
 
 from fastapi import Depends
-from sqlalchemy import text
+from sqlalchemy import event, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase, Session
 
 from src.foundation.core.config import settings
+
+log = logging.getLogger(__name__)
 
 engine = create_async_engine(
     settings.db_connection,
@@ -76,3 +80,51 @@ async def try_job_lock(session: AsyncSession, job: str) -> bool:
         {"namespace": _JOB_LOCK_NAMESPACE, "job": job},
     )
     return bool(rs.scalar_one())
+
+
+# `session.info` key holding the callbacks `after_commit` registered.
+_AFTER_COMMIT = "after_commit_callbacks"
+# Strong references to running callbacks, so they aren't garbage collected
+# mid-flight (the event loop only keeps weak ones).
+_after_commit_tasks: set[asyncio.Task[None]] = set()
+
+
+def after_commit(
+    session: AsyncSession, callback: Callable[[], Awaitable[None]]
+) -> None:
+    """Run ``callback`` once the session's transaction commits, or never if it
+    rolls back - for side effects that must not announce a write that didn't
+    happen (e.g. realtime events). It runs as a task after the commit, so the
+    caller doesn't wait for it and its errors are logged, not raised. Use
+    `queue_email` instead for anything that must not be lost."""
+    session.info.setdefault(_AFTER_COMMIT, []).append(callback)
+
+
+async def _run_after_commit(callback: Callable[[], Awaitable[None]]) -> None:
+    try:
+        await callback()
+    except Exception:
+        log.exception("After-commit callback %r failed", callback)
+
+
+@event.listens_for(Session, "after_commit")
+def _schedule_after_commit(session: Session) -> None:
+    callbacks = session.info.pop(_AFTER_COMMIT, [])
+    if not callbacks:
+        return
+    loop = asyncio.get_running_loop()
+    for callback in callbacks:
+        task = loop.create_task(_run_after_commit(callback))
+        _after_commit_tasks.add(task)
+        task.add_done_callback(_after_commit_tasks.discard)
+
+
+@event.listens_for(Session, "after_rollback")
+def _discard_after_commit(session: Session) -> None:
+    session.info.pop(_AFTER_COMMIT, None)
+
+
+async def drain_after_commit() -> None:
+    """Wait for the after-commit callbacks still running (process shutdown)."""
+    if _after_commit_tasks:
+        await asyncio.gather(*_after_commit_tasks, return_exceptions=True)

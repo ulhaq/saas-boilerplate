@@ -17,8 +17,9 @@ import logging
 import signal
 
 from src.bootstrap import bootstrap
-from src.foundation.core.database import ASYNC_SESSION_LOCAL
+from src.foundation.core.database import ASYNC_SESSION_LOCAL, drain_after_commit
 from src.foundation.core.logging import setup_logging
+from src.foundation.core.realtime import close_broker
 from src.foundation.core.telemetry import setup_telemetry
 from src.foundation.services.email_outbox import run_email_outbox_loop
 from src.foundation.services.gdpr import run_gdpr_retention_loop
@@ -50,6 +51,9 @@ async def main() -> None:
     for task in tasks:
         task.cancel()
     await asyncio.gather(*tasks, return_exceptions=True)
+    # Realtime events of the last committed iterations.
+    await drain_after_commit()
+    await close_broker()
     log.info("Worker stopped")
 
 

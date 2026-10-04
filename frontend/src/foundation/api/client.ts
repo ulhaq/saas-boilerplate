@@ -18,8 +18,10 @@ export function getAccessToken(): string | null {
   return _accessToken
 }
 
+export const API_BASE_URL = '/v1'
+
 export const apiClient = axios.create({
-  baseURL: '/v1',
+  baseURL: API_BASE_URL,
   withCredentials: true, // sends the httponly refresh_token cookie
 })
 
@@ -31,21 +33,28 @@ apiClient.interceptors.request.use((config) => {
   return config
 })
 
-// ── Response interceptor: handle 401 + auto-refresh ──────────────────────
-let isRefreshing = false
-let failedQueue: Array<{
-  resolve: (token: string) => void
-  reject: (err: unknown) => void
-}> = []
+// ── Token refresh ─────────────────────────────────────────────────────────
+let refreshing: Promise<string> | null = null
 
-function processQueue(error: unknown, token: string | null = null): void {
-  for (const p of failedQueue) {
-    if (error) p.reject(error)
-    else p.resolve(token!)
-  }
-  failedQueue = []
+/**
+ * Exchange the httponly refresh cookie for a new access token and use it from
+ * now on. Concurrent callers (requests that all hit an expired token, the
+ * realtime event stream) share one refresh request.
+ */
+export function refreshAccessToken(): Promise<string> {
+  refreshing ??= api
+    .post('/auth/refresh')
+    .then(({ data }) => {
+      setAccessToken(data.access_token)
+      return data.access_token
+    })
+    .finally(() => {
+      refreshing = null
+    })
+  return refreshing
 }
 
+// ── Response interceptor: handle 401 + auto-refresh ──────────────────────
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
@@ -61,35 +70,19 @@ apiClient.interceptors.response.use(
       !original.url?.includes('/auth/') &&
       errorCode !== 'login_failed'
     ) {
-      if (isRefreshing) {
-        return new Promise<string>((resolve, reject) => {
-          failedQueue.push({ resolve, reject })
-        }).then((token) => {
-          original.headers.Authorization = `Bearer ${token}`
-          return apiClient(original)
-        })
-      }
-
       original._retry = true
-      isRefreshing = true
-
+      let token: string
       try {
-        const { data } = await api.post('/auth/refresh')
-        const newToken = data.access_token
-        setAccessToken(newToken)
-        processQueue(null, newToken)
-        original.headers.Authorization = `Bearer ${newToken}`
-        return apiClient(original)
+        token = await refreshAccessToken()
       } catch (refreshError) {
-        processQueue(refreshError, null)
         // Lazy import to avoid circular dep
         const { useAuthStore } = await import('@/foundation/stores/auth')
         useAuthStore().clearSession()
         window.location.href = '/login'
         return Promise.reject(refreshError)
-      } finally {
-        isRefreshing = false
       }
+      original.headers.Authorization = `Bearer ${token}`
+      return apiClient(original)
     }
 
     return Promise.reject(error)

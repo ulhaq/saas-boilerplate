@@ -6,6 +6,7 @@ import { useProfileStore } from '@/foundation/stores/profile'
 import { useOrganizationsStore } from '@/foundation/stores/organizations'
 import { useEntitlements } from '@/foundation/entitlements'
 import { useNotificationsStore } from '@/foundation/stores/notifications'
+import { useRealtimeStore } from '@/foundation/stores/realtime'
 import type {
   Token,
   MfaChallenge,
@@ -25,6 +26,7 @@ export const useAuthStore = defineStore('auth', () => {
   const organizationStore = useOrganizationsStore()
   const entitlements = useEntitlements()
   const notificationsStore = useNotificationsStore()
+  const realtime = useRealtimeStore()
 
   const isInitialized = computed(() => session.isInitialized)
   const isAuthenticated = computed(() => session.isAuthenticated)
@@ -45,10 +47,18 @@ export const useAuthStore = defineStore('auth', () => {
       organizationStore.fetchOrganizations(),
       entitlements.load(),
     ])
-    notificationsStore.startPolling()
+    startLiveUpdates()
+  }
+
+  // The realtime stream is opened with the current access token, so (re)start
+  // it whenever the session changes.
+  function startLiveUpdates(): void {
+    notificationsStore.start()
+    realtime.connect()
   }
 
   function clearSession(): void {
+    realtime.disconnect()
     session.clear()
     profile.clear()
     organizationStore.clear()
@@ -65,7 +75,7 @@ export const useAuthStore = defineStore('auth', () => {
         organizationStore.fetchOrganizations(),
         entitlements.load(),
       ])
-      notificationsStore.startPolling()
+      startLiveUpdates()
     } catch {
       // No valid session cookie - proceed as unauthenticated.
     }
@@ -160,7 +170,7 @@ export const useAuthStore = defineStore('auth', () => {
     setSession(token)
     await Promise.all([profile.fetchMe(), entitlements.load()])
     notificationsStore.clear()
-    notificationsStore.startPolling()
+    startLiveUpdates()
     // organizations list does not change on switch
   }
 

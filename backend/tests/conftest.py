@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 # are set up by the `tests.preload` plugin, which runs before this file.
 import src.foundation.core.security as _security_mod
 from src.bootstrap import ALL_PERMISSIONS, PERMISSION_DESCRIPTIONS
+from src.foundation.core import realtime
 from src.foundation.core.config import settings
 from src.foundation.core.database import Base, get_db
 from src.foundation.core.security import hash_secret
@@ -70,6 +71,24 @@ def allow_multiple_organizations() -> Generator[None]:
     settings.allow_multiple_organizations = True
     yield
     settings.allow_multiple_organizations = original
+
+
+@pytest.fixture(scope="session", autouse=True)
+def in_process_realtime_broker() -> Generator[None]:
+    """Never reach a Redis named in .env: an unset REDIS_URL picks the
+    in-process broker (`core/realtime.py`)."""
+    original = settings.redis_url
+    settings.redis_url = ""
+    yield
+    settings.redis_url = original
+
+
+@pytest.fixture(autouse=True)
+def realtime_broker() -> realtime.LocalBroker:
+    """A fresh broker per test, so no subscription outlives its test."""
+    broker = realtime.LocalBroker()
+    realtime.install_broker(broker)
+    return broker
 
 
 @pytest.fixture(scope="session", autouse=True)

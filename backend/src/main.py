@@ -19,7 +19,7 @@ from starlette.routing import BaseRoute
 
 from src.bootstrap import AUDIT_ACTION, bootstrap
 from src.foundation.core.config import settings
-from src.foundation.core.database import DbSession
+from src.foundation.core.database import DbSession, drain_after_commit
 from src.foundation.core.error_response import (
     ErrorResponse,
     ValidationDetail,
@@ -34,13 +34,16 @@ from src.foundation.core.middlewares import (
     ErrorHandlingMiddleware,
     SecurityHeadersMiddleware,
 )
+from src.foundation.core.realtime import close_broker
 from src.foundation.core.routing import API_PREFIX, RouterMount
+from src.foundation.core.shutdown import watch_shutdown_signals
 from src.foundation.core.telemetry import instrument_app, setup_telemetry
 from src.foundation.enums import ErrorCode
 from src.foundation.routers import (
     api_token,
     audit_log,
     auth,
+    events,
     invitation,
     notification,
     organization,
@@ -60,7 +63,11 @@ bootstrap()
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
+    # So open event streams end and let a reload/deploy proceed.
+    watch_shutdown_signals()
     yield
+    await drain_after_commit()
+    await close_broker()
 
 
 app = FastAPI(
@@ -267,6 +274,7 @@ ROUTERS: list[RouterMount] = [
         public=False,
     ),
     RouterMount(router=notification.router, tags=["Notifications"], public=False),
+    RouterMount(router=events.router, tags=["Events"], public=False),
 ]
 
 for mount in ROUTERS:
