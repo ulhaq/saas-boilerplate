@@ -73,16 +73,6 @@ def allow_multiple_organizations() -> Generator[None]:
     settings.allow_multiple_organizations = original
 
 
-@pytest.fixture(scope="session", autouse=True)
-def in_process_realtime_broker() -> Generator[None]:
-    """Never reach a Redis named in .env: an unset REDIS_URL picks the
-    in-process broker (`core/realtime.py`)."""
-    original = settings.redis_url
-    settings.redis_url = ""
-    yield
-    settings.redis_url = original
-
-
 @pytest.fixture(autouse=True)
 def realtime_broker() -> realtime.LocalBroker:
     """A fresh broker per test, so no subscription outlives its test."""

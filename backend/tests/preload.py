@@ -15,6 +15,10 @@ import os
 from pathlib import Path
 
 os.environ["RATE_LIMIT_ENABLED"] = "false"
+# Never reach a Redis named in .env: an unset REDIS_URL picks the in-process
+# realtime broker (`core/realtime.py`) and in-memory rate-limit counters
+# (`core/limiter.py`), which is read at import time
+os.environ["REDIS_URL"] = ""
 # Never export telemetry from tests, even when .env enables it
 os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"] = ""
 

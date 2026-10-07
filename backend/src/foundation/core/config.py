@@ -141,7 +141,8 @@ class Settings(EnvSettings):
     @model_validator(mode="after")
     def validate_redis_url(self) -> Self:
         # Without Redis, events published by the worker or another API
-        # replica never reach the app.
+        # replica never reach the app, and each replica keeps its own
+        # rate-limit counters.
         if self.app_env != "local" and not self.redis_url:
             raise ValueError("REDIS_URL must be set in non-local environments")
         return self
