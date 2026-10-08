@@ -29,7 +29,7 @@ meta:
       :total-pages="totalPages"
       :loading="isLoading"
       :empty-title="$t('notifications.empty')"
-      :row-class="(item) => (!item.read_at ? 'bg-primary/[0.04]' : undefined)"
+      :row-class="(item) => (!item.read_at ? 'bg-primary/4' : undefined)"
       :on-row-click="handleRowClick"
       @update:page="goToPage"
       @update:page-size="setPageSize"

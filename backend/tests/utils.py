@@ -1,11 +1,11 @@
-from collections.abc import Iterable, Iterator
+from collections.abc import Generator, Iterable
 from contextlib import ExitStack, contextmanager
 from datetime import UTC, datetime, timedelta
 from unittest.mock import patch
 
 
 @contextmanager
-def advance_clock(*targets: str, seconds: int = 3) -> Iterator[None]:
+def advance_clock(*targets: str, seconds: int = 3) -> Generator[None]:
     """Context manager that shifts datetime.now() forward by *seconds*.
 
     Each target is a dotted module path that imports datetime via

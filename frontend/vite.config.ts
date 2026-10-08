@@ -1,11 +1,11 @@
 import { defineConfig, type Plugin } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import VueRouter from 'unplugin-vue-router/vite'
+import VueRouter from 'vue-router/vite'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
-import { VueRouterAutoImports } from 'unplugin-vue-router'
+import { VueRouterAutoImports } from 'vue-router/unplugin'
 import { fileURLToPath, URL } from 'node:url'
-import { BRAND } from './src/brand'
+import { BRAND } from './src/brand.ts'
 import { modulePackages } from './products.config.js'
 
 /**

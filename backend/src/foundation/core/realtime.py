@@ -24,7 +24,7 @@ import asyncio
 import contextlib
 import json
 import logging
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncGenerator, Generator
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
@@ -114,7 +114,7 @@ class _Fanout:
         self._subscriptions: dict[str, set[Subscription]] = {}
 
     @contextlib.contextmanager
-    def subscribe(self, channel: str) -> Iterator[Subscription]:
+    def subscribe(self, channel: str) -> Generator[Subscription]:
         subscription = Subscription()
         self._subscriptions.setdefault(channel, set()).add(subscription)
         try:
@@ -156,7 +156,7 @@ class LocalBroker:
         self._fanout.dispatch(channel, event)
 
     @contextlib.asynccontextmanager
-    async def subscribe(self, channel: str) -> AsyncIterator[Subscription]:
+    async def subscribe(self, channel: str) -> AsyncGenerator[Subscription]:
         with self._fanout.subscribe(channel) as subscription:
             yield subscription
 
@@ -182,7 +182,7 @@ class RedisBroker:
         await self._redis.publish(_REDIS_CHANNEL_PREFIX + channel, event.to_json())
 
     @contextlib.asynccontextmanager
-    async def subscribe(self, channel: str) -> AsyncIterator[Subscription]:
+    async def subscribe(self, channel: str) -> AsyncGenerator[Subscription]:
         if self._relay is None or self._relay.done():
             self._relay = asyncio.create_task(self._run_relay(), name="realtime-relay")
         with self._fanout.subscribe(channel) as subscription:
@@ -271,7 +271,7 @@ async def close_broker() -> None:
 async def _publish(channel: str, event: RealtimeEvent) -> None:
     try:
         await broker().publish(channel, event)
-    except Exception:  # noqa: BLE001 - never fails the publisher
+    except Exception:  # never fails the publisher
         # Best effort: the client re-syncs from the database.
         log.warning("Could not publish realtime event %s", event.type, exc_info=True)
 

@@ -408,7 +408,7 @@ class StripeProvider(BillingProviderABC):
             if current.status == "paused":
                 sub = await stripe.Subscription.resume_async(
                     external_subscription_id,
-                    billing_cycle_anchor="unchanged",
+                    billing_cycle_anchor={"type": "unchanged"},
                     api_key=self._api_key,
                 )
             else:

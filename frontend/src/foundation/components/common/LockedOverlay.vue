@@ -2,7 +2,7 @@
   <div class="relative">
     <div
       v-if="locked"
-      class="absolute -inset-4 z-10 flex flex-col items-center justify-center gap-3 rounded-lg bg-muted/70 backdrop-blur-sm"
+      class="absolute -inset-4 z-10 flex flex-col items-center justify-center gap-3 rounded-lg bg-muted/70 backdrop-blur-xs"
     >
       <p class="text-sm font-medium">{{ $t('planFeature.unavailableMessage') }}</p>
       <Button v-if="appConfig.upgradeRoute" size="sm" as-child>

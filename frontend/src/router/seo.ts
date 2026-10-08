@@ -34,7 +34,7 @@ export function buildRouteHead(path: string, breadcrumb?: string) {
   return {
     htmlAttrs: { lang: locale.value },
     title,
-    link: seoKey ? [{ rel: 'canonical', href: canonical }] : [],
+    link: seoKey ? [{ rel: 'canonical' as const, href: canonical }] : [],
     meta: [
       { name: 'robots', content: seoKey ? 'index, follow' : 'noindex, nofollow' },
       { name: 'description', content: description },

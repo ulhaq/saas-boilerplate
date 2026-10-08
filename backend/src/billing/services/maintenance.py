@@ -203,19 +203,18 @@ async def run_trial_reminder_loop(session_factory: Any) -> None:
     while True:
         try:
             with track_worker_run("trial_reminder", interval):
-                async with session_factory() as session:
-                    async with session.begin():
-                        if await try_job_lock(session, "trial_reminder"):
-                            service = BillingMaintenanceService(
-                                BillingRepositoryManager(session),
-                            )
-                            count = await service.send_trial_reminders()
-                            log.info(
-                                "Trial reminder: %d organization(s) reminded",
-                                count,
-                            )
-                        else:
-                            log.info("Trial reminder: running in another worker")
+                async with session_factory() as session, session.begin():
+                    if await try_job_lock(session, "trial_reminder"):
+                        service = BillingMaintenanceService(
+                            BillingRepositoryManager(session),
+                        )
+                        count = await service.send_trial_reminders()
+                        log.info(
+                            "Trial reminder: %d organization(s) reminded",
+                            count,
+                        )
+                    else:
+                        log.info("Trial reminder: running in another worker")
         except Exception:
             log.exception("Trial reminder loop error")
         await asyncio.sleep(interval)
@@ -230,21 +229,20 @@ async def run_stale_checkout_cleanup_loop(session_factory: Any) -> None:
     while True:
         try:
             with track_worker_run("stale_checkout_cleanup", interval):
-                async with session_factory() as session:
-                    async with session.begin():
-                        if await try_job_lock(session, "stale_checkout_cleanup"):
-                            service = BillingMaintenanceService(
-                                BillingRepositoryManager(session),
-                            )
-                            count = await service.cleanup_stale_checkouts()
-                            log.info(
-                                "Stale checkout cleanup: %d subscription(s) canceled",
-                                count,
-                            )
-                        else:
-                            log.info(
-                                "Stale checkout cleanup: running in another worker",
-                            )
+                async with session_factory() as session, session.begin():
+                    if await try_job_lock(session, "stale_checkout_cleanup"):
+                        service = BillingMaintenanceService(
+                            BillingRepositoryManager(session),
+                        )
+                        count = await service.cleanup_stale_checkouts()
+                        log.info(
+                            "Stale checkout cleanup: %d subscription(s) canceled",
+                            count,
+                        )
+                    else:
+                        log.info(
+                            "Stale checkout cleanup: running in another worker",
+                        )
         except Exception:
             log.exception("Stale checkout cleanup loop error")
         await asyncio.sleep(interval)

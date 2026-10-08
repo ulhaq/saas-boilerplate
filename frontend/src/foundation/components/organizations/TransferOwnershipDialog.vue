@@ -21,9 +21,7 @@
           ]"
           @click="selectedUserId = user.id"
         >
-          <div
-            class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0"
-          >
+          <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
             <span class="text-xs font-medium text-primary">{{ initials(user.name) }}</span>
           </div>
           <div class="min-w-0">

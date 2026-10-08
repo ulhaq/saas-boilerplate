@@ -14,7 +14,9 @@ import { useAuthStore } from '@/foundation/stores/auth'
 import { buildRouteHead } from '@/router/seo'
 
 const AuthLayout = defineAsyncComponent(() => import('@/foundation/layouts/AuthLayout.vue'))
-const DashboardLayout = defineAsyncComponent(() => import('@/foundation/layouts/DashboardLayout.vue'))
+const DashboardLayout = defineAsyncComponent(
+  () => import('@/foundation/layouts/DashboardLayout.vue'),
+)
 
 const route = useRoute()
 const authStore = useAuthStore()

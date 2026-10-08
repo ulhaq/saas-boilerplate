@@ -2134,8 +2134,7 @@ export interface operations {
         }
         content: {
           'application/json':
-            | components['schemas']['Token']
-            | components['schemas']['MfaChallengeOut']
+            components['schemas']['Token'] | components['schemas']['MfaChallengeOut']
         }
       }
       /** @description Bad Request */

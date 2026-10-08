@@ -39,7 +39,7 @@ def test_every_route_commits_before_the_response() -> None:
 
     for route in routes:
         for dependant in _session_dependants(route.dependant):
-            assert dependant.computed_scope == "function", (
+            assert dependant.scope == "function", (
                 f"{route.path}: depend on the session via DbSession, "
                 "not Depends(get_db)"
             )

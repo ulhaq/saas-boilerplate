@@ -27,9 +27,8 @@ async def test_purge_expired_tokens_removes_stale_tokens(
         patch("src.foundation.core.config.settings.invite_expiry", 0),
         patch("src.foundation.core.config.settings.gdpr_token_purge_days", 0),
     ):
-        async with TestSessionLocal() as session:
-            async with session.begin():
-                count = await purge_expired_tokens(session)
+        async with TestSessionLocal() as session, session.begin():
+            count = await purge_expired_tokens(session)
 
     assert count >= 2
 
@@ -49,9 +48,8 @@ async def test_purge_soft_deleted_users_removes_past_retention() -> None:
         await session.commit()
 
     with patch("src.foundation.core.config.settings.gdpr_retention_days", 0):
-        async with TestSessionLocal() as session:
-            async with session.begin():
-                count = await purge_soft_deleted_users(session)
+        async with TestSessionLocal() as session, session.begin():
+            count = await purge_soft_deleted_users(session)
 
     assert count == 1
 
@@ -64,17 +62,15 @@ async def test_purge_soft_deleted_users_keeps_users_within_retention() -> None:
         await session.commit()
 
     with patch("src.foundation.core.config.settings.gdpr_retention_days", 30):
-        async with TestSessionLocal() as session:
-            async with session.begin():
-                count = await purge_soft_deleted_users(session)
+        async with TestSessionLocal() as session, session.begin():
+            count = await purge_soft_deleted_users(session)
 
     assert count == 0
 
 
 async def test_purge_soft_deleted_users_ignores_active_users() -> None:
     with patch("src.foundation.core.config.settings.gdpr_retention_days", 0):
-        async with TestSessionLocal() as session:
-            async with session.begin():
-                count = await purge_soft_deleted_users(session)
+        async with TestSessionLocal() as session, session.begin():
+            count = await purge_soft_deleted_users(session)
 
     assert count == 0

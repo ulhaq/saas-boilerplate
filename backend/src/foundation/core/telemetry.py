@@ -15,7 +15,7 @@ until setup_telemetry() runs - tests and telemetry-less setups pay nothing.
 import os
 import re
 import time
-from collections.abc import Iterable, Iterator
+from collections.abc import Generator, Iterable
 from contextlib import contextmanager
 
 from fastapi import FastAPI
@@ -129,7 +129,7 @@ _meter.create_observable_gauge(
 
 
 @contextmanager
-def track_worker_run(worker: str, interval_seconds: float) -> Iterator[None]:
+def track_worker_run(worker: str, interval_seconds: float) -> Generator[None]:
     """Wrap one iteration of a worker loop: a trace span, duration/outcome
     metrics, and the last-success timestamp that the heartbeat alert compares
     against the loop's interval. Exceptions are recorded and re-raised."""

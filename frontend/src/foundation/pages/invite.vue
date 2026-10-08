@@ -166,12 +166,7 @@ import { useI18n } from 'vue-i18n'
 import { legalUrl } from '@/foundation/constants'
 
 type InviteState =
-  | 'loading'
-  | 'invalid'
-  | 'wrong-account'
-  | 'sign-in-required'
-  | 'existing-user'
-  | 'new-user'
+  'loading' | 'invalid' | 'wrong-account' | 'sign-in-required' | 'existing-user' | 'new-user'
 
 const route = useRoute()
 const router = useRouter()
