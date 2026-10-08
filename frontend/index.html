@@ -4,7 +4,8 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#020617" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#101114" />
 
     <!--
       Only the tags that are identical on every page live here. Title,
@@ -39,7 +40,7 @@
         background: #ffffff;
       }
       .dark .app-loader {
-        background: #020617;
+        background: #101114;
       }
       .app-loader__spinner {
         width: 28px;
@@ -53,7 +54,7 @@
           app-loader-fade 0.2s linear 0.2s forwards;
       }
       .dark .app-loader__spinner {
-        border-color: #1e293b;
+        border-color: #26282e;
         border-top-color: #e2e8f0;
       }
       @keyframes app-loader-spin {

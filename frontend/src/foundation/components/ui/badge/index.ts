@@ -13,8 +13,7 @@ export const badgeVariants = cva(
         destructive:
           'border-transparent bg-destructive text-destructive-foreground shadow hover:bg-destructive/80',
         outline: 'text-foreground',
-        error:
-          'border-destructive/20 bg-destructive/10 text-destructive dark:text-destructive-foreground',
+        error: 'border-destructive/20 bg-destructive/10 text-destructive dark:text-red-400',
         warning: 'border-warning/25 bg-warning/10 text-warning dark:text-warning',
         success: 'border-success/25 bg-success/10 text-success dark:text-success',
         info: 'border-info/25 bg-info/10 text-info dark:text-info',
