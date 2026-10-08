@@ -249,7 +249,7 @@ meta:
 <script setup lang="ts">
 import { ref, reactive, onMounted, nextTick, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Plus, Loader2, Copy, Check } from 'lucide-vue-next'
+import { Plus, Loader2, Copy, Check } from '@lucide/vue'
 import { Button } from '@/foundation/components/ui/button'
 import { Input } from '@/foundation/components/ui/input'
 import { Label } from '@/foundation/components/ui/label'

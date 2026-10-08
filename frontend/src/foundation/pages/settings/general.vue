@@ -168,7 +168,7 @@ meta:
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Loader2, X } from 'lucide-vue-next'
+import { Loader2, X } from '@lucide/vue'
 import { Card, CardHeader, CardTitle, CardContent } from '@/foundation/components/ui/card'
 import { Input } from '@/foundation/components/ui/input'
 import { Label } from '@/foundation/components/ui/label'

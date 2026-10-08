@@ -131,7 +131,7 @@ meta:
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Mail, MoreHorizontal, Pencil, Trash2, Shield, X } from 'lucide-vue-next'
+import { Mail, MoreHorizontal, Pencil, Trash2, Shield, X } from '@lucide/vue'
 import { Button } from '@/foundation/components/ui/button'
 import { Input } from '@/foundation/components/ui/input'
 import { Badge } from '@/foundation/components/ui/badge'

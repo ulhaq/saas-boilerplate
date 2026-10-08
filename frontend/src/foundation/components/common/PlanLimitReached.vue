@@ -19,7 +19,7 @@
 </template>
 
 <script setup lang="ts">
-import { Lock } from 'lucide-vue-next'
+import { Lock } from '@lucide/vue'
 import { Button } from '@/foundation/components/ui/button'
 import { appConfig } from '@/foundation/config'
 

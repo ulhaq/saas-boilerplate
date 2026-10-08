@@ -107,7 +107,7 @@ meta:
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { Bell, Check } from 'lucide-vue-next'
+import { Bell, Check } from '@lucide/vue'
 import { TableCell } from '@/foundation/components/ui/table'
 import PageHeader from '@/foundation/components/common/PageHeader.vue'
 import DataTable from '@/foundation/components/common/DataTable.vue'

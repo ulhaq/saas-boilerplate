@@ -241,7 +241,7 @@ meta:
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Sun, Moon, Monitor, Check } from 'lucide-vue-next'
+import { Sun, Moon, Monitor, Check } from '@lucide/vue'
 import { Card, CardContent } from '@/foundation/components/ui/card'
 import { Input } from '@/foundation/components/ui/input'
 import { Label } from '@/foundation/components/ui/label'

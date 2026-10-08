@@ -97,7 +97,7 @@ meta:
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Info } from 'lucide-vue-next'
+import { Info } from '@lucide/vue'
 import { Badge } from '@/foundation/components/ui/badge'
 import { Button } from '@/foundation/components/ui/button'
 import { TableCell } from '@/foundation/components/ui/table'

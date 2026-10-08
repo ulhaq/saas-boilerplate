@@ -121,7 +121,7 @@ import {
   Settings,
   LogOut,
   Check,
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 import {
   DropdownMenu,
   DropdownMenuContent,

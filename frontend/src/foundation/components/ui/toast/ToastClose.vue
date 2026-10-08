@@ -2,7 +2,7 @@
 import type { ToastCloseProps } from 'reka-ui'
 import type { HTMLAttributes } from 'vue'
 import { reactiveOmit } from '@vueuse/core'
-import { X } from 'lucide-vue-next'
+import { X } from '@lucide/vue'
 import { ToastClose } from 'reka-ui'
 import { cn } from '@/foundation/lib/utils'
 

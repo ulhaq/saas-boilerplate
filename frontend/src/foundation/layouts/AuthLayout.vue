@@ -25,6 +25,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
-import { Radar } from 'lucide-vue-next'
+import { Radar } from '@lucide/vue'
 useI18n()
 </script>

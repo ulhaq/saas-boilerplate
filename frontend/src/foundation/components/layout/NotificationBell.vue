@@ -85,7 +85,7 @@
 import { ref, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Bell, Check, Loader2 } from 'lucide-vue-next'
+import { Bell, Check, Loader2 } from '@lucide/vue'
 import { Popover, PopoverContent, PopoverTrigger } from '@/foundation/components/ui/popover'
 import { useFormatDate } from '@/foundation/composables/useFormatDate'
 import { useToast } from '@/foundation/composables/useToast'

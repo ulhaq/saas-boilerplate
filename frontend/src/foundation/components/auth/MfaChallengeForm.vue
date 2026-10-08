@@ -63,7 +63,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Loader2 } from 'lucide-vue-next'
+import { Loader2 } from '@lucide/vue'
 import { Input } from '@/foundation/components/ui/input'
 import { Label } from '@/foundation/components/ui/label'
 import { Button } from '@/foundation/components/ui/button'

@@ -90,7 +90,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Loader2, RotateCw } from 'lucide-vue-next'
+import { Loader2, RotateCw } from '@lucide/vue'
 import { Badge } from '@/foundation/components/ui/badge'
 import { Button } from '@/foundation/components/ui/button'
 import { TableCell } from '@/foundation/components/ui/table'

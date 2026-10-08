@@ -208,7 +208,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Copy, Download, Loader2 } from 'lucide-vue-next'
+import { Copy, Download, Loader2 } from '@lucide/vue'
 import {
   Card,
   CardContent,

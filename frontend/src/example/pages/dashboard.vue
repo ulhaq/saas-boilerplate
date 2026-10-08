@@ -97,7 +97,7 @@ meta:
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
-import { ArrowRight, Bell, CreditCard, FolderOpen, Plus } from 'lucide-vue-next'
+import { ArrowRight, Bell, CreditCard, FolderOpen, Plus } from '@lucide/vue'
 import PageHeader from '@/foundation/components/common/PageHeader.vue'
 import StatCard from '@/foundation/components/common/StatCard.vue'
 import EmptyState from '@/foundation/components/common/EmptyState.vue'

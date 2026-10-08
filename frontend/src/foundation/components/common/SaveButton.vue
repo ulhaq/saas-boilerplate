@@ -31,7 +31,7 @@
 
 <script setup lang="ts">
 import type { HTMLAttributes } from 'vue'
-import { Loader2, Check } from 'lucide-vue-next'
+import { Loader2, Check } from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
 import { Button } from '@/foundation/components/ui/button'
 import type { ButtonVariants } from '@/foundation/components/ui/button'

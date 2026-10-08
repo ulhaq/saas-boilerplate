@@ -82,7 +82,7 @@ meta:
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { BellOff } from 'lucide-vue-next'
+import { BellOff } from '@lucide/vue'
 import { Card, CardContent } from '@/foundation/components/ui/card'
 import { Checkbox } from '@/foundation/components/ui/checkbox'
 import { Skeleton } from '@/foundation/components/ui/skeleton'

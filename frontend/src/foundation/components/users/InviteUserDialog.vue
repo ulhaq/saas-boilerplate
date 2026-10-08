@@ -96,7 +96,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Loader2, Plus } from 'lucide-vue-next'
+import { Loader2, Plus } from '@lucide/vue'
 import { useValidation } from '@/foundation/composables/useValidation'
 import { useRules } from '@/foundation/composables/useRules'
 import {

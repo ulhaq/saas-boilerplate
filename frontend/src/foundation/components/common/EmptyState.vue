@@ -12,7 +12,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { InboxIcon } from 'lucide-vue-next'
+import { InboxIcon } from '@lucide/vue'
 
 const { t } = useI18n()
 

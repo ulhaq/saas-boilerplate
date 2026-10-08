@@ -137,7 +137,7 @@ meta:
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { usePermission } from '@/foundation/composables/usePermission'
-import { Plus, MoreHorizontal, Pencil, Trash2, Key } from 'lucide-vue-next'
+import { Plus, MoreHorizontal, Pencil, Trash2, Key } from '@lucide/vue'
 import { Button } from '@/foundation/components/ui/button'
 import { Badge } from '@/foundation/components/ui/badge'
 import { TableCell } from '@/foundation/components/ui/table'

@@ -1,5 +1,5 @@
 import type { Component } from 'vue'
-import { Bell, ShieldCheck, Users } from 'lucide-vue-next'
+import { Bell, ShieldCheck, Users } from '@lucide/vue'
 
 /**
  * Sidebar navigation registry.

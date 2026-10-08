@@ -33,7 +33,7 @@
 import { ref } from 'vue'
 import type { HTMLAttributes } from 'vue'
 import { useVModel } from '@vueuse/core'
-import { Eye, EyeOff } from 'lucide-vue-next'
+import { Eye, EyeOff } from '@lucide/vue'
 import { cn } from '@/foundation/lib/utils'
 
 defineOptions({ inheritAttrs: false })

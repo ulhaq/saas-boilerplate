@@ -4,7 +4,7 @@
  * `src/billing/module.py`). Listed in `src/products.ts`; drop it there (and
  * from `products.config.js`) to run without plans: every feature on, no limits.
  */
-import { Receipt } from 'lucide-vue-next'
+import { Receipt } from '@lucide/vue'
 import SubscriptionBanner from '@/billing/components/SubscriptionBanner.vue'
 import { BILLING_ROUTE, requireAppAccess, useBillingEntitlements } from '@/billing/entitlements'
 import da from '@/billing/locales/da'

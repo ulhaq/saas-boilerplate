@@ -69,7 +69,7 @@ meta:
 
 <script setup lang="ts">
 import { useRoute, useRouter } from 'vue-router'
-import { Loader2, CheckCircle2 } from 'lucide-vue-next'
+import { Loader2, CheckCircle2 } from '@lucide/vue'
 import {
   Card,
   CardContent,

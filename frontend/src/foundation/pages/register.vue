@@ -108,7 +108,7 @@ meta:
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { Loader2, MailCheck, CheckCircle2 } from 'lucide-vue-next'
+import { Loader2, MailCheck, CheckCircle2 } from '@lucide/vue'
 import {
   Card,
   CardContent,

@@ -65,7 +65,7 @@ meta:
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Loader2, MailCheck } from 'lucide-vue-next'
+import { Loader2, MailCheck } from '@lucide/vue'
 import {
   Card,
   CardContent,

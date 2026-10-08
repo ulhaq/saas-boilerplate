@@ -113,7 +113,7 @@
 import { computed, ref } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Settings, Check, ChevronsUpDown, Building2, Radar, Plus } from 'lucide-vue-next'
+import { Settings, Check, ChevronsUpDown, Building2, Radar, Plus } from '@lucide/vue'
 import {
   DropdownMenu,
   DropdownMenuContent,

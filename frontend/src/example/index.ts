@@ -2,7 +2,7 @@
  * Example product module entry - the manifest of everything the foundation shell
  * needs to know about the product. Listed in `src/products.ts`.
  */
-import { FolderOpen, LayoutDashboard } from 'lucide-vue-next'
+import { FolderOpen, LayoutDashboard } from '@lucide/vue'
 import da from '@/example/locales/da'
 import en from '@/example/locales/en'
 import { registerExampleNotifications } from '@/example/notifications'

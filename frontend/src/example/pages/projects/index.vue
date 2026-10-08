@@ -92,7 +92,7 @@ meta:
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { MoreHorizontal, Pencil, Plus, Trash2, X } from 'lucide-vue-next'
+import { MoreHorizontal, Pencil, Plus, Trash2, X } from '@lucide/vue'
 import { Button } from '@/foundation/components/ui/button'
 import { Input } from '@/foundation/components/ui/input'
 import { TableCell } from '@/foundation/components/ui/table'

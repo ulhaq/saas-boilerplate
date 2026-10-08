@@ -97,7 +97,7 @@ meta:
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Loader2 } from 'lucide-vue-next'
+import { Loader2 } from '@lucide/vue'
 import { Card, CardContent } from '@/foundation/components/ui/card'
 import { Button } from '@/foundation/components/ui/button'
 import { Label } from '@/foundation/components/ui/label'

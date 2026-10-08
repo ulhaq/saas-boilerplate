@@ -88,7 +88,7 @@ import {
   ScrollText,
   KeyRound,
   LockKeyhole,
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 import { usePermission } from '@/foundation/composables/usePermission'
 import { useEntitlements } from '@/foundation/entitlements'
 import { PlanFeature } from '@/foundation/constants'

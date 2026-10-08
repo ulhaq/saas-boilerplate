@@ -438,7 +438,7 @@ meta:
 </template>
 
 <script setup lang="ts">
-import { Loader2, ExternalLink, ShieldCheck, CreditCard } from 'lucide-vue-next'
+import { Loader2, ExternalLink, ShieldCheck, CreditCard } from '@lucide/vue'
 import { Button } from '@/foundation/components/ui/button'
 import { Badge } from '@/foundation/components/ui/badge'
 import { Input } from '@/foundation/components/ui/input'

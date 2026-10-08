@@ -124,7 +124,7 @@
 <script setup lang="ts" generic="T">
 import { ref, computed, type Component } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-vue-next'
+import { ArrowUpDown, ArrowUp, ArrowDown } from '@lucide/vue'
 import {
   Table,
   TableBody,

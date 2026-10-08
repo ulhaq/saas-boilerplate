@@ -34,7 +34,7 @@ meta:
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { CheckCircle2, Loader2 } from 'lucide-vue-next'
+import { CheckCircle2, Loader2 } from '@lucide/vue'
 import { Card, CardContent, CardHeader, CardTitle } from '@/foundation/components/ui/card'
 import { Button } from '@/foundation/components/ui/button'
 import { useAuthStore } from '@/foundation/stores/auth'
