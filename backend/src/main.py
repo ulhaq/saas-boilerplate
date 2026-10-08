@@ -37,7 +37,7 @@ from src.foundation.core.middlewares import (
 from src.foundation.core.realtime import close_broker
 from src.foundation.core.routing import API_PREFIX, RouterMount
 from src.foundation.core.shutdown import watch_shutdown_signals
-from src.foundation.core.telemetry import instrument_app, setup_telemetry
+from src.foundation.core.telemetry import APP_TELEMETRY, setup_telemetry
 from src.foundation.enums import ErrorCode
 from src.foundation.routers import (
     api_token,
@@ -74,6 +74,7 @@ app = FastAPI(
     lifespan=lifespan,
     title=settings.app_name,
     debug=settings.app_debug,
+    telemetry=APP_TELEMETRY,
     middleware=[
         Middleware(
             CORSMiddleware,
@@ -89,7 +90,6 @@ app = FastAPI(
 )
 
 app.state.limiter = limiter
-instrument_app(app)
 
 
 API_CSP = (

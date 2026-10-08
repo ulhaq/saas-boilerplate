@@ -2,7 +2,9 @@
 
 Disabled unless OTEL_EXPORTER_OTLP_ENDPOINT is set. setup_telemetry() then installs
 the global tracer/meter providers and instruments SQLAlchemy and outgoing HTTP
-(the Stripe SDK uses requests/httpx); the API additionally calls instrument_app().
+(the Stripe SDK uses requests/httpx). Incoming requests are traced and measured by
+FastAPI's native telemetry (APP_TELEMETRY, passed to FastAPI()), which reports to
+these global providers and stays inert while they are unset.
 
 Logs are not exported from here: they go to stdout (redacted; JSON in production)
 where the Alloy agent collects them, and the logging processor stamps the active
@@ -18,11 +20,10 @@ import time
 from collections.abc import Generator, Iterable
 from contextlib import contextmanager
 
-from fastapi import FastAPI
+from fastapi.telemetry import TelemetryConfig
 from opentelemetry import metrics, trace
 from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 from opentelemetry.instrumentation.requests import RequestsInstrumentor
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
@@ -81,11 +82,9 @@ def setup_telemetry(service: str) -> None:
     HTTPXClientInstrumentor().instrument()
 
 
-def instrument_app(app: FastAPI) -> None:
-    """Trace every request (minus health checks) and record the standard HTTP
-    server metrics (request count/duration by route and status)."""
-    if _enabled:
-        FastAPIInstrumentor.instrument_app(app, excluded_urls="/health")
+# Trace every request (minus health checks) and record the standard HTTP server
+# metrics (http.server.request.duration by route and status) the dashboards use
+APP_TELEMETRY: TelemetryConfig = {"exclude": lambda scope: scope["path"] == "/health"}
 
 
 # --- Worker loops ------------------------------------------------------------
