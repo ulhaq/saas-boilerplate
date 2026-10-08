@@ -77,7 +77,10 @@ def setup_telemetry(service: str) -> None:
         MeterProvider(resource=resource, metric_readers=[reader]),
     )
 
-    SQLAlchemyInstrumentor().instrument(engine=engine.sync_engine)
+    # The instrumentor declares sqlalchemy < 2.1 and refuses to run on 2.1.x, but
+    # its engine event hooks work unchanged there; drop skip_dep_check once it
+    # widens the pin
+    SQLAlchemyInstrumentor().instrument(engine=engine.sync_engine, skip_dep_check=True)
     RequestsInstrumentor().instrument()
     HTTPXClientInstrumentor().instrument()
 
