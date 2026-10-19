@@ -89,11 +89,11 @@ const errorMessage = ref('')
 const sent = ref(false)
 
 async function onSubmit() {
-  if (!email.value) return
+  if (!email.value.trim()) return
   isLoading.value = true
   errorMessage.value = ''
   try {
-    await authStore.requestPasswordReset({ email: email.value })
+    await authStore.requestPasswordReset({ email: email.value.trim() })
     sent.value = true
   } catch (err: unknown) {
     errorMessage.value = resolveError(err)

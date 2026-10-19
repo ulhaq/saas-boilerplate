@@ -116,11 +116,11 @@ function onCancelMfa() {
 }
 
 async function onSubmit() {
-  if (!email.value || !password.value) return
+  if (!email.value.trim() || !password.value) return
   isLoading.value = true
   errorMessage.value = ''
   try {
-    const challenge = await authStore.login(email.value, password.value)
+    const challenge = await authStore.login(email.value.trim(), password.value)
     if (challenge) {
       mfaToken.value = challenge.mfa_token
       return

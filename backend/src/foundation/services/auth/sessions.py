@@ -51,7 +51,7 @@ class SessionService(AuthBaseService):
         username: str,
         password: str,
     ) -> Token | MfaChallengeOut:
-        email = username.lower()
+        email = username.strip().lower()
         # Checked before the password: a locked address is refused the same
         # way whether or not an account exists for it.
         if locked_until := await self.repos.login_throttle.locked_until(email):

@@ -14,9 +14,9 @@ export function useRules() {
 
     email: [
       (v: string) => !!v.trim() || t('common.emailRequired'),
-      (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) || t('common.emailInvalid'),
+      (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()) || t('common.emailInvalid'),
       (v: string) => {
-        const domain = v.split('@')[1]?.toLowerCase()
+        const domain = v.trim().split('@')[1]?.toLowerCase()
         return !domain || !disposableSet.has(domain) || t('common.emailDisposable')
       },
     ] as Rule[],

@@ -20,7 +20,7 @@ class CustomerWebhookHandlers(WebhookHandlerGroup):
         # silently diverge. Pull Stripe's email back in so the two stay in sync.
         obj = raw["data"]["object"]
         customer_id: str | None = obj.get("id")
-        email: str | None = obj.get("email")
+        email: str | None = (obj.get("email") or "").strip().lower() or None
         # billing_email is a required field - never let an empty Stripe email
         # clear it.
         if not customer_id or not email:

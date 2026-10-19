@@ -189,7 +189,7 @@ export function useBillingPage() {
 
   async function handleSaveEmail() {
     try {
-      const data = await saveEmail(() => subscriptionStore.updateBillingEmail(billingEmail.value))
+      const data = await saveEmail(() => subscriptionStore.updateBillingEmail(billingEmail.value.trim()))
       subscription.value = data
       billingEmail.value = data.billing_email ?? ''
     } catch (err: unknown) {

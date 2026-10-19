@@ -159,7 +159,7 @@ async function onSubmit() {
   errorMessage.value = ''
   try {
     await authStore.register({
-      email: form.email,
+      email: form.email.trim(),
       terms_accepted: true,
       locale: locale.value as SupportedLocale,
     })
