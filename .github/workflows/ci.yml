@@ -1,14 +1,59 @@
 name: CI
 
 on:
+  # Branch pushes are covered by their pull request; push runs only for main
+  # (it gates the deploy), so a PR branch isn't tested twice per push.
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
+# A newer push to the same branch/PR supersedes a running check. Never cancel
+# on main: a cancelled run there would skip that commit's deploy.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
-  backend:
-    name: Backend - lint & test
+  backend-lint:
+    name: Backend - lint & API schema
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v8.2.0
+        with:
+          python-version: "3.15"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: Lint (ty + ruff + import-linter)
+        run: uv run poe check
+
+      - name: API schemas match the code
+        run: uv run poe openapi && git diff --exit-code openapi.json openapi.internal.json
+
+  # The full app and the app without the optional modules, side by side. The
+  # foundation and the product must work without them: the "without-modules"
+  # leg removes them from its throwaway checkout for good (as a user would,
+  # docs/adding-a-domain-module.md) and checks everything again - lint, the
+  # migration chain on a fresh database, and the remaining tests. Each leg
+  # runs its tests in parallel across the runner's cores (pytest -n auto).
+  backend-test:
+    name: Backend - test (${{ matrix.variant }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [full, without-modules]
     defaults:
       run:
         working-directory: backend
@@ -27,6 +72,10 @@ jobs:
           --health-timeout 5s
           --health-retries 10
 
+    env:
+      APP_SECRET: ci-test-secret-not-for-production
+      DB_CONNECTION: postgresql+psycopg://postgres:postgres@localhost:5432/app
+
     steps:
       - uses: actions/checkout@v6
 
@@ -34,53 +83,36 @@ jobs:
         uses: astral-sh/setup-uv@v8.2.0
         with:
           python-version: "3.15"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
 
       - name: Install dependencies
         run: uv sync --locked
 
-      - name: Lint (ty + ruff + import-linter)
-        run: uv run poe check
-
-      - name: API schemas match the code
-        run: uv run poe openapi && git diff --exit-code openapi.json openapi.internal.json
-
-      - name: Migrations match models
-        env:
-          DB_CONNECTION: postgresql+psycopg://postgres:postgres@localhost:5432/app
-        run: uv run alembic upgrade head && uv run alembic check
-
-      - name: Test
-        env:
-          APP_SECRET: ci-test-secret-not-for-production
-          DB_CONNECTION: postgresql+psycopg://postgres:postgres@localhost:5432/app
-        run: uv run poe test
-
-      # The foundation and the product must work without the optional modules:
-      # remove them from this throwaway checkout for good (as a user would,
-      # docs/adding-a-domain-module.md) and check everything again - lint,
-      # the migration chain on a fresh database, and the remaining tests.
-      - name: Without optional modules - remove them
+      - name: Remove the optional modules
+        if: matrix.variant == 'without-modules'
         run: |
           uv run python scripts/remove_module.py billing
           uv run python scripts/remove_module.py marketing
           uv run poe fix
-
-      - name: Without optional modules - lint, migrate, test
-        env:
-          APP_SECRET: ci-test-secret-not-for-production
-          DB_CONNECTION: postgresql+psycopg://postgres:postgres@localhost:5432/app_without_modules
-        run: |
           uv run poe check
-          uv run python -c "from sqlalchemy import create_engine, text; \
-            e = create_engine('postgresql+psycopg://postgres:postgres@localhost:5432/app', \
-            isolation_level='AUTOCOMMIT'); \
-            e.connect().execute(text('CREATE DATABASE app_without_modules'))"
-          uv run alembic upgrade head && uv run alembic check
-          uv run poe test
 
+      - name: Migrations match models
+        run: uv run alembic upgrade head && uv run alembic check
+
+      - name: Test
+        run: uv run poe test
+
+  # The app with and without the billing module, side by side: the
+  # "without-billing" leg removes it from its throwaway checkout (as a user
+  # would) and checks everything again.
   frontend:
-    name: Frontend - typecheck & lint
+    name: Frontend - check & test (${{ matrix.variant }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [full, without-billing]
     defaults:
       run:
         working-directory: frontend
@@ -99,7 +131,16 @@ jobs:
         run: npm ci
 
       - name: API types match the schema
+        if: matrix.variant == 'full'
         run: npm run gen:api && git diff --exit-code src/api-schema.ts
+
+      - name: Formatting
+        if: matrix.variant == 'full'
+        run: npm run format:check
+
+      - name: Remove the billing module
+        if: matrix.variant == 'without-billing'
+        run: node scripts/remove-billing.mjs
 
       # Before type-checking: the build generates the route, component and
       # auto-import types (src/*.d.ts, gitignored) that the type-check reads.
@@ -116,17 +157,6 @@ jobs:
 
       - name: Component tests
         run: npm test
-
-      - name: Formatting
-        run: npm run format:check
-
-      # The app must work without the billing module: remove it from this
-      # throwaway checkout (as a user would) and check everything again.
-      - name: Without billing - remove the module
-        run: node scripts/remove-billing.mjs
-
-      - name: Without billing - build, type-check, lint, test
-        run: npm run build && npm run typecheck && npx eslint . && npm test
 
   site:
     name: Site - check & build
@@ -154,14 +184,24 @@ jobs:
       - name: Build
         run: npm run build
 
-  build-and-push:
-    name: Build & push images
-    needs: [backend, frontend, site]
+  # The production images build (base images, the --no-dev install on slim,
+  # npm ci on Alpine, COPY/.dockerignore) and start up, without pushing
+  # anything or needing secrets. Built in parallel, layers cached between runs.
+  images:
+    name: Image - ${{ matrix.image }}
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
-    permissions:
-      contents: read
-      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The app imports with only the production dependencies installed.
+          - image: backend
+            smoke: python -c "import src.main"
+          # Caddy accepts the config the image ships.
+          - image: frontend
+            smoke: caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+          - image: site
+            smoke: caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
 
     steps:
       - uses: actions/checkout@v6
@@ -169,116 +209,134 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
-      - name: Log in to GHCR
-        uses: docker/login-action@v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push backend
+      - name: Build ${{ matrix.image }}
         uses: docker/build-push-action@v7
         with:
-          context: ./backend
-          push: true
-          tags: |
-            ghcr.io/${{ github.repository }}/backend:latest
-            ghcr.io/${{ github.repository }}/backend:${{ github.sha }}
+          context: ./${{ matrix.image }}
+          load: true
+          tags: ci/${{ matrix.image }}:${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
 
-      - name: Write frontend env
-        env:
-          FRONTEND_ENV: ${{ secrets.FRONTEND_ENV }}
-        run: printf '%s\n' "$FRONTEND_ENV" > frontend/.env
+      - name: Smoke test ${{ matrix.image }}
+        run: docker run --rm ci/${{ matrix.image }}:${{ github.sha }} ${{ matrix.smoke }}
 
-      - name: Build and push frontend
-        uses: docker/build-push-action@v7
-        with:
-          context: ./frontend
-          push: true
-          tags: |
-            ghcr.io/${{ github.repository }}/frontend:latest
-            ghcr.io/${{ github.repository }}/frontend:${{ github.sha }}
+  # Build & push is disabled for now - uncomment (with deploy below) to publish images again.
+  # # One image per leg, built in parallel, with layers cached between runs.
+  # build-and-push:
+  #   name: Build & push ${{ matrix.image }}
+  #   needs: [backend-lint, backend-test, frontend, site, images]
+  #   runs-on: ubuntu-latest
+  #   if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+  #   permissions:
+  #     contents: read
+  #     packages: write
+  #   strategy:
+  #     matrix:
+  #       include:
+  #         - image: backend
+  #         - image: frontend
+  #           env_secret: FRONTEND_ENV
+  #         - image: site
+  #           env_secret: SITE_ENV
 
-      - name: Write site env
-        env:
-          SITE_ENV: ${{ secrets.SITE_ENV }}
-        run: printf '%s\n' "$SITE_ENV" > site/.env
+  #   steps:
+  #     - uses: actions/checkout@v6
 
-      - name: Build and push site
-        uses: docker/build-push-action@v7
-        with:
-          context: ./site
-          push: true
-          tags: |
-            ghcr.io/${{ github.repository }}/site:latest
-            ghcr.io/${{ github.repository }}/site:${{ github.sha }}
+  #     - name: Set up Docker Buildx
+  #       uses: docker/setup-buildx-action@v4
 
-  deploy:
-    name: Deploy to Hetzner
-    needs: [build-and-push]
-    runs-on: ubuntu-latest
-    # Queue, never overlap: a slower older deploy finishing last would roll
-    # production back to its SHA.
-    concurrency:
-      group: deploy
-      cancel-in-progress: false
+  #     - name: Log in to GHCR
+  #       uses: docker/login-action@v4
+  #       with:
+  #         registry: ghcr.io
+  #         username: ${{ github.actor }}
+  #         password: ${{ secrets.GITHUB_TOKEN }}
 
-    steps:
-      - uses: actions/checkout@v6
+  #     - name: Write ${{ matrix.image }} env
+  #       if: matrix.env_secret
+  #       env:
+  #         IMAGE_ENV: ${{ secrets[matrix.env_secret] }}
+  #       run: printf '%s\n' "$IMAGE_ENV" > ${{ matrix.image }}/.env
 
-      - name: Copy scripts and compose files to server
-        uses: appleboy/scp-action@v1
-        with:
-          host: ${{ secrets.HETZNER_HOST }}
-          username: ${{ secrets.HETZNER_USER }}
-          key: ${{ secrets.HETZNER_SSH_KEY }}
-          source: scripts/,docker-compose.yml,docker-compose.observability.yml,observability/
-          target: /opt/app/
+  #     - name: Build and push ${{ matrix.image }}
+  #       uses: docker/build-push-action@v7
+  #       with:
+  #         context: ./${{ matrix.image }}
+  #         push: true
+  #         cache-from: type=gha,scope=${{ matrix.image }}
+  #         cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+  #         tags: |
+  #           ghcr.io/${{ github.repository }}/${{ matrix.image }}:latest
+  #           ghcr.io/${{ github.repository }}/${{ matrix.image }}:${{ github.sha }}
 
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1
-        env:
-          BACKEND_IMAGE: ghcr.io/${{ github.repository }}/backend:${{ github.sha }}
-          FRONTEND_IMAGE: ghcr.io/${{ github.repository }}/frontend:${{ github.sha }}
-          SITE_IMAGE: ghcr.io/${{ github.repository }}/site:${{ github.sha }}
-          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_ACTOR: ${{ github.actor }}
-          OBSERVABILITY_ENV: ${{ secrets.OBSERVABILITY_ENV }}
-          BACKEND_ENV: ${{ secrets.BACKEND_ENV }}
-        with:
-          host: ${{ secrets.HETZNER_HOST }}
-          username: ${{ secrets.HETZNER_USER }}
-          key: ${{ secrets.HETZNER_SSH_KEY }}
-          envs: BACKEND_IMAGE,FRONTEND_IMAGE,SITE_IMAGE,GHCR_TOKEN,GITHUB_ACTOR,OBSERVABILITY_ENV,BACKEND_ENV
-          script: |
-            set -e
-            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
-            printf '%s\n' "$BACKEND_ENV" > /opt/app/.env
-            echo "BACKEND_IMAGE=$BACKEND_IMAGE" >> /opt/app/.env
-            echo "FRONTEND_IMAGE=$FRONTEND_IMAGE" >> /opt/app/.env
-            echo "SITE_IMAGE=$SITE_IMAGE" >> /opt/app/.env
-            cd /opt/app
-            docker compose pull
-            # Migrate with the new image while the old containers still serve.
-            # New code may map columns the live schema lacks, so the schema has
-            # to be ahead of the containers, never behind. Fails the deploy if
-            # the migration fails - old containers keep running, untouched.
-            # Then sync permissions: new ones reach every Owner role.
-            docker compose run --rm backend sh -c \
-              "alembic upgrade head && python -m src.sync_permissions"
-            docker compose up -d --remove-orphans
-            # Same stale-mount issue for the agent config; restart only if the
-            # observability profile is on (naming the service would start it).
-            if [ -n "$(docker compose ps -q alloy)" ]; then docker compose restart alloy; fi
-            # Monitoring stack on the same server, only when the OBSERVABILITY_ENV
-            # secret is set. Recreated every deploy: the copy replaces the config
-            # files, and single-file bind mounts keep pointing at the old ones.
-            if [ -n "$OBSERVABILITY_ENV" ]; then
-              printf '%s\n' "$OBSERVABILITY_ENV" > observability/.env
-              docker compose -f docker-compose.observability.yml -p observability \
-                --env-file observability/.env up -d --force-recreate --remove-orphans
-            fi
-            # Each deploy pulls new SHA-tagged images; drop unused ones older
-            # than 7 days so the disk doesn't fill. Images in use are never
-            # removed, and older SHAs can be re-pulled from GHCR for a rollback.
-            docker image prune -af --filter "until=168h" || true
+  # Deploy is disabled for now - uncomment to deploy main to Hetzner again.
+  # deploy:
+  #   name: Deploy to Hetzner
+  #   needs: [build-and-push]
+  #   runs-on: ubuntu-latest
+  #   # Queue, never overlap: a slower older deploy finishing last would roll
+  #   # production back to its SHA.
+  #   concurrency:
+  #     group: deploy
+  #     cancel-in-progress: false
+
+  #   steps:
+  #     - uses: actions/checkout@v6
+
+  #     - name: Copy scripts and compose files to server
+  #       uses: appleboy/scp-action@v1
+  #       with:
+  #         host: ${{ secrets.HETZNER_HOST }}
+  #         username: ${{ secrets.HETZNER_USER }}
+  #         key: ${{ secrets.HETZNER_SSH_KEY }}
+  #         source: scripts/,docker-compose.yml,docker-compose.observability.yml,observability/
+  #         target: /opt/app/
+
+  #     - name: Deploy via SSH
+  #       uses: appleboy/ssh-action@v1
+  #       env:
+  #         BACKEND_IMAGE: ghcr.io/${{ github.repository }}/backend:${{ github.sha }}
+  #         FRONTEND_IMAGE: ghcr.io/${{ github.repository }}/frontend:${{ github.sha }}
+  #         SITE_IMAGE: ghcr.io/${{ github.repository }}/site:${{ github.sha }}
+  #         GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #         GITHUB_ACTOR: ${{ github.actor }}
+  #         OBSERVABILITY_ENV: ${{ secrets.OBSERVABILITY_ENV }}
+  #         BACKEND_ENV: ${{ secrets.BACKEND_ENV }}
+  #       with:
+  #         host: ${{ secrets.HETZNER_HOST }}
+  #         username: ${{ secrets.HETZNER_USER }}
+  #         key: ${{ secrets.HETZNER_SSH_KEY }}
+  #         envs: BACKEND_IMAGE,FRONTEND_IMAGE,SITE_IMAGE,GHCR_TOKEN,GITHUB_ACTOR,OBSERVABILITY_ENV,BACKEND_ENV
+  #         script: |
+  #           set -e
+  #           echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+  #           printf '%s\n' "$BACKEND_ENV" > /opt/app/.env
+  #           echo "BACKEND_IMAGE=$BACKEND_IMAGE" >> /opt/app/.env
+  #           echo "FRONTEND_IMAGE=$FRONTEND_IMAGE" >> /opt/app/.env
+  #           echo "SITE_IMAGE=$SITE_IMAGE" >> /opt/app/.env
+  #           cd /opt/app
+  #           docker compose pull
+  #           # Migrate with the new image while the old containers still serve.
+  #           # New code may map columns the live schema lacks, so the schema has
+  #           # to be ahead of the containers, never behind. Fails the deploy if
+  #           # the migration fails - old containers keep running, untouched.
+  #           # Then sync permissions: new ones reach every Owner role.
+  #           docker compose run --rm backend sh -c \
+  #             "alembic upgrade head && python -m src.sync_permissions"
+  #           docker compose up -d --remove-orphans
+  #           # Same stale-mount issue for the agent config; restart only if the
+  #           # observability profile is on (naming the service would start it).
+  #           if [ -n "$(docker compose ps -q alloy)" ]; then docker compose restart alloy; fi
+  #           # Monitoring stack on the same server, only when the OBSERVABILITY_ENV
+  #           # secret is set. Recreated every deploy: the copy replaces the config
+  #           # files, and single-file bind mounts keep pointing at the old ones.
+  #           if [ -n "$OBSERVABILITY_ENV" ]; then
+  #             printf '%s\n' "$OBSERVABILITY_ENV" > observability/.env
+  #             docker compose -f docker-compose.observability.yml -p observability \
+  #               --env-file observability/.env up -d --force-recreate --remove-orphans
+  #           fi
+  #           # Each deploy pulls new SHA-tagged images; drop unused ones older
+  #           # than 7 days so the disk doesn't fill. Images in use are never
+  #           # removed, and older SHAs can be re-pulled from GHCR for a rollback.
+  #           docker image prune -af --filter "until=168h" || true
