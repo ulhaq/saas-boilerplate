@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, test } from 'vitest'
-import { adoptCurrencyFromUrl, rememberedCurrency } from '@/billing/currency'
+import { adoptPlanChoiceFromUrl, rememberedCurrency, rememberedInterval } from '@/billing/currency'
 
 function openAt(path: string) {
   window.history.replaceState(null, '', path)
-  adoptCurrencyFromUrl()
+  adoptPlanChoiceFromUrl()
 }
 
 const address = () => window.location.pathname + window.location.search + window.location.hash
@@ -13,7 +13,7 @@ beforeEach(() => {
   window.history.replaceState(null, '', '/')
 })
 
-describe('adoptCurrencyFromUrl', () => {
+describe('adoptPlanChoiceFromUrl', () => {
   test('remembers the currency from the site and drops it from the address', () => {
     openAt('/register?currency=DKK&utm_source=site#top')
 
@@ -34,5 +34,20 @@ describe('adoptCurrencyFromUrl', () => {
 
     expect(rememberedCurrency()).toBe('eur')
     expect(address()).toBe('/login?next=%2Fnotes')
+  })
+
+  test('remembers the billing period from the site too', () => {
+    openAt('/register?currency=eur&interval=YEAR')
+
+    expect(rememberedCurrency()).toBe('eur')
+    expect(rememberedInterval()).toBe('year')
+    expect(address()).toBe('/register')
+  })
+
+  test('ignores a value that is no billing period, still dropping it', () => {
+    openAt('/register?interval=fortnight')
+
+    expect(rememberedInterval()).toBeNull()
+    expect(address()).toBe('/register')
   })
 })

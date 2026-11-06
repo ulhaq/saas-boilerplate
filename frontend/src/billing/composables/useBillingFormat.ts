@@ -24,15 +24,20 @@ const STATUS_BADGES: Record<string, BadgeVariant> = {
 export function useBillingFormat() {
   const { t, te, locale } = useI18n()
 
-  function formatPrice(price: PlanPriceOut): string {
+  /** A price in its currency, as the marketing site writes it: whole amounts without
+   * decimals (€12), others with two (€32.50). */
+  function formatPrice(price: Pick<PlanPriceOut, 'amount' | 'currency'>): string {
     const amount = price.amount / 100
+    const digits = price.amount % 100 === 0 ? 0 : 2
     try {
       return new Intl.NumberFormat(locale.value, {
         style: 'currency',
         currency: price.currency,
+        minimumFractionDigits: digits,
+        maximumFractionDigits: digits,
       }).format(amount)
     } catch {
-      return `${price.currency.toUpperCase()} ${amount.toFixed(2)}`
+      return `${price.currency.toUpperCase()} ${amount.toFixed(digits)}`
     }
   }
 
@@ -47,9 +52,35 @@ export function useBillingFormat() {
     return price.interval === 'year' ? price.amount / (12 * count) : price.amount / count
   }
 
+  /** How a price is shown: a yearly one by the month, as a monthly one is, with its yearly
+   * total in `billedYearly` (else null), so the periods compare at a glance. */
+  function displayedPrice(price: PlanPriceOut): {
+    price: PlanPriceOut
+    billedYearly: string | null
+  } {
+    if (price.amount === 0 || price.interval !== 'year') return { price, billedYearly: null }
+    return {
+      price: { ...price, amount: Math.round(monthlyEquivalent(price)), interval: 'month' },
+      billedYearly: formatPrice(price),
+    }
+  }
+
+  /** The price's billing period in the locale ("month", "year"), else Stripe's word. */
+  function intervalLabel(price: Pick<PlanPriceOut, 'interval'>): string {
+    const key = `subscription.intervals.${price.interval}`
+    return te(key) ? t(key) : price.interval
+  }
+
   function statusBadgeVariant(status: string): BadgeVariant {
     return STATUS_BADGES[status] ?? 'outline'
   }
 
-  return { formatPrice, planDescription, monthlyEquivalent, statusBadgeVariant }
+  return {
+    formatPrice,
+    planDescription,
+    monthlyEquivalent,
+    displayedPrice,
+    intervalLabel,
+    statusBadgeVariant,
+  }
 }

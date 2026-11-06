@@ -16,6 +16,11 @@ export type Currency = (typeof CURRENCIES)[number]
  * app does: DKK in Danish, EUR otherwise. */
 export const CURRENCY: Record<Locale, Currency> = { en: 'EUR', da: 'DKK' }
 
+/** The billing periods the paid plans are priced in, in the order the pricing cards'
+ * period switch lists them; monthly is shown until the visitor picks another. */
+export const INTERVALS = ['month', 'year'] as const
+export type Interval = (typeof INTERVALS)[number]
+
 /** Plan highlighted as "most popular"; empty for none. */
 export const RECOMMENDED_PLAN = 'Advanced'
 
@@ -23,6 +28,9 @@ export interface Plan {
   name: string
   /** Monthly price per currency in minor units (øre, cents); 0 is the free plan. */
   amount: Record<Currency, number>
+  /** Yearly price per currency in minor units (the billing migration's seeds): twelve times
+   * a whole monthly amount, so the cards show it per month exactly; 0 is the free plan. */
+  yearly: Record<Currency, number>
   description: Record<Locale, string>
 }
 
@@ -30,16 +38,19 @@ export const PLANS: Plan[] = [
   {
     name: 'Free',
     amount: { DKK: 0, EUR: 0 },
+    yearly: { DKK: 0, EUR: 0 },
     description: { en: 'For individuals getting started', da: 'Til enkeltpersoner, der vil i gang' },
   },
   {
     name: 'Basic',
     amount: { DKK: 7900, EUR: 1100 },
+    yearly: { DKK: 79200, EUR: 10800 },
     description: { en: 'For small teams', da: 'Til små teams' },
   },
   {
     name: 'Advanced',
     amount: { DKK: 19900, EUR: 2700 },
+    yearly: { DKK: 199200, EUR: 26400 },
     description: {
       en: 'For growing teams that need API access',
       da: 'Til voksende teams med behov for API-adgang',
@@ -48,6 +59,7 @@ export const PLANS: Plan[] = [
   {
     name: 'Pro',
     amount: { DKK: 49900, EUR: 6700 },
+    yearly: { DKK: 499200, EUR: 67200 },
     description: { en: 'For large organizations', da: 'Til store organisationer' },
   },
 ]
@@ -103,9 +115,27 @@ export const COMPARISON: Record<Locale, ComparisonRow[]> = {
   ],
 }
 
-/** The plan's monthly price in minor units, in the locale's currency or `currency`. */
-export function planAmount(plan: Plan, locale: Locale, currency: Currency = CURRENCY[locale]): number {
-  return plan.amount[currency]
+/** The plan's price in minor units for one `interval` (a month unless given), in the
+ * locale's currency or `currency`. */
+export function planAmount(
+  plan: Plan,
+  locale: Locale,
+  currency: Currency = CURRENCY[locale],
+  interval: Interval = 'month',
+): number {
+  return interval === 'year' ? plan.yearly[currency] : plan.amount[currency]
+}
+
+/** What paying yearly saves at least, in `currency`, on every paid plan: in free months when
+ * that is a whole number of months (a year priced at ten months: 2), else in whole percent,
+ * rounded down so it never overstates; null when some plan saves nothing yearly. */
+export function yearlySaving(currency: Currency): { months: number } | { percent: number } | null {
+  const paid = PLANS.filter((plan) => plan.amount[currency] > 0)
+  if (paid.length === 0) return null
+  const least = Math.min(...paid.map((plan) => 12 - plan.yearly[currency] / plan.amount[currency]))
+  if (least <= 0) return null
+  if (Number.isInteger(least)) return { months: least }
+  return { percent: Math.floor((least / 12) * 100) }
 }
 
 export function formatPrice(

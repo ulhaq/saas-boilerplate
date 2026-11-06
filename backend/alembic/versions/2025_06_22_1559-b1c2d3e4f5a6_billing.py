@@ -389,6 +389,33 @@ def upgrade() -> None:
                 "created_at": now,
                 "updated_at": now,
             },
+            # Yearly prices next to each paid plan's monthly ones: twelve times a
+            # whole monthly amount about 17-19% under the monthly price (DKK 66/166/416,
+            # EUR 9/22/56 a month), so the pricing pages can show it per month
+            # exactly. Allowances stay monthly: usage resets on the 1st of each
+            # month whatever the subscription's interval.
+            *(
+                {
+                    "plan_id": plan_id,
+                    "amount": amount,
+                    "currency": currency,
+                    "interval": "year",
+                    "interval_count": 1,
+                    "external_price_id": None,
+                    "is_active": True,
+                    "deleted_at": None,
+                    "created_at": now,
+                    "updated_at": now,
+                }
+                for plan_id, currency, amount in (
+                    (2, "dkk", 79200),
+                    (3, "dkk", 199200),
+                    (4, "dkk", 499200),
+                    (2, "eur", 10800),
+                    (3, "eur", 26400),
+                    (4, "eur", 67200),
+                )
+            ),
         ],
     )
 

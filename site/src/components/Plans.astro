@@ -3,19 +3,22 @@
  * The plans. One markup for every theme: cards by default, ledger rows in
  * the editorial theme. Each plan lists its limits (`plan-stats`) and the
  * features that set it apart from cheaper plans (`plan-features`). The price is
- * rendered in every currency, the locale's shown; a switch (with JavaScript only)
- * shows another, remembered in the browser.
+ * rendered in every currency and billing period - the locale's currency, monthly,
+ * shown; two switches (with JavaScript only) show another, remembered in the
+ * browser and handed to the app's links.
  */
 import { CTA_MODE, appUrl } from '../config'
 import {
   COMPARISON,
   CURRENCIES,
   CURRENCY,
+  INTERVALS,
   PLANS,
   RECOMMENDED_PLAN,
   TRIAL_DAYS,
   formatPrice,
   planAmount,
+  yearlySaving,
 } from '../content/plans'
 import { path, type Locale } from '../i18n/routes'
 import { fmt, useMessages } from '../i18n/ui'
@@ -35,8 +38,39 @@ const extras = rows.filter(
 const ctaHref = CTA_MODE === 'waitlist' ? `${path('home', locale)}#waitlist` : appUrl('/register')
 ---
 
-<div class="plans-currency" data-currency-switch hidden>
-  <div class="currency-switch" role="radiogroup" aria-label={t.pricing.currency}>
+<div class="plans-switches" data-plans-switches hidden>
+  <div class="plans-switch plans-switch--interval" role="radiogroup" aria-label={t.pricing.interval}>
+    {
+      INTERVALS.map((interval) => (
+        <button
+          type="button"
+          role="radio"
+          data-interval={interval}
+          aria-checked={interval === 'month' ? 'true' : 'false'}
+        >
+          {t.pricing.intervals[interval]}
+          {interval === 'year' &&
+            CURRENCIES.map((currency) => {
+              const saving = yearlySaving(currency)
+              return saving ? (
+                <span
+                  class="plans-switch-saving"
+                  data-saving-currency={currency}
+                  hidden={currency !== CURRENCY[locale]}
+                >
+                  {'months' in saving
+                    ? fmt(saving.months === 1 ? t.pricing.oneMonthFree : t.pricing.monthsFree, {
+                        count: saving.months,
+                      })
+                    : fmt(t.pricing.yearlySaving, saving)}
+                </span>
+              ) : null
+            })}
+        </button>
+      ))
+    }
+  </div>
+  <div class="plans-switch plans-switch--currency" role="radiogroup" aria-label={t.pricing.currency}>
     {
       CURRENCIES.map((currency) => (
         <button
@@ -73,20 +107,39 @@ const ctaHref = CTA_MODE === 'waitlist' ? `${path('home', locale)}#waitlist` : a
               </div>
             ))}
           </dl>
-          {CURRENCIES.map((currency) => (
-            <div
-              class="plan-price"
-              data-price-currency={currency}
-              hidden={currency !== CURRENCY[locale]}
-            >
-              <span class="plan-amount">
-                {formatPrice(planAmount(plan, locale, currency), locale, currency)}
-              </span>
-              <span class="plan-per">
-                {free ? t.pricing.free : `${t.pricing.perMonth}, ${t.pricing.exclVat}`}
-              </span>
-            </div>
-          ))}
+          <div class="plan-prices">
+            {CURRENCIES.flatMap((currency) =>
+              // The free plan has one price, whatever the period.
+              (free ? (['month'] as const) : INTERVALS).map((interval) => {
+                // A yearly price is shown by the month too (it is twelve whole months' worth,
+                // `plans.ts`), its yearly total under it, so the periods compare at a glance.
+                const total = planAmount(plan, locale, currency, interval)
+                const yearly = interval === 'year'
+                return (
+                  <div
+                    class="plan-price"
+                    data-price-currency={currency}
+                    data-price-interval={free ? undefined : interval}
+                    hidden={currency !== CURRENCY[locale] || interval !== 'month'}
+                  >
+                    <span class="plan-amount">
+                      {formatPrice(yearly ? Math.round(total / 12) : total, locale, currency)}
+                    </span>
+                    <span class="plan-per">
+                      {free ? t.pricing.free : `${t.pricing.perMonth}, ${t.pricing.exclVat}`}
+                    </span>
+                    {yearly && (
+                      <span class="plan-per">
+                        {fmt(t.pricing.billedYearly, {
+                          price: formatPrice(total, locale, currency),
+                        })}
+                      </span>
+                    )}
+                  </div>
+                )
+              }),
+            )}
+          </div>
           {included.length > 0 && (
             <ul class="plan-features">
               {included.map((row) => (
@@ -109,34 +162,64 @@ const ctaHref = CTA_MODE === 'waitlist' ? `${path('home', locale)}#waitlist` : a
 </ol>
 
 <script>
-  import { saveCurrency, savedCurrency } from '../scripts/currency'
+  import { saveCurrency, saveInterval, savedCurrency, savedInterval } from '../scripts/currency'
 
-  // Every plans list on the page follows one choice, kept for the next visit and
-  // passed to the app by its links (`scripts/currency.ts`).
-  const switches = [...document.querySelectorAll<HTMLElement>('[data-currency-switch]')]
-  const options = switches.flatMap((el) => [
+  // Every plans list on the page follows one currency and one billing period, kept
+  // for the next visit and passed to the app by its links (`scripts/currency.ts`).
+  const switches = [...document.querySelectorAll<HTMLElement>('[data-plans-switches]')]
+  const currencyOptions = switches.flatMap((el) => [
     ...el.querySelectorAll<HTMLButtonElement>('[data-currency]'),
   ])
-  const offered = new Set(options.map((option) => option.dataset.currency))
+  const intervalOptions = switches.flatMap((el) => [
+    ...el.querySelectorAll<HTMLButtonElement>('[data-interval]'),
+  ])
+  const offeredCurrencies = new Set(currencyOptions.map((option) => option.dataset.currency))
+  const offeredIntervals = new Set(intervalOptions.map((option) => option.dataset.interval))
 
-  function show(currency: string) {
-    options.forEach((option) =>
-      option.setAttribute('aria-checked', String(option.dataset.currency === currency)),
+  const shown = {
+    currency: currencyOptions.find((o) => o.getAttribute('aria-checked') === 'true')?.dataset
+      .currency,
+    interval: 'month',
+  }
+
+  function render() {
+    currencyOptions.forEach((option) =>
+      option.setAttribute('aria-checked', String(option.dataset.currency === shown.currency)),
     )
+    intervalOptions.forEach((option) =>
+      option.setAttribute('aria-checked', String(option.dataset.interval === shown.interval)),
+    )
+    document.querySelectorAll<HTMLElement>('[data-saving-currency]').forEach((saving) => {
+      saving.hidden = saving.dataset.savingCurrency !== shown.currency
+    })
     document.querySelectorAll<HTMLElement>('[data-price-currency]').forEach((price) => {
-      price.hidden = price.dataset.priceCurrency !== currency
+      // A price without a period (the free plan's) shows in every period.
+      const interval = price.dataset.priceInterval
+      price.hidden =
+        price.dataset.priceCurrency !== shown.currency ||
+        (interval !== undefined && interval !== shown.interval)
     })
   }
 
-  const saved = savedCurrency()
-  if (saved && offered.has(saved)) show(saved)
+  const currency = savedCurrency()
+  if (currency && offeredCurrencies.has(currency)) shown.currency = currency
+  const interval = savedInterval()
+  if (interval && offeredIntervals.has(interval)) shown.interval = interval
+  render()
 
   switches.forEach((el) => (el.hidden = false))
-  options.forEach((option) =>
+  currencyOptions.forEach((option) =>
     option.addEventListener('click', () => {
-      const currency = option.dataset.currency!
-      show(currency)
-      saveCurrency(currency)
+      shown.currency = option.dataset.currency!
+      render()
+      saveCurrency(shown.currency)
+    }),
+  )
+  intervalOptions.forEach((option) =>
+    option.addEventListener('click', () => {
+      shown.interval = option.dataset.interval!
+      render()
+      saveInterval(shown.interval)
     }),
   )
 </script>

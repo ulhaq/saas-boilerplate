@@ -1,13 +1,21 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { rememberCurrency, rememberedCurrency } from '@/billing/currency'
+import {
+  rememberCurrency,
+  rememberInterval,
+  rememberedCurrency,
+  rememberedInterval,
+} from '@/billing/currency'
 import { useSubscriptionStore } from '@/billing/stores/subscription'
 import { useConfirm } from '@/foundation/composables/useConfirm'
 import { useToast } from '@/foundation/composables/useToast'
 import { useErrorHandler } from '@/foundation/composables/useErrorHandler'
 import { useSaveFeedback } from '@/foundation/composables/useSaveFeedback'
-import type { ComparisonRow } from '@/billing/composables/useBillingFormat'
+import { useBillingFormat, type ComparisonRow } from '@/billing/composables/useBillingFormat'
 import type { SubscriptionOut, PlanOut, PlanPriceOut } from '@/billing/types'
+
+/** How the billing periods are ordered on the page. */
+const INTERVAL_ORDER = ['month', 'year', 'week', 'day']
 
 /** State and actions of the billing settings page (`pages/settings/billing.vue`). */
 export function useBillingPage() {
@@ -16,6 +24,7 @@ export function useBillingPage() {
   const { toast } = useToast()
   const { confirm } = useConfirm()
   const { resolveError } = useErrorHandler()
+  const { monthlyEquivalent } = useBillingFormat()
 
   const isLoading = ref(false)
   const plansLoading = ref(false)
@@ -73,12 +82,84 @@ export function useBillingPage() {
     rememberCurrency(value)
   }
 
-  /** Active plans with only their prices in `currency` (a free price in any), cheapest first. */
+  /** The paid prices in `currency`. */
+  const paidPricesInCurrency = computed(() =>
+    plans.value
+      .flatMap((p) => p.prices)
+      .filter((pr) => pr.is_active && pr.amount > 0 && pr.currency === currency.value),
+  )
+
+  /** The billing periods the paid plans are priced in, in `currency`: monthly first. */
+  const intervals = computed(() =>
+    [...new Set(paidPricesInCurrency.value.map((pr) => pr.interval))].sort(
+      (a, b) => intervalOrder(a) - intervalOrder(b),
+    ),
+  )
+
+  function intervalOrder(interval: string): number {
+    const index = INTERVAL_ORDER.indexOf(interval)
+    return index === -1 ? INTERVAL_ORDER.length : index
+  }
+
+  /** The billing period the user picked, here or on the marketing site, remembered in this
+   * browser. */
+  const chosenInterval = ref<string | null>(rememberedInterval())
+
+  /** The billing period the page offers: the one picked, else the paid subscription's,
+   * else monthly - whichever the paid plans are priced in. Unlike the currency it is never
+   * locked: Stripe can move a subscription between monthly and yearly prices. */
+  const billingInterval = computed(() => {
+    const offered = intervals.value
+    const current = subscription.value?.plan_price
+    for (const wanted of [
+      chosenInterval.value,
+      current && current.amount > 0 ? current.interval : null,
+      'month',
+    ]) {
+      if (wanted && offered.includes(wanted)) return wanted
+    }
+    return offered[0] ?? 'month'
+  })
+
+  /** The billing periods the user may pick from: none when there is only one. */
+  const intervalChoices = computed(() => (intervals.value.length > 1 ? intervals.value : []))
+
+  function setInterval(value: string) {
+    chosenInterval.value = value
+    rememberInterval(value)
+  }
+
+  /** What paying yearly saves at least, in `currency`, on every plan priced both ways, as the
+   * badge on the Yearly option: in free months when that is a whole number of months (ten
+   * for a year: "2 months free"), else in whole percent, rounded down so it never overstates
+   * (null: no plan has both, or one is no cheaper yearly). */
+  const yearlySaving = computed(() => {
+    const savings: number[] = []
+    for (const plan of plans.value) {
+      const prices = plan.prices.filter(
+        (pr) => pr.is_active && pr.amount > 0 && pr.currency === currency.value,
+      )
+      const monthly = prices.find((pr) => pr.interval === 'month' && pr.interval_count === 1)
+      const yearly = prices.find((pr) => pr.interval === 'year' && pr.interval_count === 1)
+      if (monthly && yearly) savings.push(12 - yearly.amount / monthly.amount)
+    }
+    const least = savings.length > 0 ? Math.min(...savings) : 0
+    if (least <= 0) return null
+    if (Number.isInteger(least)) return t('subscription.monthsFree', { count: least }, least)
+    return t('subscription.yearlySaving', { percent: Math.floor((least / 12) * 100) })
+  })
+
+  /** Active plans with only their prices in `currency` and `billingInterval` (a free price
+   * in any), cheapest first. */
   const availablePlans = computed<PlanOut[]>(() =>
     plans.value
       .map((plan) => ({
         ...plan,
-        prices: plan.prices.filter((pr) => pr.amount === 0 || pr.currency === currency.value),
+        prices: plan.prices.filter(
+          (pr) =>
+            pr.amount === 0 ||
+            (pr.currency === currency.value && pr.interval === billingInterval.value),
+        ),
       }))
       .sort((a, b) => minPrice(a) - minPrice(b)),
   )
@@ -106,7 +187,8 @@ export function useBillingPage() {
 
   function planName(price: PlanPriceOut | null): string {
     if (!price) return ''
-    const plan = availablePlans.value.find((p) => p.prices.some((pr) => pr.id === price.id))
+    // Every plan, not only `availablePlans`: the current price may be in another period.
+    const plan = plans.value.find((p) => p.prices.some((pr) => pr.id === price.id))
     return plan?.name ?? ''
   }
 
@@ -200,14 +282,31 @@ export function useBillingPage() {
     }
   }
 
-  async function handleSwitchPlan(priceId: number, priceAmount: number) {
-    const currentAmount = subscription.value?.plan_price?.amount ?? 0
-    const isUpgrade = priceAmount > currentAmount
+  /** What switching the subscription to `price` is: another billing period of the same
+   * plan, or a plan costing more (`upgrade`) or less (`downgrade`) a month. */
+  function switchKind(price: PlanPriceOut): 'interval' | 'upgrade' | 'downgrade' {
+    const current = subscription.value?.plan_price
+    if (!current) return 'upgrade'
+    if (current.plan_id === price.plan_id) return 'interval'
+    return monthlyEquivalent(price) > monthlyEquivalent(current) ? 'upgrade' : 'downgrade'
+  }
+
+  /** The label of the button switching the subscription to `price`. */
+  function switchLabel(price: PlanPriceOut): string {
+    const kind = switchKind(price)
+    return kind === 'interval'
+      ? t(`subscription.switchInterval.${price.interval}`)
+      : t(`subscription.${kind}`)
+  }
+
+  async function handleSwitchPlan(price: PlanPriceOut) {
+    const kind = switchKind(price)
+    const priceId = price.id
     const ok = await confirm(
       t('subscription.switchPlanTitle'),
       t('subscription.switchPlanDescription'),
-      t(isUpgrade ? 'subscription.upgrade' : 'subscription.downgrade'),
-      isUpgrade ? 'default' : 'destructive',
+      switchLabel(price),
+      kind === 'downgrade' ? 'destructive' : 'default',
     )
     if (!ok) return
     switchId.value = priceId
@@ -283,12 +382,17 @@ export function useBillingPage() {
     currency,
     currencyChoices,
     setCurrency,
+    billingInterval,
+    intervalChoices,
+    setInterval,
+    yearlySaving,
     comparisonRows,
     planName,
     handleCancel,
     handleResume,
     handlePortal,
     handleSwitchPlan,
+    switchLabel,
     handleTrial,
     handleSaveEmail,
     handleCheckout,

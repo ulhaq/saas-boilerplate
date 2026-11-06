@@ -121,7 +121,7 @@ meta:
               $t('subscription.heroTrialSubtitle', {
                 days: trialPrice.trial_period_days,
                 price: formatPrice(trialPrice),
-                interval: trialPrice.interval,
+                interval: intervalLabel(trialPrice),
               })
             }}
           </p>
@@ -147,12 +147,21 @@ meta:
       <div v-else-if="paidPlans.length > 0" class="space-y-3">
         <div class="flex flex-wrap items-center justify-between gap-2">
           <h3 class="font-semibold">{{ $t('subscription.availablePlans') }}</h3>
-          <CurrencySwitcher
-            v-if="currencyChoices.length > 1"
-            :currencies="currencyChoices"
-            :model-value="currency"
-            @update:model-value="setCurrency"
-          />
+          <div class="flex flex-wrap items-center gap-2">
+            <IntervalSwitcher
+              v-if="intervalChoices.length > 1"
+              :intervals="intervalChoices"
+              :model-value="billingInterval"
+              :yearly-saving="yearlySaving"
+              @update:model-value="setInterval"
+            />
+            <CurrencySwitcher
+              v-if="currencyChoices.length > 1"
+              :currencies="currencyChoices"
+              :model-value="currency"
+              @update:model-value="setCurrency"
+            />
+          </div>
         </div>
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <PlanCard v-for="plan in paidPlans" :key="plan.id" :plan="plan" :rows="comparisonRows">
@@ -231,7 +240,16 @@ meta:
 
       <!-- Available paid plans to subscribe to from the paused state -->
       <div v-if="paidPlans.length > 0" class="space-y-3">
-        <h3 class="font-semibold">{{ $t('subscription.availablePlans') }}</h3>
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h3 class="font-semibold">{{ $t('subscription.availablePlans') }}</h3>
+          <IntervalSwitcher
+            v-if="intervalChoices.length > 1"
+            :intervals="intervalChoices"
+            :model-value="billingInterval"
+            :yearly-saving="yearlySaving"
+            @update:model-value="setInterval"
+          />
+        </div>
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <PlanCard v-for="plan in paidPlans" :key="plan.id" :plan="plan" :rows="comparisonRows">
             <div class="space-y-2">
@@ -244,7 +262,7 @@ meta:
                 <Button
                   size="sm"
                   :disabled="switchId === price.id || price.id === subscription?.plan_price_id"
-                  @click="handleSwitchPlan(price.id, price.amount)"
+                  @click="handleSwitchPlan(price)"
                 >
                   <Loader2 v-if="switchId === price.id" class="w-4 h-4 mr-2 animate-spin" />
                   {{
@@ -376,7 +394,16 @@ meta:
       <!-- Available paid plans for upgrading/downgrading.
            Free plan is excluded - to return to free, cancel the subscription. -->
       <div v-if="paidPlans.length > 0" class="space-y-3">
-        <h3 class="font-semibold">{{ $t('subscription.availablePlans') }}</h3>
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h3 class="font-semibold">{{ $t('subscription.availablePlans') }}</h3>
+          <IntervalSwitcher
+            v-if="intervalChoices.length > 1"
+            :intervals="intervalChoices"
+            :model-value="billingInterval"
+            :yearly-saving="yearlySaving"
+            @update:model-value="setInterval"
+          />
+        </div>
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <PlanCard v-for="plan in paidPlans" :key="plan.id" :plan="plan" :rows="comparisonRows">
             <div class="space-y-2">
@@ -389,16 +416,13 @@ meta:
                 <Button
                   size="sm"
                   :disabled="switchId === price.id || price.id === subscription?.plan_price_id"
-                  @click="handleSwitchPlan(price.id, price.amount)"
+                  @click="handleSwitchPlan(price)"
                 >
                   <Loader2 v-if="switchId === price.id" class="w-4 h-4 mr-2 animate-spin" />
                   {{
                     price.id === subscription?.plan_price_id
                       ? $t('subscription.currentPlan')
-                      : subscription?.plan_price &&
-                          monthlyEquivalent(price) > monthlyEquivalent(subscription.plan_price)
-                        ? $t('subscription.upgrade')
-                        : $t('subscription.downgrade')
+                      : switchLabel(price)
                   }}
                 </Button>
               </div>
@@ -416,12 +440,21 @@ meta:
             <h3 class="font-semibold text-lg">{{ $t('subscription.noSubscription') }}</h3>
             <p class="text-muted-foreground text-sm mt-0.5">{{ $t('subscription.choosePlan') }}</p>
           </div>
-          <CurrencySwitcher
-            v-if="currencyChoices.length > 1"
-            :currencies="currencyChoices"
-            :model-value="currency"
-            @update:model-value="setCurrency"
-          />
+          <div class="flex flex-wrap items-center gap-2">
+            <IntervalSwitcher
+              v-if="intervalChoices.length > 1"
+              :intervals="intervalChoices"
+              :model-value="billingInterval"
+              :yearly-saving="yearlySaving"
+              @update:model-value="setInterval"
+            />
+            <CurrencySwitcher
+              v-if="currencyChoices.length > 1"
+              :currencies="currencyChoices"
+              :model-value="currency"
+              @update:model-value="setCurrency"
+            />
+          </div>
         </div>
 
         <div v-if="plansLoading" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -484,6 +517,7 @@ import {
 import PageHeader from '@/foundation/components/common/PageHeader.vue'
 import CurrencySwitcher from '@/billing/components/CurrencySwitcher.vue'
 import CurrentPrice from '@/billing/components/CurrentPrice.vue'
+import IntervalSwitcher from '@/billing/components/IntervalSwitcher.vue'
 import PlanCard from '@/billing/components/PlanCard.vue'
 import PriceLabel from '@/billing/components/PriceLabel.vue'
 import { useBillingFormat } from '@/billing/composables/useBillingFormat'
@@ -491,7 +525,7 @@ import { useBillingPage } from '@/billing/composables/useBillingPage'
 import { useFormatDate } from '@/foundation/composables/useFormatDate'
 
 const { formatDate, formatDateTime } = useFormatDate()
-const { formatPrice, monthlyEquivalent, statusBadgeVariant } = useBillingFormat()
+const { formatPrice, intervalLabel, statusBadgeVariant } = useBillingFormat()
 const {
   isLoading,
   plansLoading,
@@ -513,12 +547,17 @@ const {
   currency,
   currencyChoices,
   setCurrency,
+  billingInterval,
+  intervalChoices,
+  setInterval,
+  yearlySaving,
   comparisonRows,
   planName,
   handleCancel,
   handleResume,
   handlePortal,
   handleSwitchPlan,
+  switchLabel,
   handleTrial,
   handleSaveEmail,
   handleCheckout,

@@ -1,13 +1,22 @@
-import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
+import { enableAutoUnmount, flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import Billing from '@/billing/pages/settings/billing.vue'
 import { i18n } from '@/plugins/i18n'
-import { adoptCurrencyFromUrl } from '@/billing/currency'
+import { adoptPlanChoiceFromUrl } from '@/billing/currency'
 import { useSubscriptionStore } from '@/billing/stores/subscription'
 import type { PlanOut, PlanPriceOut, SubscriptionOut } from '@/billing/types'
 
 const t = i18n.global.t
+
+/** A price as the page writes it: whole amounts without decimals. */
+const money = (amount: number, currency: string) =>
+  new Intl.NumberFormat('en', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,
+    maximumFractionDigits: Number.isInteger(amount) ? 0 : 2,
+  }).format(amount)
 
 const confirm = vi.fn(async (..._args: unknown[]) => true)
 const toast = vi.fn()
@@ -37,7 +46,8 @@ function price(
 
 const FREE = price(1, 0, 'month', null)
 const PRO_MONTHLY = price(2, 9900, 'month', 14)
-const PRO_YEARLY = price(3, 99000, 'year', 14)
+// Pro's second price: same plan as monthly Pro.
+const PRO_YEARLY = { ...price(3, 99000, 'year', 14), plan_id: PRO_MONTHLY.plan_id }
 const BUSINESS = price(4, 29900, 'month', null)
 
 function plan(id: number, name: string, prices: PlanPriceOut[]): PlanOut {
@@ -113,6 +123,19 @@ async function mountBilling(
   return wrapper
 }
 
+/** The options of the radio group labelled `label` (the currency or billing period). */
+const options = (wrapper: VueWrapper, label: string) =>
+  wrapper.findAll(`[role="radiogroup"][aria-label="${label}"] [role="radio"]`)
+
+async function pickInterval(wrapper: VueWrapper, interval: 'month' | 'year') {
+  const option = options(wrapper, t('subscription.billingInterval')).find((o) =>
+    o.text().startsWith(t(`subscription.intervalOptions.${interval}`)),
+  )
+  expect(option, `interval option ${interval}`).toBeDefined()
+  await option!.trigger('click')
+  await flushPromises()
+}
+
 const buttonLabels = (wrapper: VueWrapper) =>
   wrapper
     .findAll('button')
@@ -138,16 +161,20 @@ beforeEach(() => {
   vi.spyOn(window, 'open').mockImplementation(() => null)
 })
 
+// Unmount each test's page, so earlier ones don't keep rendering (and slowing) later ones.
+enableAutoUnmount(afterEach)
+
 afterEach(() => {
   vi.restoreAllMocks()
 })
 
 describe('billing page', () => {
-  test('without a subscription, every active price can be subscribed to via checkout', async () => {
+  test('without a subscription, every monthly price can be subscribed to via checkout', async () => {
     const wrapper = await mountBilling(null)
 
     expect(wrapper.text()).toContain(t('subscription.noSubscription'))
-    expect(buttons(wrapper, t('subscription.subscribe'))).toHaveLength(4)
+    // Free, Pro monthly and Business: yearly prices wait behind the toggle.
+    expect(buttons(wrapper, t('subscription.subscribe'))).toHaveLength(3)
 
     await click(wrapper, t('subscription.subscribe'), 1)
     expect(store.checkout).toHaveBeenCalledWith(PRO_MONTHLY.id)
@@ -164,13 +191,14 @@ describe('billing page', () => {
     const wrapper = await mountBilling(onFreePlan())
 
     expect(wrapper.text()).toContain(t('subscription.noCardRequired'))
-    // One trial button per trial-eligible price: Pro monthly, then Pro yearly.
-    expect(buttons(wrapper, t('subscription.startTrialButton', { days: 14 }))).toHaveLength(2)
-    await click(wrapper, t('subscription.startTrialButton', { days: 14 }), 1)
-    expect(store.startTrial).toHaveBeenCalledWith(PRO_YEARLY.id)
-
+    // One trial button per trial-eligible price in the period shown: Pro monthly.
+    expect(buttons(wrapper, t('subscription.startTrialButton', { days: 14 }))).toHaveLength(1)
     await click(wrapper, t('subscription.subscribe'))
     expect(store.checkout).toHaveBeenCalledWith(BUSINESS.id)
+
+    await pickInterval(wrapper, 'year')
+    await click(wrapper, t('subscription.startTrialButton', { days: 14 }))
+    expect(store.startTrial).toHaveBeenCalledWith(PRO_YEARLY.id)
     expect(store.switchPlan).not.toHaveBeenCalled()
   })
 
@@ -178,9 +206,9 @@ describe('billing page', () => {
     const wrapper = await mountBilling(onFreePlan({ trial_used: true }))
 
     expect(buttonLabels(wrapper)).not.toContain(t('subscription.startTrialButton', { days: 14 }))
-    expect(buttons(wrapper, t('subscription.subscribe'))).toHaveLength(3)
+    expect(buttons(wrapper, t('subscription.subscribe'))).toHaveLength(2)
 
-    await click(wrapper, t('subscription.subscribe'), 2)
+    await click(wrapper, t('subscription.subscribe'), 1)
     expect(store.checkout).toHaveBeenCalledWith(BUSINESS.id)
   })
 
@@ -200,7 +228,7 @@ describe('billing page', () => {
     expect(current).toHaveLength(1)
     expect(current[0]!.attributes('disabled')).toBeDefined()
 
-    await click(wrapper, t('subscription.subscribe'), 1)
+    await click(wrapper, t('subscription.subscribe'))
     expect(confirm).toHaveBeenCalledOnce()
     expect(store.switchPlan).toHaveBeenCalledWith(BUSINESS.id)
   })
@@ -208,13 +236,8 @@ describe('billing page', () => {
   test('an active subscription labels other plans by monthly price and switches after confirmation', async () => {
     const wrapper = await mountBilling(subscription())
 
-    // Yearly Pro (825/month) is cheaper per month than monthly Pro (990).
     expect(buttonLabels(wrapper)).toEqual(
-      expect.arrayContaining([
-        t('subscription.currentPlan'),
-        t('subscription.downgrade'),
-        t('subscription.upgrade'),
-      ]),
+      expect.arrayContaining([t('subscription.currentPlan'), t('subscription.upgrade')]),
     )
 
     await click(wrapper, t('subscription.upgrade'))
@@ -333,7 +356,7 @@ describe('currencies', () => {
     expect(store.switchPlan).toHaveBeenCalledWith(23)
   })
 
-  const currencyOptions = (wrapper: VueWrapper) => wrapper.findAll('[role="radio"]')
+  const currencyOptions = (wrapper: VueWrapper) => options(wrapper, t('subscription.currency'))
 
   test('a picked currency is offered instead of the locale one, and remembered', async () => {
     const wrapper = await mountBilling(null, PLANS_IN_TWO)
@@ -352,7 +375,7 @@ describe('currencies', () => {
 
   test('the currency picked on the marketing site is offered', async () => {
     window.history.replaceState(null, '', '/settings/billing?currency=dkk')
-    adoptCurrencyFromUrl()
+    adoptPlanChoiceFromUrl()
     const wrapper = await mountBilling(null, PLANS_IN_TWO)
 
     await click(wrapper, t('subscription.subscribe'), 1)
@@ -375,8 +398,7 @@ describe('currencies', () => {
       onFreePlan({ plan_price: FREE_EUR, plan_price_id: FREE_EUR.id }),
       PLANS_IN_TWO,
     )
-    const zero = (currency: string) =>
-      new Intl.NumberFormat('en', { style: 'currency', currency }).format(0)
+    const zero = (currency: string) => money(0, currency)
 
     expect(wrapper.text()).toContain(zero('eur'))
     await currencyOptions(wrapper)[0]!.trigger('click')
@@ -408,6 +430,125 @@ describe('currencies', () => {
 
     await click(wrapper, t('subscription.subscribe'), 1)
     expect(store.checkout).toHaveBeenCalledWith(BASIC_EUR.id)
+  })
+})
+
+describe('billing periods', () => {
+  const intervalOptions = (wrapper: VueWrapper) =>
+    options(wrapper, t('subscription.billingInterval'))
+
+  test('monthly is shown first, with the months yearly gives free', async () => {
+    const wrapper = await mountBilling(null)
+
+    const labels = intervalOptions(wrapper).map((o) => o.text().replace(/\s+/g, ' '))
+    // 99000 a year against 12 x 9900: 10 months' worth, so 2 months free.
+    expect(labels).toEqual([
+      t('subscription.intervalOptions.month'),
+      `${t('subscription.intervalOptions.year')} ${t('subscription.monthsFree', { count: 2 }, 2)}`,
+    ])
+    expect(intervalOptions(wrapper)[0]!.attributes('aria-checked')).toBe('true')
+  })
+
+  test('a yearly price that is no whole number of months is shown as a percentage', async () => {
+    const wrapper = await mountBilling(null, [
+      plan(1, 'Free', [FREE]),
+      plan(2, 'Pro', [PRO_MONTHLY, { ...PRO_YEARLY, amount: 95000 }]),
+    ])
+
+    // 95000 against 12 x 9900 = 118800: 20% less.
+    expect(intervalOptions(wrapper)[1]!.text()).toContain(
+      t('subscription.yearlySaving', { percent: 20 }),
+    )
+  })
+
+  test('the saving shown is the smallest of the plans', async () => {
+    const wrapper = await mountBilling(null, [
+      plan(1, 'Free', [FREE]),
+      plan(2, 'Pro', [PRO_MONTHLY, { ...PRO_YEARLY, amount: 95000 }]),
+      plan(3, 'Business', [
+        price(30, 20000, 'month', null, 'dkk'),
+        price(31, 180000, 'year', null, 'dkk'),
+      ]),
+    ])
+
+    // Pro saves 20% (95000 against 118800), Business 25% (180000 against 240000).
+    expect(intervalOptions(wrapper)[1]!.text()).toContain(
+      t('subscription.yearlySaving', { percent: 20 }),
+    )
+  })
+
+  test('picking yearly offers the yearly prices, by the month with their yearly total', async () => {
+    const wrapper = await mountBilling(null)
+    const dkk = (amount: number) => money(amount, 'dkk')
+
+    await pickInterval(wrapper, 'year')
+    // Free and Pro yearly; Business has no yearly price.
+    expect(buttons(wrapper, t('subscription.subscribe'))).toHaveLength(2)
+    expect(wrapper.text()).toContain(`${dkk(82.5)} / ${t('subscription.intervals.month')}`)
+    expect(wrapper.text()).toContain(t('subscription.billedYearly', { price: dkk(990) }))
+    expect(wrapper.text()).not.toContain(`/ ${t('subscription.intervals.year')}`)
+    await click(wrapper, t('subscription.subscribe'), 1)
+    expect(store.checkout).toHaveBeenCalledWith(PRO_YEARLY.id)
+  })
+
+  test('a yearly subscription is shown its own period, and can move to monthly', async () => {
+    const wrapper = await mountBilling(
+      subscription({ plan_price_id: PRO_YEARLY.id, plan_price: PRO_YEARLY }),
+    )
+
+    expect(intervalOptions(wrapper)[1]!.attributes('aria-checked')).toBe('true')
+    expect(buttonLabels(wrapper)).toContain(t('subscription.currentPlan'))
+    // The current price too: by the month, the yearly total under it.
+    expect(wrapper.text()).toContain(
+      t('subscription.billedYearly', {
+        price: money(990, 'dkk'),
+      }),
+    )
+
+    await pickInterval(wrapper, 'month')
+    await click(wrapper, t('subscription.switchInterval.month'))
+    expect(confirm).toHaveBeenCalledWith(
+      t('subscription.switchPlanTitle'),
+      expect.any(String),
+      t('subscription.switchInterval.month'),
+      'default',
+    )
+    expect(store.switchPlan).toHaveBeenCalledWith(PRO_MONTHLY.id)
+  })
+
+  test('a monthly subscriber moving the same plan to yearly is not told it is a downgrade', async () => {
+    const wrapper = await mountBilling(subscription())
+
+    await pickInterval(wrapper, 'year')
+    expect(buttonLabels(wrapper)).not.toContain(t('subscription.downgrade'))
+    await click(wrapper, t('subscription.switchInterval.year'))
+    expect(store.switchPlan).toHaveBeenCalledWith(PRO_YEARLY.id)
+  })
+
+  test('a picked billing period is remembered, also from the marketing site', async () => {
+    const wrapper = await mountBilling(null)
+    await pickInterval(wrapper, 'year')
+
+    const again = await mountBilling(null)
+    expect(options(again, t('subscription.billingInterval'))[1]!.attributes('aria-checked')).toBe(
+      'true',
+    )
+
+    localStorage.clear()
+    window.history.replaceState(null, '', '/settings/billing?interval=year')
+    adoptPlanChoiceFromUrl()
+    const fromSite = await mountBilling(null)
+    await click(fromSite, t('subscription.subscribe'), 1)
+    expect(store.checkout).toHaveBeenCalledWith(PRO_YEARLY.id)
+  })
+
+  test('with one billing period, there is nothing to pick', async () => {
+    const wrapper = await mountBilling(null, [
+      plan(1, 'Free', [FREE]),
+      plan(3, 'Business', [BUSINESS]),
+    ])
+
+    expect(intervalOptions(wrapper)).toHaveLength(0)
   })
 })
 
