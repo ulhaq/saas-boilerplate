@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
-from httpx import Headers
+from httpx2 import Headers
 from sqlalchemy import select
 
 from src.billing.models.billing import Plan, PlanPrice, Subscription

@@ -4,7 +4,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
-from httpx import Headers, Response
+from httpx2 import Headers, Response
 from sqlalchemy import select
 
 from src.foundation.models.api_token import ApiToken

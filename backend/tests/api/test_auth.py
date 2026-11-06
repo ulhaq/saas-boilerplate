@@ -300,10 +300,8 @@ def test_request_password_reset_with_non_existent_email(client: TestClient) -> N
 
 
 def test_cannot_refresh_access_token_with_invalid_token(client: TestClient) -> None:
-    response = client.post(
-        "v1/auth/refresh",
-        cookies={"refresh_token": "invalidtoken"},
-    )
+    client.cookies.set("refresh_token", "invalidtoken")
+    response = client.post("v1/auth/refresh")
     assert response.status_code == 401
     rs = response.json()
     assert rs["error_code"] == "unauthorized"
@@ -320,10 +318,8 @@ def test_cannot_refresh_access_token_with_expired_token(client: TestClient) -> N
         assert response.status_code == 200
         rs = response.json()
 
-        response = client.post(
-            "v1/auth/refresh",
-            cookies={"refresh_token": rs["refresh_token"]},
-        )
+        client.cookies.set("refresh_token", rs["refresh_token"])
+        response = client.post("v1/auth/refresh")
         assert response.status_code == 401
         rs = response.json()
         assert rs["error_code"] == "token_expired"
@@ -466,10 +462,8 @@ def test_get_access_token_sets_httponly_refresh_token_cookie(
 
 
 def test_cannot_refresh_without_cookie(client: TestClient) -> None:
-    response = client.post(
-        "v1/auth/refresh",
-        cookies={"refresh_token": ""},
-    )
+    client.cookies.set("refresh_token", "")
+    response = client.post("v1/auth/refresh")
     assert response.status_code == 401
 
 

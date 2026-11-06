@@ -5,7 +5,7 @@ import secrets
 from datetime import datetime
 
 from fastapi.testclient import TestClient
-from httpx import Headers, Response
+from httpx2 import Headers, Response
 from sqlalchemy import delete
 
 from src.billing.models.billing import PlanFeature as PlanFeatureModel
