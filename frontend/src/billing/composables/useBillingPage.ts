@@ -1,5 +1,6 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { rememberCurrency, rememberedCurrency } from '@/billing/currency'
 import { useSubscriptionStore } from '@/billing/stores/subscription'
 import { useConfirm } from '@/foundation/composables/useConfirm'
 import { useToast } from '@/foundation/composables/useToast'
@@ -11,7 +12,7 @@ import type { SubscriptionOut, PlanOut, PlanPriceOut } from '@/billing/types'
 /** State and actions of the billing settings page (`pages/settings/billing.vue`). */
 export function useBillingPage() {
   const subscriptionStore = useSubscriptionStore()
-  const { t, tm } = useI18n()
+  const { t, tm, locale } = useI18n()
   const { toast } = useToast()
   const { confirm } = useConfirm()
   const { resolveError } = useErrorHandler()
@@ -28,8 +29,63 @@ export function useBillingPage() {
   const { saving: emailSaving, saved: emailSaved, save: saveEmail } = useSaveFeedback()
   const billingEmail = ref('')
   const subscription = ref<SubscriptionOut | null>(null)
-  const availablePlans = ref<PlanOut[]>([])
+  const plans = ref<PlanOut[]>([])
   const errorMessage = ref('')
+
+  /** The currencies the paid plans are priced in. */
+  const currencies = computed(() =>
+    [
+      ...new Set(
+        plans.value
+          .flatMap((p) => p.prices)
+          .filter((pr) => pr.is_active && pr.amount > 0)
+          .map((pr) => pr.currency),
+      ),
+    ].sort(),
+  )
+
+  /** A paid subscription's currency: Stripe bills a subscription in one currency, so the
+   * plans to switch to are offered in it, and no other can be picked. */
+  const lockedCurrency = computed(() => {
+    const current = subscription.value?.plan_price
+    return current && current.amount > 0 ? current.currency : null
+  })
+
+  /** The currency the user picked, here or on the marketing site, remembered in this browser. */
+  const chosenCurrency = ref<string | null>(rememberedCurrency())
+
+  /** The currency the page offers: the paid subscription's, else the one picked, else the
+   * locale's, else EUR - whichever the paid plans are priced in. */
+  const currency = computed(() => {
+    if (lockedCurrency.value) return lockedCurrency.value
+    const offered = currencies.value
+    if (chosenCurrency.value && offered.includes(chosenCurrency.value)) return chosenCurrency.value
+    const preferred = locale.value.startsWith('da') ? 'dkk' : 'eur'
+    if (offered.includes(preferred)) return preferred
+    return offered.includes('eur') ? 'eur' : (offered[0] ?? preferred)
+  })
+
+  /** The currencies the user may pick from: none while a paid subscription fixes it. */
+  const currencyChoices = computed(() => (lockedCurrency.value ? [] : currencies.value))
+
+  function setCurrency(value: string) {
+    chosenCurrency.value = value
+    rememberCurrency(value)
+  }
+
+  /** Active plans with only their prices in `currency` (a free price in any), cheapest first. */
+  const availablePlans = computed<PlanOut[]>(() =>
+    plans.value
+      .map((plan) => ({
+        ...plan,
+        prices: plan.prices.filter((pr) => pr.amount === 0 || pr.currency === currency.value),
+      }))
+      .sort((a, b) => minPrice(a) - minPrice(b)),
+  )
+
+  function minPrice(plan: PlanOut): number {
+    return Math.min(...plan.prices.filter((p) => p.is_active).map((p) => p.amount), Infinity)
+  }
 
   const trialPrice = computed<PlanPriceOut | undefined>(() => {
     const last = availablePlans.value[availablePlans.value.length - 1]
@@ -84,13 +140,7 @@ export function useBillingPage() {
     plansLoading.value = true
     try {
       const data = await subscriptionStore.listPlans()
-      availablePlans.value = data
-        .filter((p) => p.is_active)
-        .sort((a, b) => {
-          const minPrice = (plan: typeof a) =>
-            Math.min(...plan.prices.filter((p) => p.is_active).map((p) => p.amount), Infinity)
-          return minPrice(a) - minPrice(b)
-        })
+      plans.value = data.filter((p) => p.is_active)
     } catch {
       // Non-critical - plan list is optional context
     } finally {
@@ -230,6 +280,9 @@ export function useBillingPage() {
     errorMessage,
     trialPrice,
     paidPlans,
+    currency,
+    currencyChoices,
+    setCurrency,
     comparisonRows,
     planName,
     handleCancel,

@@ -11,6 +11,7 @@ import pytest
 from sqlalchemy import select, text
 
 from src.billing.config import billing_settings
+from src.billing.enums import BillingErrorCode
 from src.billing.exceptions import BillingProviderException
 from src.billing.repositories.manager import BillingRepositoryManager
 from src.billing.schemas.billing import CheckoutIn, StartTrialIn, SwitchPlanIn
@@ -335,6 +336,42 @@ async def test_switch_plan_success(mock_billing_provider, plan_with_price):
         service = SubscriptionService(repos, mock_billing_provider, _admin_auth())
         out = await service.switch_plan(SwitchPlanIn(plan_price_id=price2.id))
     assert out.status == "active"
+
+
+async def test_switch_plan_to_other_currency_raises(
+    mock_billing_provider,
+    plan_with_price,
+):
+    price_id = plan_with_price["price"]["id"]
+    async with TestSessionLocal() as session, session.begin():
+        from src.billing.models.billing import PlanPrice
+
+        repos = BillingRepositoryManager(session)
+        eur_price = PlanPrice(
+            plan_id=plan_with_price["plan"]["id"],
+            amount=999,
+            currency="eur",
+            interval="month",
+            interval_count=1,
+            external_price_id="price_eur_other",
+            is_active=True,
+        )
+        session.add(eur_price)
+        await session.flush()
+
+        sub = await repos.subscription.get_active_for_organization(1)
+        assert sub
+        await repos.subscription.update(
+            sub,
+            plan_price_id=price_id,
+            external_subscription_id="sub_currency",
+        )
+        repos.subscription.set_organization_scope(1)
+        service = SubscriptionService(repos, mock_billing_provider, _admin_auth())
+        with pytest.raises(ValidationException) as exc:
+            await service.switch_plan(SwitchPlanIn(plan_price_id=eur_price.id))
+    assert exc.value.error_code == BillingErrorCode.CURRENCY_MISMATCH
+    mock_billing_provider.switch_subscription_price.assert_not_called()
 
 
 # ---------------------------------------------------------------------------

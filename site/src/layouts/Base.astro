@@ -7,7 +7,7 @@ import theme from '@theme/config'
 import Header from '../components/Header.astro'
 import Footer from '../components/Footer.astro'
 import Ticker from '../components/Ticker.astro'
-import { SITE, UMAMI } from '../config'
+import { APP_URL, SITE, UMAMI } from '../config'
 import { LOCALES, path, type Locale, type PageKey } from '../i18n/routes'
 import { useMessages } from '../i18n/ui'
 
@@ -72,7 +72,7 @@ const ogImage = new URL('/og-image.png', origin).href
       )
     }
   </head>
-  <body>
+  <body data-app-url={APP_URL}>
     <a class="skip" href="#main">{t.skipToContent}</a>
     {theme.highlights === 'ticker' && <Ticker locale={locale} />}
     <Header locale={locale} page={page} />
@@ -80,5 +80,10 @@ const ogImage = new URL('/og-image.png', origin).href
       <slot />
     </main>
     <Footer locale={locale} />
+    <script>
+      import { tagAppLinks } from '../scripts/currency'
+
+      tagAppLinks()
+    </script>
   </body>
 </html>

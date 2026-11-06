@@ -2,10 +2,21 @@
 /**
  * The plans. One markup for every theme: cards by default, ledger rows in
  * the editorial theme. Each plan lists its limits (`plan-stats`) and the
- * features that set it apart from cheaper plans (`plan-features`).
+ * features that set it apart from cheaper plans (`plan-features`). The price is
+ * rendered in every currency, the locale's shown; a switch (with JavaScript only)
+ * shows another, remembered in the browser.
  */
 import { CTA_MODE, appUrl } from '../config'
-import { COMPARISON, PLANS, RECOMMENDED_PLAN, TRIAL_DAYS, formatPrice } from '../content/plans'
+import {
+  COMPARISON,
+  CURRENCIES,
+  CURRENCY,
+  PLANS,
+  RECOMMENDED_PLAN,
+  TRIAL_DAYS,
+  formatPrice,
+  planAmount,
+} from '../content/plans'
 import { path, type Locale } from '../i18n/routes'
 import { fmt, useMessages } from '../i18n/ui'
 
@@ -24,10 +35,27 @@ const extras = rows.filter(
 const ctaHref = CTA_MODE === 'waitlist' ? `${path('home', locale)}#waitlist` : appUrl('/register')
 ---
 
+<div class="plans-currency" data-currency-switch hidden>
+  <div class="currency-switch" role="radiogroup" aria-label={t.pricing.currency}>
+    {
+      CURRENCIES.map((currency) => (
+        <button
+          type="button"
+          role="radio"
+          data-currency={currency}
+          aria-checked={currency === CURRENCY[locale] ? 'true' : 'false'}
+        >
+          {currency}
+        </button>
+      ))
+    }
+  </div>
+</div>
+
 <ol class="plans">
   {
     PLANS.map((plan) => {
-      const free = plan.amount === 0
+      const free = planAmount(plan, locale) === 0
       const recommended = plan.name === RECOMMENDED_PLAN
       const included = extras.filter((row) => row.values[plan.name] === true)
       return (
@@ -45,12 +73,20 @@ const ctaHref = CTA_MODE === 'waitlist' ? `${path('home', locale)}#waitlist` : a
               </div>
             ))}
           </dl>
-          <div class="plan-price">
-            <span class="plan-amount">{formatPrice(plan.amount, locale)}</span>
-            <span class="plan-per">
-              {free ? t.pricing.free : `${t.pricing.perMonth}, ${t.pricing.exclVat}`}
-            </span>
-          </div>
+          {CURRENCIES.map((currency) => (
+            <div
+              class="plan-price"
+              data-price-currency={currency}
+              hidden={currency !== CURRENCY[locale]}
+            >
+              <span class="plan-amount">
+                {formatPrice(planAmount(plan, locale, currency), locale, currency)}
+              </span>
+              <span class="plan-per">
+                {free ? t.pricing.free : `${t.pricing.perMonth}, ${t.pricing.exclVat}`}
+              </span>
+            </div>
+          ))}
           {included.length > 0 && (
             <ul class="plan-features">
               {included.map((row) => (
@@ -71,3 +107,36 @@ const ctaHref = CTA_MODE === 'waitlist' ? `${path('home', locale)}#waitlist` : a
     })
   }
 </ol>
+
+<script>
+  import { saveCurrency, savedCurrency } from '../scripts/currency'
+
+  // Every plans list on the page follows one choice, kept for the next visit and
+  // passed to the app by its links (`scripts/currency.ts`).
+  const switches = [...document.querySelectorAll<HTMLElement>('[data-currency-switch]')]
+  const options = switches.flatMap((el) => [
+    ...el.querySelectorAll<HTMLButtonElement>('[data-currency]'),
+  ])
+  const offered = new Set(options.map((option) => option.dataset.currency))
+
+  function show(currency: string) {
+    options.forEach((option) =>
+      option.setAttribute('aria-checked', String(option.dataset.currency === currency)),
+    )
+    document.querySelectorAll<HTMLElement>('[data-price-currency]').forEach((price) => {
+      price.hidden = price.dataset.priceCurrency !== currency
+    })
+  }
+
+  const saved = savedCurrency()
+  if (saved && offered.has(saved)) show(saved)
+
+  switches.forEach((el) => (el.hidden = false))
+  options.forEach((option) =>
+    option.addEventListener('click', () => {
+      const currency = option.dataset.currency!
+      show(currency)
+      saveCurrency(currency)
+    }),
+  )
+</script>

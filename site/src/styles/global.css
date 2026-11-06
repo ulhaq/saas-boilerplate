@@ -756,6 +756,53 @@
 
   /* ---------- plans ---------- */
 
+  .plans-currency {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 16px;
+  }
+
+  .plans-currency[hidden],
+  .plan-price[hidden] {
+    display: none;
+  }
+
+  .currency-switch {
+    display: inline-flex;
+    gap: 2px;
+    padding: 3px;
+    border: var(--border-w) solid var(--rule);
+    border-radius: 999px;
+    background: var(--surface);
+  }
+
+  .currency-switch button {
+    min-height: 32px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .currency-switch button:hover {
+    color: var(--ink);
+  }
+
+  .currency-switch button[aria-checked='true'] {
+    background: var(--ink);
+    color: var(--bg);
+  }
+
+  .currency-switch button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
   .plans {
     list-style: none;
     margin: 0;

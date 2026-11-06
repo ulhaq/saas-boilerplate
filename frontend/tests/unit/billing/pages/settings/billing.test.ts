@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import Billing from '@/billing/pages/settings/billing.vue'
 import { i18n } from '@/plugins/i18n'
+import { adoptCurrencyFromUrl } from '@/billing/currency'
 import { useSubscriptionStore } from '@/billing/stores/subscription'
 import type { PlanOut, PlanPriceOut, SubscriptionOut } from '@/billing/types'
 
@@ -13,12 +14,18 @@ const toast = vi.fn()
 vi.mock('@/foundation/composables/useConfirm', () => ({ useConfirm: () => ({ confirm }) }))
 vi.mock('@/foundation/composables/useToast', () => ({ useToast: () => ({ toast }) }))
 
-function price(id: number, amount: number, interval: string, trial: number | null): PlanPriceOut {
+function price(
+  id: number,
+  amount: number,
+  interval: string,
+  trial: number | null,
+  currency = 'dkk',
+): PlanPriceOut {
   return {
     id,
     plan_id: id,
     amount,
-    currency: 'dkk',
+    currency,
     interval,
     interval_count: 1,
     trial_period_days: trial,
@@ -125,6 +132,7 @@ async function click(wrapper: VueWrapper, label: string, index = 0) {
 
 beforeEach(() => {
   i18n.global.locale.value = 'en'
+  localStorage.clear()
   confirm.mockClear()
   toast.mockClear()
   vi.spyOn(window, 'open').mockImplementation(() => null)
@@ -286,6 +294,120 @@ describe('billing page', () => {
     await flushPromises()
 
     expect(wrapper.find('.text-destructive').exists()).toBe(true)
+  })
+})
+
+describe('currencies', () => {
+  const FREE_EUR = price(20, 0, 'month', null, 'eur')
+  const BASIC_EUR = price(21, 1200, 'month', null, 'eur')
+  const BASIC_DKK = price(22, 8900, 'month', null, 'dkk')
+  const PLANS_IN_TWO = [plan(1, 'Free', [FREE_EUR]), plan(2, 'Basic', [BASIC_EUR, BASIC_DKK])]
+
+  test.each([
+    ['da', BASIC_DKK],
+    ['en', BASIC_EUR],
+  ])('without a subscription, the %s locale is offered its currency only', async (lang, paid) => {
+    i18n.global.locale.value = lang as 'en' | 'da'
+    const wrapper = await mountBilling(null, PLANS_IN_TWO)
+
+    // The free price and one paid price, not both currencies.
+    expect(buttons(wrapper, t('subscription.subscribe'))).toHaveLength(2)
+    await click(wrapper, t('subscription.subscribe'), 1)
+    expect(store.checkout).toHaveBeenCalledWith(paid.id)
+  })
+
+  test('a paid subscription keeps its currency, whatever the locale', async () => {
+    i18n.global.locale.value = 'da'
+    const wrapper = await mountBilling(
+      subscription({ plan_price_id: BASIC_EUR.id, plan_price: BASIC_EUR }),
+      [
+        ...PLANS_IN_TWO,
+        plan(3, 'Pro', [
+          price(23, 3900, 'month', null, 'eur'),
+          price(24, 29000, 'month', null, 'dkk'),
+        ]),
+      ],
+    )
+
+    await click(wrapper, t('subscription.upgrade'))
+    expect(store.switchPlan).toHaveBeenCalledWith(23)
+  })
+
+  const currencyOptions = (wrapper: VueWrapper) => wrapper.findAll('[role="radio"]')
+
+  test('a picked currency is offered instead of the locale one, and remembered', async () => {
+    const wrapper = await mountBilling(null, PLANS_IN_TWO)
+
+    expect(currencyOptions(wrapper).map((o) => o.text())).toEqual(['DKK', 'EUR'])
+    expect(currencyOptions(wrapper)[1]!.attributes('aria-checked')).toBe('true')
+    await currencyOptions(wrapper)[0]!.trigger('click')
+    await click(wrapper, t('subscription.subscribe'), 1)
+    expect(store.checkout).toHaveBeenCalledWith(BASIC_DKK.id)
+
+    // Back on the page later, the choice still holds.
+    const again = await mountBilling(null, PLANS_IN_TWO)
+    await click(again, t('subscription.subscribe'), 1)
+    expect(store.checkout).toHaveBeenCalledWith(BASIC_DKK.id)
+  })
+
+  test('the currency picked on the marketing site is offered', async () => {
+    window.history.replaceState(null, '', '/settings/billing?currency=dkk')
+    adoptCurrencyFromUrl()
+    const wrapper = await mountBilling(null, PLANS_IN_TWO)
+
+    await click(wrapper, t('subscription.subscribe'), 1)
+    expect(store.checkout).toHaveBeenCalledWith(BASIC_DKK.id)
+  })
+
+  test('a free user can pick the currency too', async () => {
+    const wrapper = await mountBilling(
+      onFreePlan({ plan_price: FREE_EUR, plan_price_id: FREE_EUR.id }),
+      PLANS_IN_TWO,
+    )
+
+    await currencyOptions(wrapper)[0]!.trigger('click')
+    await click(wrapper, t('subscription.subscribe'))
+    expect(store.checkout).toHaveBeenCalledWith(BASIC_DKK.id)
+  })
+
+  test("the free plan's price follows the picked currency", async () => {
+    const wrapper = await mountBilling(
+      onFreePlan({ plan_price: FREE_EUR, plan_price_id: FREE_EUR.id }),
+      PLANS_IN_TWO,
+    )
+    const zero = (currency: string) =>
+      new Intl.NumberFormat('en', { style: 'currency', currency }).format(0)
+
+    expect(wrapper.text()).toContain(zero('eur'))
+    await currencyOptions(wrapper)[0]!.trigger('click')
+    expect(wrapper.text()).toContain(zero('dkk'))
+    expect(wrapper.text()).not.toContain(zero('eur'))
+  })
+
+  test('a paid subscription offers no currency to pick', async () => {
+    const wrapper = await mountBilling(
+      subscription({ plan_price_id: BASIC_EUR.id, plan_price: BASIC_EUR }),
+      PLANS_IN_TWO,
+    )
+
+    expect(currencyOptions(wrapper)).toHaveLength(0)
+  })
+
+  test('with one currency, there is nothing to pick', async () => {
+    const wrapper = await mountBilling(null)
+
+    expect(currencyOptions(wrapper)).toHaveLength(0)
+  })
+
+  test('a locale whose currency no plan is priced in falls back to EUR', async () => {
+    i18n.global.locale.value = 'da'
+    const wrapper = await mountBilling(null, [
+      plan(1, 'Free', [FREE_EUR]),
+      plan(2, 'Basic', [BASIC_EUR, price(25, 1300, 'month', null, 'usd')]),
+    ])
+
+    await click(wrapper, t('subscription.subscribe'), 1)
+    expect(store.checkout).toHaveBeenCalledWith(BASIC_EUR.id)
   })
 })
 

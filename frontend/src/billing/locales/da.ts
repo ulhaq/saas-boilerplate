@@ -74,6 +74,7 @@ export default {
     noSubscription: 'Intet aktivt abonnement',
     choosePlan: 'Vælg en plan nedenfor for at komme i gang.',
     availablePlans: 'Tilgængelige planer',
+    currency: 'Valuta',
     noPlansAvailable: 'Ingen planer er tilgængelige i øjeblikket.',
     noPricesAvailable: 'Ingen prisvalgmuligheder tilgængelige.',
     subscribe: 'Abonner',

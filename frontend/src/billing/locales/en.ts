@@ -73,6 +73,7 @@ export default {
     noSubscription: 'No active subscription',
     choosePlan: 'Choose a plan below to get started.',
     availablePlans: 'Available plans',
+    currency: 'Currency',
     noPlansAvailable: 'No plans are currently available.',
     noPricesAvailable: 'No pricing options available.',
     subscribe: 'Subscribe',

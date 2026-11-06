@@ -38,10 +38,13 @@ async def setup() -> None:  # noqa: C901
         plans = result.scalars().all()
 
         for plan in plans:
-            if all(p.amount == 0 for p in plan.prices):
-                log.info(
-                    "Skipping free plan '%s' (no Stripe product needed)",
+            prices = [p for p in plan.prices if p.deleted_at is None and p.is_active]
+            if all(p.amount == 0 for p in prices):
+                log.log(
+                    logging.INFO if prices else logging.WARNING,
+                    "Skipping plan '%s' (%s, no Stripe product needed)",
                     plan.name,
+                    "free" if prices else "no active prices",
                 )
                 continue
 
@@ -102,7 +105,7 @@ async def setup() -> None:  # noqa: C901
                 )
             plan_external_product_id = plan.external_product_id
 
-            for price in plan.prices:
+            for price in prices:
                 if price.external_price_id:
                     log.info(
                         "Price %s already linked to Stripe price %s, skipping",

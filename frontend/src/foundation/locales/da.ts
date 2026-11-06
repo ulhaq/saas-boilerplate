@@ -620,6 +620,7 @@ export default {
         'En organisation med et aktivt abonnement kan ikke slettes. Annuller abonnementet først.',
       subscription_not_found: 'Intet aktivt abonnement fundet',
       trial_already_used: 'Du har allerede brugt din gratis prøveperiode',
+      currency_mismatch: 'Dit abonnement betales i en anden valuta. Vælg en pris i samme valuta.',
       limit_exceeded:
         'Du har nået din plans brugsgrænse for denne periode. Opgrader din plan for at fortsætte.',
       capacity_exceeded: 'Du har nået din plans grænse. Opgrader din plan for at tilføje flere.',

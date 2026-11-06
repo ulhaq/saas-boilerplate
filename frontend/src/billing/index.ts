@@ -6,6 +6,7 @@
  */
 import { Receipt } from '@lucide/vue'
 import SubscriptionBanner from '@/billing/components/SubscriptionBanner.vue'
+import { adoptCurrencyFromUrl } from '@/billing/currency'
 import { BILLING_ROUTE, requireAppAccess, useBillingEntitlements } from '@/billing/entitlements'
 import da from '@/billing/locales/da'
 import en from '@/billing/locales/en'
@@ -21,6 +22,8 @@ const billing: Module = {
   name: 'billing',
   messages: { da, en },
   setup() {
+    // The marketing site's links carry the currency picked there (`?currency=`).
+    adoptCurrencyFromUrl()
     provideEntitlements(useBillingEntitlements)
     registerRouteGuard(requireAppAccess)
     registerBanner(SubscriptionBanner)

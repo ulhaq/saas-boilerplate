@@ -618,6 +618,8 @@ export default {
         'Cannot delete an organization with an active subscription. Cancel the subscription first.',
       subscription_not_found: 'No active subscription found',
       trial_already_used: 'You have already used your free trial',
+      currency_mismatch:
+        'Your subscription is billed in another currency. Choose a price in the same currency.',
       limit_exceeded:
         "You have reached your plan's usage limit for this period. Upgrade your plan to continue.",
       capacity_exceeded: "You have reached your plan's limit. Upgrade your plan to add more.",

@@ -54,7 +54,11 @@ meta:
           </p>
         </div>
 
-        <CurrentPrice v-if="subscription.plan_price" :price="subscription.plan_price" />
+        <CurrentPrice
+          v-if="subscription.plan_price"
+          :price="subscription.plan_price"
+          :currency="currency"
+        />
 
         <template v-if="subscription.plan_price_id">
           <Button :disabled="isCheckingOut" @click="handleCheckout(subscription.plan_price_id!)">
@@ -83,7 +87,11 @@ meta:
           </Badge>
         </div>
 
-        <CurrentPrice v-if="subscription.plan_price" :price="subscription.plan_price" />
+        <CurrentPrice
+          v-if="subscription.plan_price"
+          :price="subscription.plan_price"
+          :currency="currency"
+        />
 
         <template v-if="subscription.trial_end">
           <TooltipProvider>
@@ -137,7 +145,15 @@ meta:
         <Skeleton v-for="n in 3" :key="n" class="h-36 w-full rounded-lg" />
       </div>
       <div v-else-if="paidPlans.length > 0" class="space-y-3">
-        <h3 class="font-semibold">{{ $t('subscription.availablePlans') }}</h3>
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h3 class="font-semibold">{{ $t('subscription.availablePlans') }}</h3>
+          <CurrencySwitcher
+            v-if="currencyChoices.length > 1"
+            :currencies="currencyChoices"
+            :model-value="currency"
+            @update:model-value="setCurrency"
+          />
+        </div>
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <PlanCard v-for="plan in paidPlans" :key="plan.id" :plan="plan" :rows="comparisonRows">
             <template #badge>
@@ -158,7 +174,7 @@ meta:
                 :key="price.id"
                 class="flex items-center justify-between gap-2"
               >
-                <PriceLabel :price="price" free-as-text />
+                <PriceLabel :price="price" :currency="currency" free-as-text />
                 <Button v-if="price.amount === 0" size="sm" disabled>
                   {{ $t('subscription.currentPlan') }}
                 </Button>
@@ -200,7 +216,11 @@ meta:
           </p>
         </div>
 
-        <CurrentPrice v-if="subscription.plan_price" :price="subscription.plan_price" />
+        <CurrentPrice
+          v-if="subscription.plan_price"
+          :price="subscription.plan_price"
+          :currency="currency"
+        />
 
         <Button :disabled="isPortalLoading" @click="handlePortal">
           <Loader2 v-if="isPortalLoading" class="w-4 h-4 mr-2 animate-spin" />
@@ -220,7 +240,7 @@ meta:
                 :key="price.id"
                 class="flex items-center justify-between gap-2"
               >
-                <PriceLabel :price="price" />
+                <PriceLabel :price="price" :currency="currency" />
                 <Button
                   size="sm"
                   :disabled="switchId === price.id || price.id === subscription?.plan_price_id"
@@ -312,7 +332,11 @@ meta:
           </button>
         </div>
 
-        <CurrentPrice v-if="subscription.plan_price" :price="subscription.plan_price" />
+        <CurrentPrice
+          v-if="subscription.plan_price"
+          :price="subscription.plan_price"
+          :currency="currency"
+        />
 
         <p
           v-if="subscription.current_period_end && !subscription.cancel_at_period_end"
@@ -361,7 +385,7 @@ meta:
                 :key="price.id"
                 class="flex items-center justify-between gap-2"
               >
-                <PriceLabel :price="price" />
+                <PriceLabel :price="price" :currency="currency" />
                 <Button
                   size="sm"
                   :disabled="switchId === price.id || price.id === subscription?.plan_price_id"
@@ -387,9 +411,17 @@ meta:
     <!-- No subscription - show plan selection -->
     <template v-else>
       <div class="rounded-lg border p-6 space-y-4">
-        <div>
-          <h3 class="font-semibold text-lg">{{ $t('subscription.noSubscription') }}</h3>
-          <p class="text-muted-foreground text-sm mt-0.5">{{ $t('subscription.choosePlan') }}</p>
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 class="font-semibold text-lg">{{ $t('subscription.noSubscription') }}</h3>
+            <p class="text-muted-foreground text-sm mt-0.5">{{ $t('subscription.choosePlan') }}</p>
+          </div>
+          <CurrencySwitcher
+            v-if="currencyChoices.length > 1"
+            :currencies="currencyChoices"
+            :model-value="currency"
+            @update:model-value="setCurrency"
+          />
         </div>
 
         <div v-if="plansLoading" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -417,7 +449,7 @@ meta:
                 :key="price.id"
                 class="flex items-center justify-between gap-2"
               >
-                <PriceLabel :price="price" />
+                <PriceLabel :price="price" :currency="currency" />
                 <Button
                   size="sm"
                   :disabled="checkoutId === price.id || isCheckingOut"
@@ -450,6 +482,7 @@ import {
   TooltipTrigger,
 } from '@/foundation/components/ui/tooltip'
 import PageHeader from '@/foundation/components/common/PageHeader.vue'
+import CurrencySwitcher from '@/billing/components/CurrencySwitcher.vue'
 import CurrentPrice from '@/billing/components/CurrentPrice.vue'
 import PlanCard from '@/billing/components/PlanCard.vue'
 import PriceLabel from '@/billing/components/PriceLabel.vue'
@@ -477,6 +510,9 @@ const {
   errorMessage,
   trialPrice,
   paidPlans,
+  currency,
+  currencyChoices,
+  setCurrency,
   comparisonRows,
   planName,
   handleCancel,

@@ -237,6 +237,18 @@ class SubscriptionService(BillingBaseService):
 
         if sub.plan_price_id == price.id:
             raise ValidationException("Subscription is already on this plan.")
+        # A Stripe subscription bills in one currency: its items can't be
+        # swapped for a price in another.
+        current = (
+            await self.repos.plan_price.get(sub.plan_price_id)
+            if sub.plan_price_id
+            else None
+        )
+        if current and current.currency != price.currency:
+            raise ValidationException(
+                "Cannot switch to a price in another currency.",
+                error_code=BillingErrorCode.CURRENCY_MISMATCH,
+            )
 
         old_plan_price_id = sub.plan_price_id
         ext_sub = await self.provider.switch_subscription_price(

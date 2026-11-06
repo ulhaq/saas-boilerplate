@@ -72,6 +72,10 @@ class BillingErrorCode(ErrorCodeEnum):
         "trial_already_used",
         "A free trial has already been used for this organization",
     )
+    CURRENCY_MISMATCH = (
+        "currency_mismatch",
+        "The plan's price is in another currency than the subscription",
+    )
 
 
 BILLING_PERMISSION_DESCRIPTIONS: dict[BillingPermission, str] = {
