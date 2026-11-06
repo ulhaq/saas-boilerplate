@@ -315,7 +315,7 @@ async def test_switch_plan_success(mock_billing_provider, plan_with_price):
         price2 = PlanPrice(
             plan_id=plan2.id,
             amount=1999,
-            currency="usd",
+            currency="dkk",
             interval="month",
             interval_count=1,
             external_price_id="price_test456",
