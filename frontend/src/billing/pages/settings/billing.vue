@@ -177,19 +177,28 @@ meta:
                 {{ $t('subscription.noCardRequired') }}
               </span>
             </template>
+            <template #price>
+              <div class="space-y-2">
+                <PriceLabel
+                  v-for="price in plan.prices.filter((p) => p.is_active)"
+                  :key="price.id"
+                  :price="price"
+                  :currency="currency"
+                  :saving="yearlySavingOf(price)"
+                  :reserve-saving="intervalChoices.length > 1"
+                  free-as-text
+                />
+              </div>
+            </template>
             <div class="space-y-2">
-              <div
-                v-for="price in plan.prices.filter((p) => p.is_active)"
-                :key="price.id"
-                class="flex items-center justify-between gap-2"
-              >
-                <PriceLabel :price="price" :currency="currency" free-as-text />
-                <Button v-if="price.amount === 0" size="sm" disabled>
+              <template v-for="price in plan.prices.filter((p) => p.is_active)" :key="price.id">
+                <Button v-if="price.amount === 0" size="sm" class="w-full" disabled>
                   {{ $t('subscription.currentPlan') }}
                 </Button>
                 <Button
                   v-else-if="price.trial_period_days && !subscription.trial_used"
                   size="sm"
+                  class="w-full"
                   :disabled="trialId === price.id || isTrialing"
                   @click="handleTrial(price.id)"
                 >
@@ -199,13 +208,14 @@ meta:
                 <Button
                   v-else
                   size="sm"
+                  class="w-full"
                   :disabled="checkoutId === price.id || isCheckingOut"
                   @click="handleCheckout(price.id)"
                 >
                   <Loader2 v-if="checkoutId === price.id" class="w-4 h-4 mr-2 animate-spin" />
                   {{ $t('subscription.subscribe') }}
                 </Button>
-              </div>
+              </template>
             </div>
           </PlanCard>
         </div>
@@ -252,26 +262,34 @@ meta:
         </div>
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <PlanCard v-for="plan in paidPlans" :key="plan.id" :plan="plan" :rows="comparisonRows">
+            <template #price>
+              <div class="space-y-2">
+                <PriceLabel
+                  v-for="price in plan.prices.filter((p) => p.is_active && p.amount > 0)"
+                  :key="price.id"
+                  :price="price"
+                  :currency="currency"
+                  :saving="yearlySavingOf(price)"
+                  :reserve-saving="intervalChoices.length > 1"
+                />
+              </div>
+            </template>
             <div class="space-y-2">
-              <div
+              <Button
                 v-for="price in plan.prices.filter((p) => p.is_active && p.amount > 0)"
                 :key="price.id"
-                class="flex items-center justify-between gap-2"
+                size="sm"
+                class="w-full"
+                :disabled="switchId === price.id || price.id === subscription?.plan_price_id"
+                @click="handleSwitchPlan(price)"
               >
-                <PriceLabel :price="price" :currency="currency" />
-                <Button
-                  size="sm"
-                  :disabled="switchId === price.id || price.id === subscription?.plan_price_id"
-                  @click="handleSwitchPlan(price)"
-                >
-                  <Loader2 v-if="switchId === price.id" class="w-4 h-4 mr-2 animate-spin" />
-                  {{
-                    price.id === subscription?.plan_price_id
-                      ? $t('subscription.currentPlan')
-                      : $t('subscription.subscribe')
-                  }}
-                </Button>
-              </div>
+                <Loader2 v-if="switchId === price.id" class="w-4 h-4 mr-2 animate-spin" />
+                {{
+                  price.id === subscription?.plan_price_id
+                    ? $t('subscription.currentPlan')
+                    : $t('subscription.subscribe')
+                }}
+              </Button>
             </div>
           </PlanCard>
         </div>
@@ -406,26 +424,34 @@ meta:
         </div>
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <PlanCard v-for="plan in paidPlans" :key="plan.id" :plan="plan" :rows="comparisonRows">
+            <template #price>
+              <div class="space-y-2">
+                <PriceLabel
+                  v-for="price in plan.prices.filter((p) => p.is_active && p.amount > 0)"
+                  :key="price.id"
+                  :price="price"
+                  :currency="currency"
+                  :saving="yearlySavingOf(price)"
+                  :reserve-saving="intervalChoices.length > 1"
+                />
+              </div>
+            </template>
             <div class="space-y-2">
-              <div
+              <Button
                 v-for="price in plan.prices.filter((p) => p.is_active && p.amount > 0)"
                 :key="price.id"
-                class="flex items-center justify-between gap-2"
+                size="sm"
+                class="w-full"
+                :disabled="switchId === price.id || price.id === subscription?.plan_price_id"
+                @click="handleSwitchPlan(price)"
               >
-                <PriceLabel :price="price" :currency="currency" />
-                <Button
-                  size="sm"
-                  :disabled="switchId === price.id || price.id === subscription?.plan_price_id"
-                  @click="handleSwitchPlan(price)"
-                >
-                  <Loader2 v-if="switchId === price.id" class="w-4 h-4 mr-2 animate-spin" />
-                  {{
-                    price.id === subscription?.plan_price_id
-                      ? $t('subscription.currentPlan')
-                      : switchLabel(price)
-                  }}
-                </Button>
-              </div>
+                <Loader2 v-if="switchId === price.id" class="w-4 h-4 mr-2 animate-spin" />
+                {{
+                  price.id === subscription?.plan_price_id
+                    ? $t('subscription.currentPlan')
+                    : switchLabel(price)
+                }}
+              </Button>
             </div>
           </PlanCard>
         </div>
@@ -470,28 +496,36 @@ meta:
             :plan="plan"
             :rows="comparisonRows"
           >
-            <p
-              v-if="plan.prices.filter((p) => p.is_active).length === 0"
-              class="text-xs text-muted-foreground"
-            >
-              {{ $t('subscription.noPricesAvailable') }}
-            </p>
-            <div v-else class="space-y-2">
-              <div
+            <template #price>
+              <p
+                v-if="plan.prices.filter((p) => p.is_active).length === 0"
+                class="text-xs text-muted-foreground"
+              >
+                {{ $t('subscription.noPricesAvailable') }}
+              </p>
+              <div v-else class="space-y-2">
+                <PriceLabel
+                  v-for="price in plan.prices.filter((p) => p.is_active)"
+                  :key="price.id"
+                  :price="price"
+                  :currency="currency"
+                  :saving="yearlySavingOf(price)"
+                  :reserve-saving="intervalChoices.length > 1"
+                />
+              </div>
+            </template>
+            <div v-if="plan.prices.some((p) => p.is_active)" class="space-y-2">
+              <Button
                 v-for="price in plan.prices.filter((p) => p.is_active)"
                 :key="price.id"
-                class="flex items-center justify-between gap-2"
+                size="sm"
+                class="w-full"
+                :disabled="checkoutId === price.id || isCheckingOut"
+                @click="handleCheckout(price.id)"
               >
-                <PriceLabel :price="price" :currency="currency" />
-                <Button
-                  size="sm"
-                  :disabled="checkoutId === price.id || isCheckingOut"
-                  @click="handleCheckout(price.id)"
-                >
-                  <Loader2 v-if="checkoutId === price.id" class="w-4 h-4 mr-2 animate-spin" />
-                  {{ $t('subscription.subscribe') }}
-                </Button>
-              </div>
+                <Loader2 v-if="checkoutId === price.id" class="w-4 h-4 mr-2 animate-spin" />
+                {{ $t('subscription.subscribe') }}
+              </Button>
             </div>
           </PlanCard>
         </div>
@@ -551,6 +585,7 @@ const {
   intervalChoices,
   setInterval,
   yearlySaving,
+  yearlySavingOf,
   comparisonRows,
   planName,
   handleCancel,

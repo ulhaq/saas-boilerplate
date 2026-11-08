@@ -24,7 +24,7 @@ export function useBillingPage() {
   const { toast } = useToast()
   const { confirm } = useConfirm()
   const { resolveError } = useErrorHandler()
-  const { monthlyEquivalent } = useBillingFormat()
+  const { monthlyEquivalent, formatPrice } = useBillingFormat()
 
   const isLoading = ref(false)
   const plansLoading = ref(false)
@@ -146,8 +146,26 @@ export function useBillingPage() {
     const least = savings.length > 0 ? Math.min(...savings) : 0
     if (least <= 0) return null
     if (Number.isInteger(least)) return t('subscription.monthsFree', { count: least }, least)
-    return t('subscription.yearlySaving', { percent: Math.floor((least / 12) * 100) })
+    return t('subscription.yearlySaving', { percent: Math.floor((least / 12) * 100 + 1e-9) })
   })
+
+  /** What a yearly `price` saves a year over twelve months of its plan's monthly price in
+   * the same currency, formatted - null for any other price, or one that saves nothing. */
+  function yearlySavingOf(price: PlanPriceOut): string | null {
+    if (price.amount === 0 || price.interval !== 'year' || price.interval_count !== 1) return null
+    const monthly = plans.value
+      .find((p) => p.id === price.plan_id)
+      ?.prices.find(
+        (pr) =>
+          pr.is_active &&
+          pr.currency === price.currency &&
+          pr.interval === 'month' &&
+          pr.interval_count === 1,
+      )
+    if (!monthly) return null
+    const saved = monthly.amount * 12 - price.amount
+    return saved > 0 ? formatPrice({ amount: saved, currency: price.currency }) : null
+  }
 
   /** Active plans with only their prices in `currency` and `billingInterval` (a free price
    * in any), cheapest first. */
@@ -386,6 +404,7 @@ export function useBillingPage() {
     intervalChoices,
     setInterval,
     yearlySaving,
+    yearlySavingOf,
     comparisonRows,
     planName,
     handleCancel,

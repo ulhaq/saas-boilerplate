@@ -22,6 +22,9 @@
     --accent-soft: #3451e014;
     --accent-text: var(--accent);
     --ok: #2f7a45;
+    /* The green badges' fill: the ok colour over the surface, so it suits dark
+       themes too. */
+    --ok-soft: color-mix(in srgb, var(--ok) 14%, var(--surface));
     --warn: #a45a00;
 
     --font-display: ui-sans-serif, system-ui, sans-serif;
@@ -851,8 +854,8 @@
   .plans-switch-saving {
     padding: 1px 7px;
     border-radius: 999px;
-    background: var(--accent-soft);
-    color: var(--accent);
+    background: var(--ok-soft);
+    color: var(--ok);
     font-size: 0.6875rem;
     font-weight: 700;
   }
@@ -950,6 +953,17 @@
     color: var(--muted);
   }
 
+  .plan-saving {
+    justify-self: start;
+    margin-top: 2px;
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: var(--ok-soft);
+    color: var(--ok);
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
   .plan-features {
     list-style: none;
     margin: 0;
@@ -972,6 +986,18 @@
   @media (min-width: 720px) {
     .plans {
       grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    /* Cards side by side share their rows - head, prices, limits, features,
+       call to action - so each part starts at the same height on every card,
+       however long the one above it is. */
+    @supports (grid-template-rows: subgrid) {
+      .plan {
+        display: grid;
+        grid-row: span 5;
+        grid-template-rows: subgrid;
+        row-gap: 18px;
+      }
     }
   }
 

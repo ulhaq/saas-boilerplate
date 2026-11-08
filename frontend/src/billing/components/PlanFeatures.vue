@@ -1,5 +1,6 @@
 <template>
-  <ul v-if="rows.length" class="space-y-1.5">
+  <!-- `contents`: each row is a row of the card's grid (`PlanCard`), level across cards. -->
+  <ul v-if="rows.length" class="contents">
     <li
       v-for="row in rows"
       :key="row.label"

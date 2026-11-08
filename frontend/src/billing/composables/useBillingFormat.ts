@@ -52,16 +52,19 @@ export function useBillingFormat() {
     return price.interval === 'year' ? price.amount / (12 * count) : price.amount / count
   }
 
-  /** How a price is shown: a yearly one by the month, as a monthly one is, with its yearly
-   * total in `billedYearly` (else null), so the periods compare at a glance. */
+  /** How a price is shown: a yearly one by the month, as a monthly one is, so the periods
+   * compare at a glance - `billed` says how often it is paid ("Billed yearly"; null for a
+   * free price, or a period with no wording). */
   function displayedPrice(price: PlanPriceOut): {
     price: PlanPriceOut
-    billedYearly: string | null
+    billed: string | null
   } {
-    if (price.amount === 0 || price.interval !== 'year') return { price, billedYearly: null }
+    const key = `subscription.billed.${price.interval}`
+    const billed = price.amount > 0 && price.interval_count === 1 && te(key) ? t(key) : null
+    if (price.amount === 0 || price.interval !== 'year') return { price, billed }
     return {
       price: { ...price, amount: Math.round(monthlyEquivalent(price)), interval: 'month' },
-      billedYearly: formatPrice(price),
+      billed,
     }
   }
 

@@ -439,6 +439,10 @@ describe('billing periods', () => {
 
   test('monthly is shown first, with the months yearly gives free', async () => {
     const wrapper = await mountBilling(null)
+    // Monthly prices save nothing, so no card says so.
+    expect(wrapper.text()).not.toContain(
+      t('subscription.yearlySavingAmount', { amount: money(198, 'dkk') }),
+    )
 
     const labels = intervalOptions(wrapper).map((o) => o.text().replace(/\s+/g, ' '))
     // 99000 a year against 12 x 9900: 10 months' worth, so 2 months free.
@@ -447,6 +451,7 @@ describe('billing periods', () => {
       `${t('subscription.intervalOptions.year')} ${t('subscription.monthsFree', { count: 2 }, 2)}`,
     ])
     expect(intervalOptions(wrapper)[0]!.attributes('aria-checked')).toBe('true')
+    expect(wrapper.text()).toContain(t('subscription.billed.month'))
   })
 
   test('a yearly price that is no whole number of months is shown as a percentage', async () => {
@@ -477,7 +482,7 @@ describe('billing periods', () => {
     )
   })
 
-  test('picking yearly offers the yearly prices, by the month with their yearly total', async () => {
+  test('picking yearly offers the yearly prices, by the month, billed yearly', async () => {
     const wrapper = await mountBilling(null)
     const dkk = (amount: number) => money(amount, 'dkk')
 
@@ -485,8 +490,13 @@ describe('billing periods', () => {
     // Free and Pro yearly; Business has no yearly price.
     expect(buttons(wrapper, t('subscription.subscribe'))).toHaveLength(2)
     expect(wrapper.text()).toContain(`${dkk(82.5)} / ${t('subscription.intervals.month')}`)
-    expect(wrapper.text()).toContain(t('subscription.billedYearly', { price: dkk(990) }))
+    expect(wrapper.text()).toContain(t('subscription.billed.year'))
+    expect(wrapper.text()).not.toContain(t('subscription.billed.month'))
+    // The yearly total is not shown, only the period it is billed in.
+    expect(wrapper.text()).not.toContain(dkk(990))
     expect(wrapper.text()).not.toContain(`/ ${t('subscription.intervals.year')}`)
+    // 12 x 99 - 990: what the yearly price saves on the plan's card.
+    expect(wrapper.text()).toContain(t('subscription.yearlySavingAmount', { amount: dkk(198) }))
     await click(wrapper, t('subscription.subscribe'), 1)
     expect(store.checkout).toHaveBeenCalledWith(PRO_YEARLY.id)
   })
@@ -498,12 +508,8 @@ describe('billing periods', () => {
 
     expect(intervalOptions(wrapper)[1]!.attributes('aria-checked')).toBe('true')
     expect(buttonLabels(wrapper)).toContain(t('subscription.currentPlan'))
-    // The current price too: by the month, the yearly total under it.
-    expect(wrapper.text()).toContain(
-      t('subscription.billedYearly', {
-        price: money(990, 'dkk'),
-      }),
-    )
+    // The current price too: by the month, billed yearly.
+    expect(wrapper.text()).toContain(t('subscription.billed.year'))
 
     await pickInterval(wrapper, 'month')
     await click(wrapper, t('subscription.switchInterval.month'))

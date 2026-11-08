@@ -1,9 +1,9 @@
 ---
 /**
  * The plans. One markup for every theme: cards by default, ledger rows in
- * the editorial theme. Each plan lists its limits (`plan-stats`) and the
- * features that set it apart from cheaper plans (`plan-features`). The price is
- * rendered in every currency and billing period - the locale's currency, monthly,
+ * the editorial theme. Each plan shows its price first, under its name, then
+ * its limits (`plan-stats`) and the features that set it apart from cheaper
+ * plans (`plan-features`). The price is rendered in every currency and billing period - the locale's currency, monthly,
  * shown; two switches (with JavaScript only) show another, remembered in the
  * browser and handed to the app's links.
  */
@@ -99,22 +99,16 @@ const ctaHref = CTA_MODE === 'waitlist' ? `${path('home', locale)}#waitlist` : a
             <h3 class="plan-name">{plan.name}</h3>
             <p class="plan-desc">{plan.description[locale]}</p>
           </div>
-          <dl class="plan-stats">
-            {stats.map((row) => (
-              <div>
-                <dt>{row.label}</dt>
-                <dd>{row.values[plan.name]}</dd>
-              </div>
-            ))}
-          </dl>
           <div class="plan-prices">
             {CURRENCIES.flatMap((currency) =>
               // The free plan has one price, whatever the period.
               (free ? (['month'] as const) : INTERVALS).map((interval) => {
                 // A yearly price is shown by the month too (it is twelve whole months' worth,
-                // `plans.ts`), its yearly total under it, so the periods compare at a glance.
+                // `plans.ts`), how often it is billed under it and what it saves, so the
+                // periods compare at a glance.
                 const total = planAmount(plan, locale, currency, interval)
                 const yearly = interval === 'year'
+                const saved = yearly ? planAmount(plan, locale, currency) * 12 - total : 0
                 return (
                   <div
                     class="plan-price"
@@ -128,11 +122,14 @@ const ctaHref = CTA_MODE === 'waitlist' ? `${path('home', locale)}#waitlist` : a
                     <span class="plan-per">
                       {free ? t.pricing.free : `${t.pricing.perMonth}, ${t.pricing.exclVat}`}
                     </span>
-                    {yearly && (
+                    {!free && (
                       <span class="plan-per">
-                        {fmt(t.pricing.billedYearly, {
-                          price: formatPrice(total, locale, currency),
-                        })}
+                        {yearly ? t.pricing.billedYearly : t.pricing.billedMonthly}
+                      </span>
+                    )}
+                    {saved > 0 && (
+                      <span class="plan-saving">
+                        {fmt(t.pricing.youSave, { amount: formatPrice(saved, locale, currency) })}
                       </span>
                     )}
                   </div>
@@ -140,13 +137,20 @@ const ctaHref = CTA_MODE === 'waitlist' ? `${path('home', locale)}#waitlist` : a
               }),
             )}
           </div>
-          {included.length > 0 && (
-            <ul class="plan-features">
-              {included.map((row) => (
-                <li>{row.label}</li>
-              ))}
-            </ul>
-          )}
+          <dl class="plan-stats">
+            {stats.map((row) => (
+              <div>
+                <dt>{row.label}</dt>
+                <dd>{row.values[plan.name]}</dd>
+              </div>
+            ))}
+          </dl>
+          {/* Always rendered, so every card has the same rows (the subgrid in `global.css`). */}
+          <ul class="plan-features">
+            {included.map((row) => (
+              <li>{row.label}</li>
+            ))}
+          </ul>
           <a class:list={['btn', recommended ? '' : 'btn--ghost']} href={ctaHref}>
             {CTA_MODE === 'waitlist'
               ? t.nav.waitlist

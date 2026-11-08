@@ -135,7 +135,7 @@ export function yearlySaving(currency: Currency): { months: number } | { percent
   const least = Math.min(...paid.map((plan) => 12 - plan.yearly[currency] / plan.amount[currency]))
   if (least <= 0) return null
   if (Number.isInteger(least)) return { months: least }
-  return { percent: Math.floor((least / 12) * 100) }
+  return { percent: Math.floor((least / 12) * 100 + 1e-9) }
 }
 
 export function formatPrice(

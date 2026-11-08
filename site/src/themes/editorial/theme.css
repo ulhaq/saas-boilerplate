@@ -330,6 +330,9 @@
 
   .plan {
     display: grid;
+    /* Ledger rows lay out on their own: out of the base cards' shared subgrid. */
+    grid-row: auto;
+    grid-template-rows: none;
     gap: 20px;
     padding: 28px 0;
     background: none;
