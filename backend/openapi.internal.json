@@ -6417,11 +6417,16 @@
           "setup_token": {
             "type": "string",
             "title": "Setup Token"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
           }
         },
         "type": "object",
         "required": [
-          "setup_token"
+          "setup_token",
+          "email"
         ],
         "title": "SetupTokenOut"
       },

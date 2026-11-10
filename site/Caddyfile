@@ -32,6 +32,23 @@ handle @apiForms {
 	reverse_proxy {$API_TARGET}
 }
 
+# `/` sends visitors to the front page in their browser's first language,
+# else the default locale (DEFAULT_LOCALE, src/i18n/routes.ts). A 302, not a
+# 301: the target depends on the visitor, and `/` is the hreflang x-default,
+# so it must not be cached as a permanent move. src/pages/index.astro does the
+# same in the browser, as a fallback.
+handle / {
+	header Vary Accept-Language
+	header Cache-Control "no-cache"
+	@en header_regexp Accept-Language (?i)^\s*en\b
+	handle @en {
+		redir * /en/{?query} 302
+	}
+	handle {
+		redir * /da/{?query} 302
+	}
+}
+
 handle /_astro/* {
 	header Cache-Control "public, max-age=31536000, immutable"
 	file_server

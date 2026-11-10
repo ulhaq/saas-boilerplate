@@ -14,7 +14,7 @@ Starting a new product from this template:
 - Keep or drop the optional modules (billing, marketing) - see "Keeping or dropping the optional modules" in the same guide.
 - Set the product identity in `frontend/src/brand.ts` (name, app and marketing domains) and `APP_NAME` / `EMAIL_FROM_*` in `backend/.env`.
 - Adapt plan seeds (billing migration + product migration), and plan copy (`planComparisonRows` / `planDescriptions` in the product locales). Mirror plan and brand changes in the marketing site (`site/src/config.ts`, `site/src/content/plans.ts`); the app links to its terms/privacy pages (`LEGAL_PATHS` in `frontend/src/foundation/constants.ts`).
-- Replace `frontend/public/{favicon.svg,logo.png}`.
+- Replace `frontend/public/{favicon.svg,logo.png}` (and the site's copies, `site/public/{favicon.svg,logo.png}`).
 
 ## Repository Structure
 

@@ -1808,6 +1808,8 @@ export interface components {
     SetupTokenOut: {
       /** Setup Token */
       setup_token: string
+      /** Email */
+      email: string
     }
     /** StartTrialIn */
     StartTrialIn: {

@@ -19,7 +19,8 @@ const fallback = path('home', DEFAULT_LOCALE)
       const preferred = (navigator.languages || [navigator.language])
         .map((tag) => tag.slice(0, 2).toLowerCase())
         .find((lang) => locales.includes(lang))
-      location.replace(preferred ? `/${preferred}/` : fallback)
+      // Keep the query (UTM tags) and fragment, as the Caddyfile's redirect does.
+      location.replace((preferred ? `/${preferred}/` : fallback) + location.search + location.hash)
     </script>
     <meta http-equiv="refresh" content={`0; url=${fallback}`} />
   </head>

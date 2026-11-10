@@ -36,8 +36,9 @@ const billing: Module = {
         permission: 'manage:subscription',
       },
     ])
-    // New accounts pick a plan first; upgrade prompts link to the plans.
-    configureApp({ upgradeRoute: BILLING_ROUTE, onboardingRoute: BILLING_ROUTE })
+    // Upgrade prompts link to the plans. New accounts start in the app on the
+    // free plan (no `onboardingRoute`): the plans are a choice for later.
+    configureApp({ upgradeRoute: BILLING_ROUTE })
     registerBillingNotifications()
   },
 }

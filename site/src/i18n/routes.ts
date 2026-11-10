@@ -29,6 +29,15 @@ export function path(page: PageKey, locale: Locale): string {
   return slug ? `/${locale}/${slug}/` : `/${locale}/`
 }
 
+/**
+ * The page's hreflang x-default, for visitors whose language the site lacks:
+ * the default locale's version, except the front page's, which is `/` - it
+ * redirects by the browser's language (the Caddyfile, `pages/index.astro`).
+ */
+export function xDefaultPath(page: PageKey): string {
+  return page === 'home' ? '/' : path(page, DEFAULT_LOCALE)
+}
+
 export function localeFromUrl(url: URL): Locale {
   const first = url.pathname.split('/')[1]
   return (LOCALES as readonly string[]).includes(first) ? (first as Locale) : DEFAULT_LOCALE

@@ -8,8 +8,9 @@ import Header from '../components/Header.astro'
 import Footer from '../components/Footer.astro'
 import Ticker from '../components/Ticker.astro'
 import { APP_URL, SITE, UMAMI } from '../config'
-import { LOCALES, path, type Locale, type PageKey } from '../i18n/routes'
+import { LOCALES, path, xDefaultPath, type Locale, type PageKey } from '../i18n/routes'
 import { useMessages } from '../i18n/ui'
+import { serialize, type JsonLd } from '../content/structuredData'
 
 interface Props {
   locale: Locale
@@ -17,9 +18,11 @@ interface Props {
   page: PageKey | null
   title: string
   description: string
+  /** Structured data for the page (`content/structuredData.ts`). */
+  jsonLd?: JsonLd[]
 }
 
-const { locale, page, title, description } = Astro.props
+const { locale, page, title, description, jsonLd } = Astro.props
 const t = useMessages(locale)
 const origin = Astro.site ?? new URL(Astro.url.origin)
 const canonical = page ? new URL(path(page, locale), origin).href : undefined
@@ -52,7 +55,7 @@ const ogImage = new URL('/og-image.png', origin).href
           <link rel="alternate" hreflang={l} href={new URL(path(page, l), origin).href} />
         ))
     }
-    {page && <link rel="alternate" hreflang="x-default" href={new URL('/', origin).href} />}
+    {page && <link rel="alternate" hreflang="x-default" href={new URL(xDefaultPath(page), origin).href} />}
 
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content={SITE.name} />
@@ -65,6 +68,7 @@ const ogImage = new URL('/og-image.png', origin).href
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:image" content={ogImage} />
+    {jsonLd && jsonLd.length > 0 && <script is:inline type="application/ld+json" set:html={serialize(jsonLd)} />}
 
     {
       UMAMI.scriptUrl && UMAMI.websiteId && (

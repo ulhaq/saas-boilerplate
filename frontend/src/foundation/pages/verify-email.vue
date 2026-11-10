@@ -35,11 +35,24 @@ meta:
 
       <!-- Complete profile form -->
       <form v-else-if="setupToken" class="space-y-4" @submit.prevent="onSubmit">
+        <!-- The account's email, for password managers to save the new password under.
+             Visually hidden rather than display:none, which some managers skip. -->
+        <input
+          type="email"
+          name="email"
+          autocomplete="username"
+          :value="email"
+          readonly
+          tabindex="-1"
+          aria-hidden="true"
+          class="sr-only"
+        />
         <div class="space-y-2">
           <Label for="name">{{ $t('common.name') }}</Label>
           <Input
             id="name"
             v-model="form.name"
+            autocomplete="name"
             :placeholder="$t('users.form.namePlaceholder')"
             :disabled="isLoading"
             autofocus
@@ -51,6 +64,7 @@ meta:
           <PasswordInput
             id="password"
             v-model="form.password"
+            autocomplete="new-password"
             :placeholder="$t('common.minCharacters')"
             :disabled="isLoading"
           />
@@ -103,6 +117,7 @@ if (token) {
 const verifying = ref(!!token)
 const errorMsg = ref('')
 const setupToken = ref('')
+const email = ref('')
 
 const { t } = useI18n()
 const rules = useRules()
@@ -122,6 +137,7 @@ onMounted(async () => {
   try {
     const data = await authStore.verifyEmail({ token })
     setupToken.value = data.setup_token
+    email.value = data.email
   } catch (err: unknown) {
     errorMsg.value = resolveError(err)
   } finally {

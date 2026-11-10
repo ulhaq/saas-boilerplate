@@ -70,7 +70,7 @@ test.describe('Verify email - valid token', () => {
     await expect(page.locator('.text-destructive').first()).toBeVisible()
   })
 
-  test('valid submission redirects to /settings/billing', async ({ page }) => {
+  test('valid submission starts the new account on /dashboard', async ({ page }) => {
     await stubVerifyEmail(page)
 
     // After completeRegistration the auth store calls fetchMe, fetchOrganizations,
@@ -92,7 +92,8 @@ test.describe('Verify email - valid token', () => {
     await page.locator('#password').fill('securepassword123')
     await page.getByRole('button', { name: /get started/i }).click()
 
-    await page.waitForURL('/settings/billing', { timeout: 10_000 })
-    await expect(page).toHaveURL('/settings/billing')
+    // Straight into the app on the free plan - not the plans page first.
+    await page.waitForURL('/dashboard', { timeout: 10_000 })
+    await expect(page).toHaveURL('/dashboard')
   })
 })

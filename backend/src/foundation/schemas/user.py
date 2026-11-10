@@ -107,6 +107,9 @@ class VerifyEmailIn(BaseModel):
 
 class SetupTokenOut(BaseModel):
     setup_token: str
+    # The verified address, so the page that completes the registration can hand it to
+    # password managers as the new login's username.
+    email: str
 
 
 class CompleteRegistrationIn(BaseModel):

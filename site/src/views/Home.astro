@@ -12,6 +12,7 @@ import Steps from '../components/Steps.astro'
 import WaitlistForm from '../components/WaitlistForm.astro'
 import { CTA_MODE } from '../config'
 import { TRIAL_DAYS } from '../content/plans'
+import { faqPage, organization, softwareApplication, website } from '../content/structuredData'
 import { path, type Locale } from '../i18n/routes'
 import { useMessages } from '../i18n/ui'
 
@@ -23,9 +24,21 @@ const { locale } = Astro.props
 const t = useMessages(locale)
 const waitlist = CTA_MODE === 'waitlist'
 const labels = t.home.labels
+const site = Astro.site ?? new URL(Astro.url.origin)
 ---
 
-<Base locale={locale} page="home" title={t.meta.home.title} description={t.meta.home.description}>
+<Base
+  locale={locale}
+  page="home"
+  title={t.meta.home.title}
+  description={t.meta.home.description}
+  jsonLd={[
+    organization(site),
+    website(locale, site),
+    softwareApplication(locale, site),
+    faqPage(t.faq, new URL(path('home', locale), site).href),
+  ]}
+>
   <section class="hero wrap">
     <div class="hero-copy">
       <p class="kicker hero-kicker">{t.home.kicker}</p>

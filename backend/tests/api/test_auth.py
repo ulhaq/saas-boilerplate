@@ -28,6 +28,7 @@ def _do_verify(
     mock_send.stop()
 
     rs = client.post("/v1/auth/verify-email", json={"token": token}).json()
+    assert rs["email"] == email.strip().lower()
     return rs["setup_token"]
 
 

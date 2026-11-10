@@ -20,6 +20,8 @@ npm run build    # static output in dist/
 - `src/views/` - one view per page, taking `locale`. `src/pages/<locale>/<slug>.astro` are thin wrappers, so localized slugs stay plain files.
 - `src/styles/global.css` - the base layer: layout and structure for every component, drawn from tokens (`@layer base`). Components have no scoped styles; they use these plain class names.
 - `src/themes/<name>/` - one folder per design: `config.ts` (step numbering, which highlight strip to show, browser theme colour), `theme.css` (font imports, tokens and overrides in `@layer theme`) and `HeroVisual.astro` (the front-page picture). The contract is in `src/themes/types.ts`.
+- `src/content/structuredData.ts` - the pages' schema.org JSON-LD (`jsonLd` prop of `Base.astro`): the organization, website and product with one offer per plan, currency and period (from `plans.ts`, excl. VAT) on the front page; the product on pricing; `FAQPage` for the FAQ the front page and pricing show. Built only from what the page shows - never add ratings or reviews that aren't real. `public/logo.png` (its `logo`) is a copy of the app's `frontend/public/logo.png`.
+- `/` redirects by the browser's language: Caddy (`Caddyfile`, 302 on `Accept-Language`) and `src/pages/index.astro` as a fallback, both keeping the query string. It is the front page's hreflang x-default; every other page's x-default is its `DEFAULT_LOCALE` version (`xDefaultPath`).
 - `src/content/sample.ts` - the example projects the hero visuals draw.
 
 ## Themes

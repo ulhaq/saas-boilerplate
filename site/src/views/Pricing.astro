@@ -5,6 +5,7 @@ import Faq from '../components/Faq.astro'
 import PageHero from '../components/PageHero.astro'
 import Plans from '../components/Plans.astro'
 import SectionHead from '../components/SectionHead.astro'
+import { faqPage, softwareApplication } from '../content/structuredData'
 import { path, type Locale } from '../i18n/routes'
 import { useMessages } from '../i18n/ui'
 
@@ -15,6 +16,7 @@ interface Props {
 const { locale } = Astro.props
 const t = useMessages(locale)
 const pricingFaq = t.faq.filter((item) => 'pricing' in item && item.pricing)
+const site = Astro.site ?? new URL(Astro.url.origin)
 ---
 
 <Base
@@ -22,6 +24,10 @@ const pricingFaq = t.faq.filter((item) => 'pricing' in item && item.pricing)
   page="pricing"
   title={t.meta.pricing.title}
   description={t.meta.pricing.description}
+  jsonLd={[
+    softwareApplication(locale, site),
+    faqPage(pricingFaq, new URL(path('pricing', locale), site).href),
+  ]}
 >
   <PageHero kicker={t.pricing.kicker} title={t.pricing.title} lede={t.pricing.lede} />
 

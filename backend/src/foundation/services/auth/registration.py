@@ -107,7 +107,7 @@ class RegistrationService(AuthBaseService):
             },
             salt="complete-registration",
         )
-        return SetupTokenOut(setup_token=setup_token)
+        return SetupTokenOut(setup_token=setup_token, email=email)
 
     async def complete_registration(
         self,
